@@ -235,8 +235,10 @@ ParseResult parse(Token *tokens, size_t token_count, ParserNodes *nodes) {
       continue;
 
     case T_R_PAREN:
-      if (!stack.size)
+      if (!stack.size) {
+        da_free(&stack);
         return PARSER_TOO_MANY_CLOSING;
+      }
 
       ParserNodes *new_nodes = &stack.array[stack.size - 1];
       pn = (ParserNode){
@@ -258,6 +260,7 @@ ParseResult parse(Token *tokens, size_t token_count, ParserNodes *nodes) {
 
     default:
       TODO();
+      da_free(&stack);
       return PARSER_UNKNOWN_TOKEN;
     }
 
@@ -267,6 +270,8 @@ ParseResult parse(Token *tokens, size_t token_count, ParserNodes *nodes) {
       da_append(nodes, pn);
     }
   }
+
+  da_free(&stack);
 
   if (stack.size)
     return PARSER_TOO_MANY_OPENING;
