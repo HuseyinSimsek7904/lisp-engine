@@ -84,6 +84,11 @@ typedef enum {
   TOKENIZE_UNKNOWN_CHAR,
 } TokenizeResult;
 
+bool is_symbol_char(char c) {
+  return c == '!' || (c >= '#' && c <= '&') || (c >= '*' && c <= '/') ||
+         (c >= ':' && c <= '~');
+}
+
 TokenizeResult tokenize(char *lisp_str, Tokens *tokens) {
   while (*lisp_str) {
     char c = *lisp_str++;
@@ -126,15 +131,14 @@ TokenizeResult tokenize(char *lisp_str, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
-    case 'a' ... 'z':
-    case 'A' ... 'Z': {
-      // TODO: This does not accept some tokens as symbols even though they
-      // should be accepted.
+    case '!':
+    case '#' ... '&':
+    case '*' ... '/':
+    case ':' ... '~': {
       StringBuilder sb;
       da_init(&sb);
       da_append(&sb, c);
-      while (*lisp_str >= '!' && *lisp_str <= '~' && *lisp_str != '(' &&
-             *lisp_str != ')') {
+      while (is_symbol_char(*lisp_str)) {
         da_append(&sb, *lisp_str++);
       }
       Token token = {.type = T_SYMBOL, .string = sb.array};
@@ -485,6 +489,20 @@ LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   return (LispValue){.type = LISP_NIL};
 }
 
+LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
+  for (size_t i = 0; i < arg_count; i++)
+    if (args[i].type != LISP_INT64)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "invalid type for argument to print"};
+
+  int64_t sum = 0;
+  for (size_t i = 0; i < arg_count; i++) {
+    sum += args[i].integer;
+  }
+
+  return (LispValue){.type = LISP_INT64, .integer = sum};
+}
+
 int main(void) {
   while (true) {
     char *lisp = readline("> ");
@@ -522,6 +540,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN_FUNC,
                         .builtin_function = (LispValue (*)(
                             LispValue *, size_t, void *))builtin_print});
+
+    env_set(&global_env, "+",
+            (LispValue){.type = LISP_BUILTIN_FUNC,
+                        .builtin_function = (LispValue (*)(
+                            LispValue *, size_t, void *))builtin_sum});
 
     for (size_t i = 0; i < nodes.size; i++) {
       LispValue value = evaluate_lisp(nodes.array[i], &global_env);
