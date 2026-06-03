@@ -314,9 +314,183 @@ void print_parser_nodes(ParserNode *nodes, size_t n) {
 
 // -- END OF Parser --
 
+// -- Lisp Value --
+
+typedef enum {
+  LISP_NIL,
+  LISP_ERROR,
+  LISP_STRING,
+  LISP_INT64,
+  LISP_SYMBOL,
+  LISP_BUILTIN,
+  LISP_BUILTIN_FUNC,
+} LispType;
+
+typedef struct LispValue {
+  LispType type;
+  union {
+    char *string;
+    char *error_message;
+    char *symbol;
+    int64_t integer;
+    struct LispValue (*builtin_function)(struct LispValue *, size_t, void *);
+  };
+} LispValue;
+
+typedef struct {
+  LispValue *array;
+  size_t size;
+  size_t capacity;
+} LispValues;
+
+void print_lisp(LispValue value) {
+  switch (value.type) {
+  case LISP_NIL:
+    printf("NIL");
+    break;
+
+  case LISP_ERROR:
+    printf("lisp error: %s\n", value.error_message);
+    break;
+
+  case LISP_STRING:
+    printf("\"%s\"", value.string);
+    break;
+
+  case LISP_SYMBOL:
+    printf("'%s", value.symbol);
+    break;
+
+  case LISP_INT64:
+    printf("%ld", value.integer);
+    break;
+
+  default:
+    TODO();
+  }
+}
+
+// -- END OF Lisp Value --
+
+// -- Environment --
+
+typedef struct {
+  char *symbol;
+  LispValue value;
+} EnvironmentEntry;
+
+typedef struct Environment {
+  EnvironmentEntry *array;
+  size_t size;
+  size_t capacity;
+  struct Environment *other;
+} Environment;
+
+EnvironmentEntry *env_find(Environment *env, char *symbol) {
+  for (size_t i = 0; i < env->size; i++) {
+    if (strcmp(env->array[i].symbol, symbol) == 0)
+      return &env->array[i];
+  }
+
+  if (env->other == NULL)
+    return NULL;
+
+  return env_find(env->other, symbol);
+}
+
+EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
+  EnvironmentEntry *entry = env_find(env, symbol);
+
+  if (!entry) {
+    EnvironmentEntry entry =
+        (EnvironmentEntry){.symbol = symbol, .value = value};
+    da_append(env, entry);
+    return &env->array[env->size - 1];
+  }
+
+  entry->value = value;
+  return entry;
+}
+
+// -- END OF Environment --
+
+// -- Evaluate --
+
+LispValue evaluate_lisp(ParserNode node, Environment *env) {
+  switch (node.type) {
+  case PN_STRING:
+    return (LispValue){.type = LISP_STRING, .string = node.string};
+
+  case PN_INT64:
+    return (LispValue){.type = LISP_INT64, .integer = node.integer};
+
+  case PN_SYMBOL: {
+    EnvironmentEntry *entry = env_find(env, node.symbol);
+    free(node.symbol);
+
+    if (entry)
+      return entry->value;
+
+    return (LispValue){.type = LISP_ERROR, .error_message = "undefined symbol"};
+  }
+
+  case PN_TUPLE:
+    if (!node.size)
+      return (LispValue){.type = LISP_NIL};
+
+    LispValue callable = evaluate_lisp(node.items[0], env);
+
+    if (callable.type != LISP_BUILTIN_FUNC)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "tried to call non-callable"};
+
+    LispValues args;
+    da_init(&args);
+
+    for (size_t i = 1; i < node.size; i++) {
+      da_append(&args, evaluate_lisp(node.items[i], env));
+    }
+
+    free(node.items);
+
+    LispValue result = callable.builtin_function(args.array, args.size, env);
+    da_free(&args);
+
+    return result;
+
+  default:
+    TODO();
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message =
+                           "unknown parser node while trying to evaluate"};
+  }
+
+  // dummy return
+  return (LispValue){.type = LISP_NIL};
+}
+
+// -- END OF Evaluate --
+
+LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
+  for (size_t i = 0; i < arg_count; i++)
+    if (args[i].type != LISP_STRING)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "invalid type for argument to print"};
+
+  for (size_t i = 0; i < arg_count; i++) {
+    printf("%s\n", args[i].string);
+    free(args[i].string);
+  }
+
+  return (LispValue){.type = LISP_NIL};
+}
+
 int main(void) {
   while (true) {
     char *lisp = readline("> ");
+
+    if (!lisp)
+      exit(0);
 
     Tokens tokens;
     da_init(&tokens);
@@ -341,7 +515,18 @@ int main(void) {
       continue;
     }
 
-    print_parser_nodes(nodes.array, nodes.size);
-    printf("\n");
+    Environment global_env = {.other = NULL};
+    da_init(&global_env);
+
+    env_set(&global_env, "print",
+            (LispValue){.type = LISP_BUILTIN_FUNC,
+                        .builtin_function = (LispValue (*)(
+                            LispValue *, size_t, void *))builtin_print});
+
+    for (size_t i = 0; i < nodes.size; i++) {
+      LispValue value = evaluate_lisp(nodes.array[i], &global_env);
+      print_lisp(value);
+      printf("\n");
+    }
   }
 }
