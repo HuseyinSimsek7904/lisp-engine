@@ -413,7 +413,7 @@ EnvironmentEntry *env_find(Environment *env, char *symbol) {
 }
 
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
-  EnvironmentEntry *entry = env_find(env, symbol);
+  EnvironmentEntry *entry = env_find_shallow(env, symbol);
 
   if (!entry) {
     EnvironmentEntry entry =
@@ -490,6 +490,25 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 }
 
 // -- END OF Evaluate --
+
+LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
+  if (arg_count < 2)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`set` requires at least 2 arguments"};
+
+  if (args[0].type != PN_SYMBOL)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message =
+                           "first argument to `let` must be a tuple of "
+                           "tuples with first element being a symbol"};
+
+  char *symbol = args[0].symbol;
+  LispValue value = evaluate_lisp(args[1], env);
+
+  env_set(env, symbol, value);
+
+  return value;
+}
 
 LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
@@ -624,6 +643,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN,
                         .builtin = (LispValue (*)(ParserNode *, size_t,
                                                   void *))builtin_let});
+
+    env_set(&global_env, "set",
+            (LispValue){.type = LISP_BUILTIN,
+                        .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                  void *))builtin_set});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
