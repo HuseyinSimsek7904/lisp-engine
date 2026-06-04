@@ -322,6 +322,7 @@ void print_parser_nodes(ParserNode *nodes, size_t n) {
 
 typedef enum {
   LISP_NIL,
+  LISP_T,
   LISP_ERROR,
   LISP_STRING,
   LISP_INT64,
@@ -352,6 +353,10 @@ void print_lisp(LispValue value) {
   switch (value.type) {
   case LISP_NIL:
     printf("NIL");
+    break;
+
+  case LISP_T:
+    printf("t");
     break;
 
   case LISP_ERROR:
@@ -628,6 +633,10 @@ int main(void) {
 
     Environment global_env = {.other = NULL};
     da_init(&global_env);
+
+    env_set(&global_env, "nil", (LispValue){.type = LISP_NIL});
+
+    env_set(&global_env, "t", (LispValue){.type = LISP_T});
 
     env_set(&global_env, "print",
             (LispValue){.type = LISP_BUILTIN_FUNC,
