@@ -625,10 +625,12 @@ int main(void) {
                         .builtin = (LispValue (*)(ParserNode *, size_t,
                                                   void *))builtin_let});
 
+    LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
-      LispValue value = evaluate_lisp(nodes.array[i], &global_env);
-      print_lisp(value);
-      printf("\n");
+      return_value = evaluate_lisp(nodes.array[i], &global_env);
     }
+
+    print_lisp(return_value);
+    printf("\n");
   }
 }
