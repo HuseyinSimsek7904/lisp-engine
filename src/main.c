@@ -337,6 +337,7 @@ typedef struct LispValue {
     char *error_message;
     char *symbol;
     int64_t integer;
+    struct LispValue (*builtin)(ParserNode *, size_t, void *);
     struct LispValue (*builtin_function)(struct LispValue *, size_t, void *);
   };
 } LispValue;
@@ -453,23 +454,29 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 
     LispValue callable = evaluate_lisp(node.items[0], env);
 
-    if (callable.type != LISP_BUILTIN_FUNC)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "tried to call non-callable"};
+    if (callable.type == LISP_BUILTIN_FUNC) {
+      LispValues args;
+      da_init(&args);
 
-    LispValues args;
-    da_init(&args);
+      for (size_t i = 1; i < node.size; i++) {
+        da_append(&args, evaluate_lisp(node.items[i], env));
+      }
 
-    for (size_t i = 1; i < node.size; i++) {
-      da_append(&args, evaluate_lisp(node.items[i], env));
+      free(node.items);
+
+      LispValue result = callable.builtin_function(args.array, args.size, env);
+      da_free(&args);
+
+      return result;
+    } else if (callable.type == LISP_BUILTIN) {
+      LispValue result = callable.builtin(node.items + 1, node.size - 1, env);
+      free(node.items);
+
+      return result;
     }
 
-    free(node.items);
-
-    LispValue result = callable.builtin_function(args.array, args.size, env);
-    da_free(&args);
-
-    return result;
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "tried to call non-callable"};
 
   default:
     TODO();
@@ -483,6 +490,64 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 }
 
 // -- END OF Evaluate --
+
+LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
+  if (arg_count < 2)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`let` requires at least 2 arguments"};
+
+  ParserNode defs_node = args[0];
+
+  if (defs_node.type != PN_TUPLE)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message =
+                           "first argument to `let` must be a tuple"};
+
+  Environment new_env = {.other = env};
+  da_init(&new_env);
+
+  for (size_t i = 0; i < defs_node.size; i++) {
+    ParserNode def_node = defs_node.items[i];
+
+    if (def_node.type != PN_TUPLE)
+      return (LispValue){
+          .type = LISP_ERROR,
+          .error_message = "first argument to `let` must be a tuple of tuples"};
+
+    if (def_node.size != 2)
+      return (LispValue){
+          .type = LISP_ERROR,
+          .error_message =
+              "first argument to `let` must be a tuple of tuples with sizes 2"};
+
+    if (def_node.items[0].type != PN_SYMBOL)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message =
+                             "first argument to `let` must be a tuple of "
+                             "tuples with first element being a symbol"};
+
+    char *symbol = def_node.items[0].symbol;
+
+    if (env_find_shallow(&new_env, symbol))
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "redefined symbol"};
+
+    // TODO: Maybe the passed environment should be the new environment.
+    // That way one variable defined can be used in the other one.
+    LispValue value = evaluate_lisp(def_node.items[1], env);
+
+    EnvironmentEntry entry =
+        (EnvironmentEntry){.symbol = symbol, .value = value};
+    da_append(&new_env, entry);
+  }
+
+  LispValue return_value = {.type = LISP_NIL};
+  for (size_t i = 1; i < arg_count; i++) {
+    return_value = evaluate_lisp(args[i], &new_env);
+  }
+
+  return return_value;
+}
 
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
@@ -554,6 +619,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN_FUNC,
                         .builtin_function = (LispValue (*)(
                             LispValue *, size_t, void *))builtin_sum});
+
+    env_set(&global_env, "let",
+            (LispValue){.type = LISP_BUILTIN,
+                        .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                  void *))builtin_let});
 
     for (size_t i = 0; i < nodes.size; i++) {
       LispValue value = evaluate_lisp(nodes.array[i], &global_env);
