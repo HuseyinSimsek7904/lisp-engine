@@ -573,6 +573,23 @@ LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
   return return_value;
 }
 
+LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
+  if (arg_count < 2)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`if` requires at least 2 arguments"};
+
+  LispValue boolean = evaluate_lisp(args[0], env);
+
+  if (boolean.type != LISP_NIL)
+    return evaluate_lisp(args[1], env);
+
+  LispValue result = {.type = LISP_NIL};
+  for (size_t i = 2; i < arg_count; i++) {
+    result = evaluate_lisp(args[i], env);
+  }
+  return result;
+}
+
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
     if (args[i].type != LISP_STRING)
@@ -657,6 +674,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN,
                         .builtin = (LispValue (*)(ParserNode *, size_t,
                                                   void *))builtin_set});
+
+    env_set(&global_env, "if",
+            (LispValue){.type = LISP_BUILTIN,
+                        .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                  void *))builtin_if});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
