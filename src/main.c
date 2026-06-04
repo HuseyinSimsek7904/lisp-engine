@@ -390,13 +390,22 @@ typedef struct Environment {
   struct Environment *other;
 } Environment;
 
-EnvironmentEntry *env_find(Environment *env, char *symbol) {
+EnvironmentEntry *env_find_shallow(Environment *env, char *symbol) {
   for (size_t i = 0; i < env->size; i++) {
     if (strcmp(env->array[i].symbol, symbol) == 0)
       return &env->array[i];
   }
 
-  if (env->other == NULL)
+  return NULL;
+}
+
+EnvironmentEntry *env_find(Environment *env, char *symbol) {
+  EnvironmentEntry *search = env_find_shallow(env, symbol);
+
+  if (search)
+    return search;
+
+  if (!env->other)
     return NULL;
 
   return env_find(env->other, symbol);
