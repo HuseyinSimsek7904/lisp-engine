@@ -590,6 +590,17 @@ LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
   return result;
 }
 
+LispValue builtin_do(ParserNode *args, size_t arg_count, Environment *env) {
+  LispValue result = {.type = LISP_NIL};
+  for (size_t i = 0; i < arg_count; i++) {
+    result = evaluate_lisp(args[i], env);
+
+    if (result.type == LISP_ERROR)
+      return result;
+  }
+  return result;
+}
+
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
     if (args[i].type != LISP_STRING)
@@ -679,6 +690,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN,
                         .builtin = (LispValue (*)(ParserNode *, size_t,
                                                   void *))builtin_if});
+
+    env_set(&global_env, "do",
+            (LispValue){.type = LISP_BUILTIN,
+                        .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                  void *))builtin_do});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
