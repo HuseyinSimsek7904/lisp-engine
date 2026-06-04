@@ -331,6 +331,7 @@ typedef enum {
   LISP_BUILTIN,
   LISP_BUILTIN_FUNC,
   LISP_FUNC,
+  LISP_LIST,
 } LispType;
 
 typedef struct LispValue {
@@ -348,6 +349,11 @@ typedef struct LispValue {
       ParserNode *body;
       size_t body_size;
     } function;
+    struct {
+      struct LispValue *array;
+      size_t size;
+      size_t capacity;
+    } list;
   };
 } LispValue;
 
@@ -401,6 +407,18 @@ void print_lisp(LispValue value) {
       printf(" %s", value.function.args[i]);
     }
     printf(")>");
+    break;
+
+  case LISP_LIST:
+    printf("[");
+    if (value.list.size > 0)
+      print_lisp(value.list.array[0]);
+
+    for (size_t i = 1; i < value.list.size; i++) {
+      printf(" ");
+      print_lisp(value.list.array[i]);
+    }
+    printf("]");
     break;
 
   default:
@@ -712,6 +730,17 @@ LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
   return (LispValue){.type = LISP_INT64, .integer = sum};
 }
 
+LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
+  LispValue value = {.type = LISP_LIST};
+
+  da_init(&value.list);
+  for (size_t i = 0; i < arg_count; i++) {
+    da_append(&value.list, args[i]);
+  }
+
+  return value;
+}
+
 int main(void) {
   while (true) {
     char *lisp = readline("> ");
@@ -783,6 +812,11 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN,
                         .builtin = (LispValue (*)(ParserNode *, size_t,
                                                   void *))builtin_fn});
+
+    env_set(&global_env, "list",
+            (LispValue){.type = LISP_BUILTIN_FUNC,
+                        .builtin_function = (LispValue (*)(
+                            LispValue *, size_t, void *))builtin_list});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
