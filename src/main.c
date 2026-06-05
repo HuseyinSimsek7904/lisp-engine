@@ -926,6 +926,83 @@ LispValue builtin_greater_equal(LispValue *args, size_t arg_count,
 }
 
 int main(void) {
+  Environment global_env = {.other = NULL};
+  da_init(&global_env);
+
+  env_set(&global_env, "nil", (LispValue){.type = LISP_NIL});
+
+  env_set(&global_env, "t", (LispValue){.type = LISP_T});
+
+  env_set(&global_env, "print",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_print});
+
+  env_set(&global_env, "+",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(LispValue *, size_t,
+                                                         void *))builtin_sum});
+
+  env_set(&global_env, "let",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                void *))builtin_let});
+
+  env_set(&global_env, "set",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                void *))builtin_set});
+
+  env_set(&global_env, "if",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                void *))builtin_if});
+
+  env_set(&global_env, "do",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                void *))builtin_do});
+
+  env_set(&global_env, "fn",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                                                void *))builtin_fn});
+
+  env_set(&global_env, "list",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(LispValue *, size_t,
+                                                         void *))builtin_list});
+
+  env_set(&global_env, "=",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_equal});
+
+  env_set(&global_env, "!=",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_not_equal});
+
+  env_set(&global_env, "<",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_less_than});
+
+  env_set(&global_env, "<=",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_less_equal});
+
+  env_set(&global_env, ">",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_greater_than});
+
+  env_set(&global_env, ">=",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_greater_equal});
+
   while (true) {
     char *lisp = readline("> ");
 
@@ -954,84 +1031,6 @@ int main(void) {
       fprintf(stderr, "could not parse lisp\n");
       continue;
     }
-
-    Environment global_env = {.other = NULL};
-    da_init(&global_env);
-
-    env_set(&global_env, "nil", (LispValue){.type = LISP_NIL});
-
-    env_set(&global_env, "t", (LispValue){.type = LISP_T});
-
-    env_set(&global_env, "print",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_print});
-
-    env_set(&global_env, "+",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_sum});
-
-    env_set(&global_env, "let",
-            (LispValue){.type = LISP_BUILTIN,
-                        .builtin = (LispValue (*)(ParserNode *, size_t,
-                                                  void *))builtin_let});
-
-    env_set(&global_env, "set",
-            (LispValue){.type = LISP_BUILTIN,
-                        .builtin = (LispValue (*)(ParserNode *, size_t,
-                                                  void *))builtin_set});
-
-    env_set(&global_env, "if",
-            (LispValue){.type = LISP_BUILTIN,
-                        .builtin = (LispValue (*)(ParserNode *, size_t,
-                                                  void *))builtin_if});
-
-    env_set(&global_env, "do",
-            (LispValue){.type = LISP_BUILTIN,
-                        .builtin = (LispValue (*)(ParserNode *, size_t,
-                                                  void *))builtin_do});
-
-    env_set(&global_env, "fn",
-            (LispValue){.type = LISP_BUILTIN,
-                        .builtin = (LispValue (*)(ParserNode *, size_t,
-                                                  void *))builtin_fn});
-
-    env_set(&global_env, "list",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_list});
-
-    env_set(&global_env, "=",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_equal});
-
-    env_set(&global_env, "!=",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_not_equal});
-
-    env_set(&global_env, "<",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_less_than});
-
-    env_set(&global_env, "<=",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_less_equal});
-
-    env_set(&global_env, ">",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function = (LispValue (*)(
-                            LispValue *, size_t, void *))builtin_greater_than});
-
-    env_set(&global_env, ">=",
-            (LispValue){.type = LISP_BUILTIN_FUNC,
-                        .builtin_function =
-                            (LispValue (*)(LispValue *, size_t,
-                                           void *))builtin_greater_equal});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
