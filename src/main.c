@@ -655,8 +655,7 @@ LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
   if (args[0].type != PN_SYMBOL)
     return (LispValue){.type = LISP_ERROR,
                        .error_message =
-                           "first argument to `let` must be a tuple of "
-                           "tuples with first element being a symbol"};
+                           "first argument to `set` must be a symbol"};
 
   char *symbol = args[0].symbol;
   LispValue value = evaluate_lisp(args[1], env);
