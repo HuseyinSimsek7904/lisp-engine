@@ -880,16 +880,6 @@ LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {
   return BOOL_TO_LISP(identical_lisp(args[0], args[1]));
 }
 
-LispValue builtin_not_equal(LispValue *args, size_t arg_count,
-                            Environment *env) {
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`!=` expects two arguments"};
-  }
-
-  return BOOL_TO_LISP(!identical_lisp(args[0], args[1]));
-}
-
 LispValue builtin_less_than(LispValue *args, size_t arg_count,
                             Environment *env) {
   // NOTE: Later, we can change this function to accept any number of arguments.
@@ -903,51 +893,6 @@ LispValue builtin_less_than(LispValue *args, size_t arg_count,
                        .error_message = "`<` expects two integers"};
 
   return BOOL_TO_LISP(args[0].integer < args[1].integer);
-}
-
-LispValue builtin_less_equal(LispValue *args, size_t arg_count,
-                             Environment *env) {
-  // NOTE: Later, we can change this function to accept any number of arguments.
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`<=` expects two arguments"};
-  }
-
-  if (args[0].type != LISP_INT64 || args[1].type != LISP_INT64)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`<=` expects two integers"};
-
-  return BOOL_TO_LISP(args[0].integer <= args[1].integer);
-}
-
-LispValue builtin_greater_than(LispValue *args, size_t arg_count,
-                               Environment *env) {
-  // NOTE: Later, we can change this function to accept any number of arguments.
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`>` expects two arguments"};
-  }
-
-  if (args[0].type != LISP_INT64 || args[1].type != LISP_INT64)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`>` expects two integers"};
-
-  return BOOL_TO_LISP(args[0].integer > args[1].integer);
-}
-
-LispValue builtin_greater_equal(LispValue *args, size_t arg_count,
-                                Environment *env) {
-  // NOTE: Later, we can change this function to accept any number of arguments.
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`>=` expects two arguments"};
-  }
-
-  if (args[0].type != LISP_INT64 || args[1].type != LISP_INT64)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`>=` expects two integers"};
-
-  return BOOL_TO_LISP(args[0].integer >= args[1].integer);
 }
 
 LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
@@ -1038,30 +983,10 @@ int main(void) {
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_equal});
 
-  env_set(&global_env, "!=",
-          (LispValue){.type = LISP_BUILTIN_FUNC,
-                      .builtin_function = (LispValue (*)(
-                          LispValue *, size_t, void *))builtin_not_equal});
-
   env_set(&global_env, "<",
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_less_than});
-
-  env_set(&global_env, "<=",
-          (LispValue){.type = LISP_BUILTIN_FUNC,
-                      .builtin_function = (LispValue (*)(
-                          LispValue *, size_t, void *))builtin_less_equal});
-
-  env_set(&global_env, ">",
-          (LispValue){.type = LISP_BUILTIN_FUNC,
-                      .builtin_function = (LispValue (*)(
-                          LispValue *, size_t, void *))builtin_greater_than});
-
-  env_set(&global_env, ">=",
-          (LispValue){.type = LISP_BUILTIN_FUNC,
-                      .builtin_function = (LispValue (*)(
-                          LispValue *, size_t, void *))builtin_greater_equal});
 
   env_set(&global_env, "include",
           (LispValue){.type = LISP_BUILTIN_FUNC,
