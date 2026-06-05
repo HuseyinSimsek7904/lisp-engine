@@ -504,6 +504,14 @@ typedef struct Environment {
   struct Environment *other;
 } Environment;
 
+void env_free(Environment *env) {
+  for (size_t i = 0; i < env->size; i++) {
+    free(env->array[i].symbol);
+  }
+
+  da_free(env);
+}
+
 EnvironmentEntry *env_find_shallow(Environment *env, char *symbol) {
   for (size_t i = 0; i < env->size; i++) {
     if (strcmp(env->array[i].symbol, symbol) == 0)
@@ -530,7 +538,7 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
 
   if (!entry) {
     EnvironmentEntry entry =
-        (EnvironmentEntry){.symbol = symbol, .value = value};
+        (EnvironmentEntry){.symbol = strdup(symbol), .value = value};
     da_append(env, entry);
     return &env->array[env->size - 1];
   }
@@ -605,28 +613,26 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
       da_init(&new_env);
 
       for (size_t i = 0; i < callable.function.arg_count; i++) {
-        EnvironmentEntry entry = (EnvironmentEntry){
-            .symbol = callable.function.args[i], .value = args.array[i]};
-        da_append(&new_env, entry);
+        env_set(&new_env, callable.function.args[i], args.array[i]);
       }
 
       if (callable.function.variadic) {
-        EnvironmentEntry entry =
-            (EnvironmentEntry){.symbol = callable.function.variadic,
-                               .value = (LispValue){.type = LISP_LIST}};
-        da_init(&entry.value.list);
+        LispValue list = {.type = LISP_LIST};
+        da_init(&list.list);
 
         for (size_t i = callable.function.arg_count; i < args.size; i++) {
-          da_append(&entry.value.list, args.array[i]);
+          da_append(&list.list, args.array[i]);
         }
 
-        da_append(&new_env, entry);
+        env_set(&new_env, callable.function.variadic, list);
       }
 
       LispValue result = {.type = LISP_NIL};
       for (size_t i = 0; i < callable.function.body_size; i++) {
         result = evaluate_lisp(callable.function.body[i], &new_env);
       }
+
+      env_free(&new_env);
 
       return result;
     }
@@ -710,15 +716,15 @@ LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
     // That way one variable defined can be used in the other one.
     LispValue value = evaluate_lisp(def_node.items[1], env);
 
-    EnvironmentEntry entry =
-        (EnvironmentEntry){.symbol = symbol, .value = value};
-    da_append(&new_env, entry);
+    env_set(&new_env, symbol, value);
   }
 
   LispValue return_value = {.type = LISP_NIL};
   for (size_t i = 1; i < arg_count; i++) {
     return_value = evaluate_lisp(args[i], &new_env);
   }
+
+  env_free(&new_env);
 
   return return_value;
 }
