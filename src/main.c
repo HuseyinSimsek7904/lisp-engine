@@ -779,7 +779,7 @@ LispValue builtin_fn(ParserNode *args, size_t arg_count, Environment *env) {
           .error_message = "first argument to `fn` must be a tuple of symbols"};
 
     for (size_t j = 0; j < i; j++) {
-      if (strcmp(new_args[i], args[0].items[i].symbol) == 0)
+      if (strcmp(new_args[j], args[0].items[i].symbol) == 0)
         return (LispValue){.type = LISP_ERROR,
                            .error_message = "repeated argument"};
     }
