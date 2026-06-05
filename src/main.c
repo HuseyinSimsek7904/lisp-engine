@@ -1032,7 +1032,7 @@ int main(void) {
       continue;
     }
 
-    LispValue return_value;
+    LispValue return_value = {.type = LISP_NIL};
     for (size_t i = 0; i < nodes.size; i++) {
       return_value = evaluate_lisp(nodes.array[i], &global_env);
     }
