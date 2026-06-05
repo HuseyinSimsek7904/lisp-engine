@@ -561,7 +561,6 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 
   case PN_SYMBOL: {
     EnvironmentEntry *entry = env_find(env, node.symbol);
-    free(node.symbol);
 
     if (entry)
       return entry->value;
@@ -583,10 +582,7 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
         da_append(&args, evaluate_lisp(node.items[i], env));
       }
 
-      free(node.items);
-
       LispValue result = callable.builtin_function(args.array, args.size, env);
-      da_free(&args);
 
       return result;
     } else if (callable.type == LISP_BUILTIN) {
@@ -598,8 +594,6 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
       for (size_t i = 1; i < node.size; i++) {
         da_append(&args, evaluate_lisp(node.items[i], env));
       }
-
-      free(node.items);
 
       if ((callable.function.variadic &&
            args.size < callable.function.arg_count) ||
@@ -820,7 +814,6 @@ LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
 
   for (size_t i = 0; i < arg_count; i++) {
     printf("%s\n", args[i].string);
-    free(args[i].string);
   }
 
   return (LispValue){.type = LISP_NIL};
