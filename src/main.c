@@ -645,6 +645,32 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
   return (LispValue){.type = LISP_NIL};
 }
 
+LispValue repl(char *lisp, Environment *env) {
+  Tokens tokens;
+  da_init(&tokens);
+  TokenizeResult tokenize_result = tokenize(lisp, &tokens);
+
+  if (tokenize_result)
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "could not tokenize lisp"};
+
+  ParserNodes nodes;
+  da_init(&nodes);
+
+  ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
+  da_free(&tokens);
+
+  if (parser_result)
+    return (LispValue){.type = LISP_ERROR, .error_message = "could not parse"};
+
+  LispValue return_value = {.type = LISP_NIL};
+  for (size_t i = 0; i < nodes.size; i++) {
+    return_value = evaluate_lisp(nodes.array[i], env);
+  }
+
+  return return_value;
+}
+
 // -- END OF Evaluate --
 
 LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
@@ -1008,33 +1034,9 @@ int main(void) {
     if (!lisp)
       exit(0);
 
-    Tokens tokens;
-    da_init(&tokens);
-    TokenizeResult tokenize_result = tokenize(lisp, &tokens);
+    LispValue return_value = repl(lisp, &global_env);
 
     free(lisp);
-
-    if (tokenize_result) {
-      fprintf(stderr, "could not tokenize lisp\n");
-      continue;
-    }
-
-    ParserNodes nodes;
-    da_init(&nodes);
-
-    ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
-
-    da_free(&tokens);
-
-    if (parser_result) {
-      fprintf(stderr, "could not parse lisp\n");
-      continue;
-    }
-
-    LispValue return_value = {.type = LISP_NIL};
-    for (size_t i = 0; i < nodes.size; i++) {
-      return_value = evaluate_lisp(nodes.array[i], &global_env);
-    }
 
     print_lisp(return_value);
     printf("\n");
