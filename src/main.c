@@ -56,6 +56,7 @@ typedef enum {
   T_INT64,
   T_STRING,
   T_SYMBOL,
+  T_AMPERSAND,
 } TokenType;
 
 typedef struct {
@@ -132,8 +133,13 @@ TokenizeResult tokenize(char *lisp_str, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
+    case '&': {
+      Token token = {.type = T_AMPERSAND};
+      da_append(tokens, token);
+    } break;
+
     case '!':
-    case '#' ... '&':
+    case '#' ... '%':
     case '*' ... '/':
     case ':' ... '~': {
       StringBuilder sb;
@@ -191,6 +197,7 @@ typedef enum {
   PN_STRING,
   PN_SYMBOL,
   PN_TUPLE,
+  PN_AMPERSAND,
 } ParserNodeType;
 
 typedef struct ParserNode {
@@ -261,6 +268,10 @@ ParseResult parse(Token *tokens, size_t token_count, ParserNodes *nodes) {
 
     case T_SYMBOL:
       pn = (ParserNode){.type = PN_SYMBOL, .symbol = t.symbol};
+      break;
+
+    case T_AMPERSAND:
+      pn = (ParserNode){.type = PN_AMPERSAND};
       break;
 
     default:
@@ -348,6 +359,7 @@ typedef struct LispValue {
       size_t arg_count;
       ParserNode *body;
       size_t body_size;
+      char *variadic;
     } function;
     struct {
       struct LispValue *array;
@@ -406,6 +418,13 @@ void print_lisp(LispValue value) {
     for (size_t i = 1; i < value.function.arg_count; i++) {
       printf(" %s", value.function.args[i]);
     }
+
+    if (value.function.variadic) {
+      if (value.function.arg_count > 0)
+        printf(" ");
+      printf("& %s", value.function.variadic);
+    }
+
     printf(")>");
     break;
 
@@ -574,17 +593,33 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 
       free(node.items);
 
-      if (callable.function.arg_count != args.size) {
+      if ((callable.function.variadic &&
+           args.size < callable.function.arg_count) ||
+          (!callable.function.variadic &&
+           args.size != callable.function.arg_count)) {
         return (LispValue){.type = LISP_ERROR,
                            .error_message = "incorrect number of parameters"};
       }
 
-      Environment new_env;
+      Environment new_env = {.other = env};
       da_init(&new_env);
 
-      for (size_t i = 0; i < args.size; i++) {
+      for (size_t i = 0; i < callable.function.arg_count; i++) {
         EnvironmentEntry entry = (EnvironmentEntry){
             .symbol = callable.function.args[i], .value = args.array[i]};
+        da_append(&new_env, entry);
+      }
+
+      if (callable.function.variadic) {
+        EnvironmentEntry entry =
+            (EnvironmentEntry){.symbol = callable.function.variadic,
+                               .value = (LispValue){.type = LISP_LIST}};
+        da_init(&entry.value.list);
+
+        for (size_t i = callable.function.arg_count; i < args.size; i++) {
+          da_append(&entry.value.list, args.array[i]);
+        }
+
         da_append(&new_env, entry);
       }
 
@@ -716,21 +751,49 @@ LispValue builtin_fn(ParserNode *args, size_t arg_count, Environment *env) {
                        .error_message =
                            "first argument to `fn` must be a tuple"};
 
+  char *variadic = NULL;
   char **new_args = malloc(sizeof(char *) * arg_count);
   for (size_t i = 0; i < args[0].size; i++) {
+    if (args[0].items[i].type == PN_AMPERSAND) {
+      if (i != args[0].size - 2)
+        return (LispValue){.type = LISP_ERROR,
+                           .error_message =
+                               "exactly one symbol expected after `&`"};
+
+      if (args[0].items[args[0].size - 1].type != PN_SYMBOL)
+        return (LispValue){.type = LISP_ERROR,
+                           .error_message = "symbol expected after `&`"};
+
+      variadic = args[0].items[args[0].size - 1].symbol;
+      for (size_t j = 0; j < i; j++)
+        if (strcmp(new_args[j], variadic) == 0)
+          return (LispValue){.type = LISP_ERROR,
+                             .error_message = "repeated argument"};
+
+      break;
+    }
+
     if (args[0].items[i].type != PN_SYMBOL)
       return (LispValue){
           .type = LISP_ERROR,
           .error_message = "first argument to `fn` must be a tuple of symbols"};
 
+    for (size_t j = 0; j < i; j++) {
+      if (strcmp(new_args[i], args[0].items[i].symbol) == 0)
+        return (LispValue){.type = LISP_ERROR,
+                           .error_message = "repeated argument"};
+    }
+
     new_args[i] = args[0].items[i].symbol;
   }
 
-  return (LispValue){.type = LISP_FUNC,
-                     .function = {.args = new_args,
-                                  .arg_count = args[0].size,
-                                  .body = args + 1,
-                                  .body_size = arg_count - 1}};
+  return (LispValue){
+      .type = LISP_FUNC,
+      .function = {.args = new_args,
+                   .arg_count = args[0].size - (variadic ? 2 : 0),
+                   .body = args + 1,
+                   .body_size = arg_count - 1,
+                   .variadic = variadic}};
 }
 
 LispValue builtin_do(ParserNode *args, size_t arg_count, Environment *env) {
