@@ -427,6 +427,48 @@ void print_lisp(LispValue value) {
   }
 }
 
+bool identical_lisp(LispValue a, LispValue b) {
+  if (a.type != b.type)
+    return false;
+
+  switch (a.type) {
+  case LISP_NIL:
+  case LISP_T:
+    return true;
+
+  case LISP_ERROR:
+    return a.error_message == b.error_message;
+
+  case LISP_INT64:
+    return a.integer == b.integer;
+
+  case LISP_STRING:
+    return strcmp(a.string, b.string);
+
+  case LISP_BUILTIN:
+    return a.builtin == b.builtin;
+
+  case LISP_BUILTIN_FUNC:
+    return a.builtin_function == b.builtin_function;
+
+  case LISP_LIST:
+    if (a.list.size != b.list.size)
+      return false;
+
+    for (size_t i = 0; i < a.list.size; i++)
+      if (!identical_lisp(a.list.array[i], b.list.array[i]))
+        return false;
+
+    return true;
+
+  default:
+    TODO();
+    return false;
+  }
+}
+
+#define BOOL_TO_LISP(x) (LispValue){.type = x ? LISP_T : LISP_NIL};
+
 // -- END OF Lisp Value --
 
 // -- Environment --
@@ -741,6 +783,26 @@ LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
   return value;
 }
 
+LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {
+  // NOTE: Later, we can change this function to accept any number of arguments.
+  if (arg_count != 2) {
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`=` expects two arguments"};
+  }
+
+  return BOOL_TO_LISP(identical_lisp(args[0], args[1]));
+}
+
+LispValue builtin_not_equal(LispValue *args, size_t arg_count,
+                            Environment *env) {
+  if (arg_count != 2) {
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`!=` expects two arguments"};
+  }
+
+  return BOOL_TO_LISP(!identical_lisp(args[0], args[1]));
+}
+
 int main(void) {
   while (true) {
     char *lisp = readline("> ");
@@ -817,6 +879,16 @@ int main(void) {
             (LispValue){.type = LISP_BUILTIN_FUNC,
                         .builtin_function = (LispValue (*)(
                             LispValue *, size_t, void *))builtin_list});
+
+    env_set(&global_env, "=",
+            (LispValue){.type = LISP_BUILTIN_FUNC,
+                        .builtin_function = (LispValue (*)(
+                            LispValue *, size_t, void *))builtin_equal});
+
+    env_set(&global_env, "!=",
+            (LispValue){.type = LISP_BUILTIN_FUNC,
+                        .builtin_function = (LispValue (*)(
+                            LispValue *, size_t, void *))builtin_not_equal});
 
     LispValue return_value;
     for (size_t i = 0; i < nodes.size; i++) {
