@@ -950,6 +950,41 @@ LispValue builtin_greater_equal(LispValue *args, size_t arg_count,
   return BOOL_TO_LISP(args[0].integer >= args[1].integer);
 }
 
+LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
+  LispValue return_value = {.type = LISP_NIL};
+
+  for (size_t i = 0; i < arg_count; i++) {
+    if (args[i].type != LISP_STRING)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "`include` expects strings"};
+
+    FILE *file = fopen(args[i].string, "r");
+    if (!file)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "could not open file"};
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *buffer = malloc(size + 1);
+    if (!buffer)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "could not allocate buffer"};
+
+    if (fread(buffer, 1, size, file) != size)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "could not read the whole file"};
+
+    buffer[size] = '\0';
+    return_value = repl(buffer, env);
+    if (return_value.type == LISP_ERROR)
+      return return_value;
+  }
+
+  return return_value;
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -1027,6 +1062,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_greater_equal});
+
+  env_set(&global_env, "include",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_include});
 
   while (true) {
     char *lisp = readline("> ");
