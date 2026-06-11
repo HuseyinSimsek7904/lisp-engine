@@ -859,6 +859,26 @@ LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
   return (LispValue){.type = LISP_INT64, .integer = sum};
 }
 
+LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
+                             Environment *env) {
+  if (arg_count < 1 || arg_count > 2) {
+    return (LispValue){.type = LISP_ERROR,
+                       .error_message = "`-` expects either 1 or 2 arguments"};
+  }
+
+  for (size_t i = 0; i < arg_count; i++)
+    if (args[i].type != LISP_INT64)
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "invalid type for argument to print"};
+
+  if (arg_count == 1)
+    return (LispValue){.type = LISP_INT64, .integer = -args[0].integer};
+
+  else
+    return (LispValue){.type = LISP_INT64,
+                       .integer = args[0].integer - args[1].integer};
+}
+
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
   LispValue value = {.type = LISP_LIST};
 
@@ -947,6 +967,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(LispValue *, size_t,
                                                          void *))builtin_sum});
+
+  env_set(&global_env, "-",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_neg_or_sub});
 
   env_set(&global_env, "let",
           (LispValue){.type = LISP_BUILTIN,
