@@ -574,7 +574,14 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 
     LispValue callable = evaluate_lisp(node.items[0], env);
 
-    if (callable.type == LISP_BUILTIN_FUNC) {
+    switch (callable.type) {
+    case LISP_ERROR:
+      return callable;
+
+    case LISP_BUILTIN:
+      return callable.builtin(node.items + 1, node.size - 1, env);
+
+    case LISP_BUILTIN_FUNC: {
       LispValues args;
       da_init(&args);
 
@@ -582,12 +589,10 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
         da_append(&args, evaluate_lisp(node.items[i], env));
       }
 
-      LispValue result = callable.builtin_function(args.array, args.size, env);
+      return callable.builtin_function(args.array, args.size, env);
+    }
 
-      return result;
-    } else if (callable.type == LISP_BUILTIN) {
-      return callable.builtin(node.items + 1, node.size - 1, env);
-    } else if (callable.type == LISP_FUNC) {
+    case LISP_FUNC: {
       LispValues args;
       da_init(&args);
 
@@ -612,11 +617,9 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
 
       if (callable.function.variadic) {
         LispValue list = {.type = LISP_LIST};
-        da_init(&list.list);
 
-        for (size_t i = callable.function.arg_count; i < args.size; i++) {
-          da_append(&list.list, args.array[i]);
-        }
+        da_init(&list.list);
+        da_append_many(&list.list, args.array, callable.function.arg_count);
 
         env_set(&new_env, callable.function.variadic, list);
       }
@@ -631,8 +634,10 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
       return result;
     }
 
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "tried to call non-callable"};
+    default:
+      return (LispValue){.type = LISP_ERROR,
+                         .error_message = "tried to call non-callable"};
+    }
 
   default:
     TODO();
@@ -886,9 +891,7 @@ LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
   LispValue value = {.type = LISP_LIST};
 
   da_init(&value.list);
-  for (size_t i = 0; i < arg_count; i++) {
-    da_append(&value.list, args[i]);
-  }
+  da_append_many(&value.list, args, arg_count);
 
   return value;
 }
