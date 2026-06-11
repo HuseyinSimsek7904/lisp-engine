@@ -754,9 +754,12 @@ LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
     return (LispValue){.type = LISP_ERROR,
                        .error_message = "`if` requires at least 2 arguments"};
 
-  LispValue boolean = evaluate_lisp(args[0], env);
+  LispValue condition = evaluate_lisp(args[0], env);
 
-  if (boolean.type != LISP_NIL)
+  if (condition.type == LISP_ERROR)
+    return condition;
+
+  if (condition.type != LISP_NIL)
     return evaluate_lisp(args[1], env);
 
   LispValue result = {.type = LISP_NIL};
