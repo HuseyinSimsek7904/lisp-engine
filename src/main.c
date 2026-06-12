@@ -367,6 +367,30 @@ bool identical_lisp(LispValue a, LispValue b) {
 
 // -- END OF Lisp Value --
 
+// -- Utils --
+
+char *read_file(char *file_name) {
+  FILE *file = fopen(file_name, "r");
+  if (!file)
+    return NULL;
+
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *buffer = malloc(size + 1);
+  if (!buffer)
+    return NULL;
+
+  if (fread(buffer, 1, size, file) != size)
+    return NULL;
+
+  buffer[size] = '\0';
+  return buffer;
+}
+
+// -- END OF Utils --
+
 // -- Parser --
 
 typedef enum {
@@ -854,22 +878,10 @@ LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
     if (args[i].type != LISP_STRING)
       return ERROR_TO_LISP("`include` expects strings");
 
-    FILE *file = fopen(args[i].string, "r");
-    if (!file)
-      return ERROR_TO_LISP("could not open file");
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *buffer = malloc(size + 1);
+    char *buffer = read_file(args[i].string);
     if (!buffer)
-      return ERROR_TO_LISP("could not allocate buffer");
+      return ERROR_TO_LISP("could not read file contents");
 
-    if (fread(buffer, 1, size, file) != size)
-      return ERROR_TO_LISP("could not read the whole file");
-
-    buffer[size] = '\0';
     return_value = repl(buffer, env);
     if (return_value.type == LISP_ERROR)
       return return_value;
@@ -886,22 +898,10 @@ LispValue builtin_read_file(LispValue *args, size_t arg_count,
   if (args[0].type != LISP_STRING)
     return ERROR_TO_LISP("`read-file` expects strings");
 
-  FILE *file = fopen(args[0].string, "r");
-  if (!file)
-    return ERROR_TO_LISP("could not open file");
+  char *buffer = read_file(args[0].string);
 
-  fseek(file, 0, SEEK_END);
-  size_t size = ftell(file);
-  fseek(file, 0, SEEK_SET);
-
-  char *buffer = malloc(size + 1);
   if (!buffer)
-    return ERROR_TO_LISP("could not allocate buffer");
-
-  if (fread(buffer, 1, size, file) != size)
-    return ERROR_TO_LISP("could not read the whole file");
-
-  buffer[size] = '\0';
+    return ERROR_TO_LISP("could not read file contents");
 
   return STR_TO_LISP(buffer);
 }
