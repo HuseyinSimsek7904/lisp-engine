@@ -912,6 +912,14 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
                      .items = {.array = nodes.array, .size = nodes.size}};
 }
 
+LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
+  LispValue return_value = NIL_SINGLETON_LISP;
+  for (size_t i = 0; i < arg_count; i++) {
+    return_value = evaluate_lisp(args[i], env);
+  }
+  return return_value;
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -989,6 +997,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_parse_lisp});
+
+  env_set(&global_env, "eval",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(LispValue *, size_t,
+                                                         void *))builtin_eval});
 
   while (true) {
     char *lisp = readline("> ");
