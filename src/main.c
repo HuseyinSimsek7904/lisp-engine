@@ -246,7 +246,7 @@ void print_lisp(LispValue value) {
     break;
 
   case LISP_ERROR:
-    printf("lisp error: %s\n", value.error_message);
+    printf("<error(%s)>", value.error_message);
     break;
 
   case LISP_STRING:
@@ -254,7 +254,7 @@ void print_lisp(LispValue value) {
     break;
 
   case LISP_SYMBOL:
-    printf("'%s", value.symbol);
+    printf("%s", value.symbol);
     break;
 
   case LISP_INT64:
