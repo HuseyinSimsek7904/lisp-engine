@@ -685,6 +685,25 @@ LispValue builtin_set(LispValue *args, size_t arg_count, Environment *env) {
   return value;
 }
 
+LispValue builtin_setg(LispValue *args, size_t arg_count, Environment *env) {
+  if (arg_count < 2)
+    return ERROR_TO_LISP("`setg` requires at least 2 arguments");
+
+  if (args[0].type != LISP_SYMBOL)
+    return ERROR_TO_LISP("first argument to `setg` must be a symbol");
+
+  char *symbol = args[0].symbol;
+  LispValue value = evaluate_lisp(args[1], env);
+
+  Environment *global = env;
+  while (global->other)
+    global = global->other;
+
+  env_set(global, symbol, value);
+
+  return value;
+}
+
 LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`let` requires at least 2 arguments");
@@ -995,6 +1014,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN,
                       .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_set});
+
+  env_set(&global_env, "setg",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
+                                                void *))builtin_setg});
 
   env_set(&global_env, "if",
           (LispValue){.type = LISP_BUILTIN,
