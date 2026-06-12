@@ -58,7 +58,6 @@ typedef enum {
   T_INT64,
   T_STRING,
   T_SYMBOL,
-  T_AMPERSAND,
 } TokenType;
 
 typedef struct {
@@ -135,13 +134,8 @@ TokenizeResult tokenize(char *lisp_str, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
-    case '&': {
-      Token token = {.type = T_AMPERSAND};
-      da_append(tokens, token);
-    } break;
-
     case '!':
-    case '#' ... '%':
+    case '#' ... '&':
     case '*' ... '/':
     case ':' ... '~': {
       StringBuilder sb;
@@ -204,7 +198,6 @@ typedef enum {
   LISP_BUILTIN_FUNC,
   LISP_FUNC,
   LISP_TUPLE,
-  LISP_AMPERSAND_SYMBOL,
   LISP_UNPACKED,
 } LispType;
 
@@ -284,7 +277,7 @@ void print_lisp(LispValue value) {
     if (value.custom_function.variadic) {
       if (value.custom_function.arg_count > 0)
         printf(" ");
-      printf("& %s", value.custom_function.variadic);
+      printf("(rest %s)", value.custom_function.variadic);
     }
 
     printf(")>");
@@ -442,10 +435,6 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
       pn = (LispValue){.type = LISP_SYMBOL, .symbol = t.symbol};
       break;
 
-    case T_AMPERSAND:
-      pn = (LispValue){.type = LISP_AMPERSAND_SYMBOL};
-      break;
-
     default:
       TODO();
       da_free(&stack);
@@ -534,7 +523,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   switch (lisp.type) {
   case LISP_STRING:
   case LISP_INT64:
-  case LISP_AMPERSAND_SYMBOL:
   case LISP_NIL:
   case LISP_T:
   case LISP_BUILTIN_FUNC:
@@ -781,36 +769,51 @@ LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
   char *variadic = NULL;
   char **new_args = malloc(sizeof(char *) * arg_count);
   for (size_t i = 0; i < args[0].items.size; i++) {
-    if (args[0].items.array[i].type == LISP_AMPERSAND_SYMBOL) {
-      if (i != args[0].items.size - 2)
-        return ERROR_TO_LISP("exactly one symbol expected after `&`");
+    LispValue arg = args[0].items.array[i];
 
-      if (args[0].items.array[args[0].items.size - 1].type != LISP_SYMBOL)
-        return ERROR_TO_LISP("symbol expected after `&`");
+    if (arg.type == LISP_SYMBOL) {
+      if (args[0].items.array[i].type != LISP_SYMBOL)
+        return ERROR_TO_LISP("`fn` argument list must be a tuple of symbols");
 
-      variadic = args[0].items.array[args[0].items.size - 1].symbol;
+      for (size_t j = 0; j < i; j++) {
+        if (strcmp(new_args[j], arg.symbol) == 0)
+          return ERROR_TO_LISP("repeated argument");
+      }
+
+      new_args[i] = arg.symbol;
+
+    } else if (arg.type == LISP_TUPLE) {
+      if (i != args[0].items.size - 1) {
+        TODO();
+        return ERROR_TO_LISP(
+            "only the last item in `fn` arguments list can be a tuple");
+      }
+
+      if (arg.items.size != 2)
+        return ERROR_TO_LISP(
+            "tuple inside `fn` arguments list must be of size 2");
+
+      if (arg.items.array[0].type != LISP_SYMBOL ||
+          strcmp(arg.items.array[0].string, "rest"))
+        return ERROR_TO_LISP("first item in the tuple in the `fn` arguments "
+                             "list must be a `rest` symbol");
+
+      if (arg.items.array[1].type != LISP_SYMBOL)
+        return ERROR_TO_LISP("`rest` argument must be a symbol");
+
+      assert(!variadic);
+
+      variadic = arg.items.array[1].symbol;
       for (size_t j = 0; j < i; j++)
         if (strcmp(new_args[j], variadic) == 0)
-          return ERROR_TO_LISP("repeated argument");
-
-      break;
+          return ERROR_TO_LISP("repeated `rest` argument");
     }
-
-    if (args[0].items.array[i].type != LISP_SYMBOL)
-      return ERROR_TO_LISP("first argument to `fn` must be a tuple of symbols");
-
-    for (size_t j = 0; j < i; j++) {
-      if (strcmp(new_args[j], args[0].items.array[i].symbol) == 0)
-        return ERROR_TO_LISP("repeated argument");
-    }
-
-    new_args[i] = args[0].items.array[i].symbol;
   }
 
   return (LispValue){
       .type = LISP_FUNC,
       .custom_function = {.args = new_args,
-                          .arg_count = args[0].items.size - (variadic ? 2 : 0),
+                          .arg_count = args[0].items.size - (variadic ? 1 : 0),
                           .body = args + 1,
                           .body_size = arg_count - 1,
                           .variadic = variadic}};
