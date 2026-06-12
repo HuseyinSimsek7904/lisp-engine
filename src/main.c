@@ -963,6 +963,13 @@ LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
                      .items = {.array = array, .size = item_count}};
 }
 
+LispValue builtin_quote(LispValue *args, size_t arg_count, Environment *env) {
+  if (arg_count != 1)
+    return ERROR_TO_LISP("`quote` expects exactly 1 arguments");
+
+  return args[0];
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -1050,6 +1057,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_unpack});
+
+  env_set(&global_env, "quote",
+          (LispValue){.type = LISP_BUILTIN,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_quote});
 
   char *startup[] = {"core.l"};
 
