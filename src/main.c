@@ -507,6 +507,13 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   switch (lisp.type) {
   case LISP_STRING:
   case LISP_INT64:
+  case LISP_AMPERSAND_SYMBOL:
+  case LISP_NIL:
+  case LISP_T:
+  case LISP_BUILTIN:
+  case LISP_BUILTIN_FUNC:
+  case LISP_FUNC:
+  case LISP_ERROR:
     return lisp;
 
   case LISP_SYMBOL: {
