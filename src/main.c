@@ -1051,6 +1051,17 @@ int main(void) {
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_unpack});
 
+  char *startup[] = {"core.l"};
+
+  for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
+    char *buffer = read_file(startup[i]);
+    if (!buffer)
+      fprintf(stderr, "warning: could not read contents of %s\n", startup[i]);
+
+    repl(buffer, &global_env);
+  }
+
+
   while (true) {
     char *lisp = readline("> ");
 
