@@ -890,25 +890,6 @@ LispValue builtin_less_than(LispValue *args, size_t arg_count,
   return BOOL_TO_LISP(args[0].integer < args[1].integer);
 }
 
-LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
-  LispValue return_value = {.type = LISP_NIL};
-
-  for (size_t i = 0; i < arg_count; i++) {
-    if (args[i].type != LISP_STRING)
-      return ERROR_TO_LISP("`include` expects strings");
-
-    char *buffer = read_file(args[i].string);
-    if (!buffer)
-      return ERROR_TO_LISP("could not read file contents");
-
-    return_value = repl(buffer, env);
-    if (return_value.type == LISP_ERROR)
-      return return_value;
-  }
-
-  return return_value;
-}
-
 LispValue builtin_read_file(LispValue *args, size_t arg_count,
                             Environment *env) {
   if (arg_count != 1)
@@ -1050,11 +1031,6 @@ int main(void) {
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_less_than});
 
-  env_set(&global_env, "include",
-          (LispValue){.type = LISP_BUILTIN_FUNC,
-                      .builtin_function = (LispValue (*)(
-                          LispValue *, size_t, void *))builtin_include});
-
   env_set(&global_env, "read-file",
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
@@ -1084,7 +1060,6 @@ int main(void) {
 
     repl(buffer, &global_env);
   }
-
 
   while (true) {
     char *lisp = readline("> ");

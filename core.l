@@ -1,3 +1,4 @@
+(setg include (fn (file-name) (eval (unpack (parse-lisp (read-file file-name))))))
 
 (setg not (fn (a) (if a nil t)))
 (setg and (fn (a b) (if a b nil)))
