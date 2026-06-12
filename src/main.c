@@ -33,8 +33,10 @@
   } while (0)
 #define da_append_many(da, items, n)                                           \
   do {                                                                         \
-    while (n - da_avail(da) > 0) {                                             \
-      (da)->capacity *= 2;                                                     \
+    if (n > da_avail(da)) {                                                    \
+      while (n > da_avail(da)) {                                               \
+        (da)->capacity *= 2;                                                   \
+      }                                                                        \
       da_resize(da);                                                           \
     }                                                                          \
     memcpy(&(da)->array[(da)->size], items, da_item_size(da) * n);             \
