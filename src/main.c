@@ -884,6 +884,34 @@ LispValue builtin_read_file(LispValue *args, size_t arg_count,
   return STR_TO_LISP(buffer);
 }
 
+LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
+                             Environment *env) {
+  if (arg_count != 1)
+    return ERROR_TO_LISP("`read-file` expects 1 arguments");
+
+  if (args[0].type != LISP_STRING)
+    return ERROR_TO_LISP("`read-file` expects strings");
+
+  Tokens tokens;
+  da_init(&tokens);
+  TokenizeResult tokenize_result = tokenize(args[0].string, &tokens);
+
+  if (tokenize_result)
+    return ERROR_TO_LISP("could not tokenize lisp");
+
+  LispValues nodes;
+  da_init(&nodes);
+
+  ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
+  da_free(&tokens);
+
+  if (parser_result)
+    return ERROR_TO_LISP("could not parse");
+
+  return (LispValue){.type = LISP_TUPLE,
+                     .items = {.array = nodes.array, .size = nodes.size}};
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -956,6 +984,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_read_file});
+
+  env_set(&global_env, "parse-lisp",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_parse_lisp});
 
   while (true) {
     char *lisp = readline("> ");
