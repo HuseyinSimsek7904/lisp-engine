@@ -486,7 +486,18 @@ bool identical_lisp(LispValue a, LispValue b) {
   }
 }
 
-#define BOOL_TO_LISP(x) (LispValue){.type = x ? LISP_T : LISP_NIL};
+#define BOOL_TO_LISP(x)                                                        \
+  (LispValue) { .type = x ? LISP_T : LISP_NIL }
+#define INT64_TO_LISP(x)                                                       \
+  (LispValue) { .type = LISP_INT64, .integer = x }
+#define ERROR_TO_LISP(x)                                                       \
+  (LispValue) { .type = LISP_ERROR, .error_message = x }
+#define STR_TO_LISP(x)                                                         \
+  (LispValue) { .type = LISP_STRING, .string = x }
+#define NIL_SINGLETON_LISP                                                     \
+  (LispValue) { .type = LISP_NIL }
+#define T_SINGLETON_LISP                                                       \
+  (LispValue) { .type = LISP_T }
 
 // -- END OF Lisp Value --
 
@@ -554,10 +565,10 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
 LispValue evaluate_lisp(ParserNode node, Environment *env) {
   switch (node.type) {
   case PN_STRING:
-    return (LispValue){.type = LISP_STRING, .string = node.string};
+    return STR_TO_LISP(node.string);
 
   case PN_INT64:
-    return (LispValue){.type = LISP_INT64, .integer = node.integer};
+    return INT64_TO_LISP(node.integer);
 
   case PN_SYMBOL: {
     EnvironmentEntry *entry = env_find(env, node.symbol);
@@ -565,12 +576,12 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
     if (entry)
       return entry->value;
 
-    return (LispValue){.type = LISP_ERROR, .error_message = "undefined symbol"};
+    return ERROR_TO_LISP("undefined symbol");
   }
 
   case PN_TUPLE:
     if (!node.size)
-      return (LispValue){.type = LISP_NIL};
+      return NIL_SINGLETON_LISP;
 
     LispValue callable = evaluate_lisp(node.items[0], env);
 
@@ -604,8 +615,8 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
            args.size < callable.function.arg_count) ||
           (!callable.function.variadic &&
            args.size != callable.function.arg_count)) {
-        return (LispValue){.type = LISP_ERROR,
-                           .error_message = "incorrect number of parameters"};
+
+        return ERROR_TO_LISP("incorrect number of parameters");
       }
 
       Environment new_env = {.other = env};
@@ -635,19 +646,13 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
     }
 
     default:
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "tried to call non-callable"};
+      return ERROR_TO_LISP("tried to call non-callable");
     }
 
   default:
     TODO();
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message =
-                           "unknown parser node while trying to evaluate"};
+    return ERROR_TO_LISP("unknown node while trying to evaluate");
   }
-
-  // dummy return
-  return (LispValue){.type = LISP_NIL};
 }
 
 LispValue repl(char *lisp, Environment *env) {
@@ -656,8 +661,7 @@ LispValue repl(char *lisp, Environment *env) {
   TokenizeResult tokenize_result = tokenize(lisp, &tokens);
 
   if (tokenize_result)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "could not tokenize lisp"};
+    return ERROR_TO_LISP("could not tokenize lisp");
 
   ParserNodes nodes;
   da_init(&nodes);
@@ -666,7 +670,7 @@ LispValue repl(char *lisp, Environment *env) {
   da_free(&tokens);
 
   if (parser_result)
-    return (LispValue){.type = LISP_ERROR, .error_message = "could not parse"};
+    return ERROR_TO_LISP("could not parse");
 
   LispValue return_value = {.type = LISP_NIL};
   for (size_t i = 0; i < nodes.size; i++) {
@@ -680,13 +684,10 @@ LispValue repl(char *lisp, Environment *env) {
 
 LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`set` requires at least 2 arguments"};
+    return ERROR_TO_LISP("`set` requires at least 2 arguments");
 
   if (args[0].type != PN_SYMBOL)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message =
-                           "first argument to `set` must be a symbol"};
+    return ERROR_TO_LISP("first argument to `set` must be a symbol");
 
   char *symbol = args[0].symbol;
   LispValue value = evaluate_lisp(args[1], env);
@@ -698,15 +699,12 @@ LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`let` requires at least 2 arguments"};
+    return ERROR_TO_LISP("`let` requires at least 2 arguments");
 
   ParserNode defs_node = args[0];
 
   if (defs_node.type != PN_TUPLE)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message =
-                           "first argument to `let` must be a tuple"};
+    return ERROR_TO_LISP("first argument to `let` must be a tuple");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
@@ -715,27 +713,20 @@ LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
     ParserNode def_node = defs_node.items[i];
 
     if (def_node.type != PN_TUPLE)
-      return (LispValue){
-          .type = LISP_ERROR,
-          .error_message = "first argument to `let` must be a tuple of tuples"};
+      return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples");
 
     if (def_node.size != 2)
-      return (LispValue){
-          .type = LISP_ERROR,
-          .error_message =
-              "first argument to `let` must be a tuple of tuples with sizes 2"};
+      return ERROR_TO_LISP(
+          "first argument to `let` must be a tuple of tuples with sizes 2");
 
     if (def_node.items[0].type != PN_SYMBOL)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message =
-                             "first argument to `let` must be a tuple of "
-                             "tuples with first element being a symbol"};
+      return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples "
+                           "with first element being a symbol");
 
     char *symbol = def_node.items[0].symbol;
 
     if (env_find_shallow(&new_env, symbol))
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "redefined symbol"};
+      return ERROR_TO_LISP("redefined symbol");
 
     // TODO: Maybe the passed environment should be the new environment.
     // That way one variable defined can be used in the other one.
@@ -756,8 +747,7 @@ LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`if` requires at least 2 arguments"};
+    return ERROR_TO_LISP("`if` requires at least 2 arguments");
 
   LispValue condition = evaluate_lisp(args[0], env);
 
@@ -776,45 +766,35 @@ LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_fn(ParserNode *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`fn` requires at least 2 arguments"};
+    return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
   if (args[0].type != PN_TUPLE)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message =
-                           "first argument to `fn` must be a tuple"};
+    return ERROR_TO_LISP("first argument to `fn` must be a tuple");
 
   char *variadic = NULL;
   char **new_args = malloc(sizeof(char *) * arg_count);
   for (size_t i = 0; i < args[0].size; i++) {
     if (args[0].items[i].type == PN_AMPERSAND) {
       if (i != args[0].size - 2)
-        return (LispValue){.type = LISP_ERROR,
-                           .error_message =
-                               "exactly one symbol expected after `&`"};
+        return ERROR_TO_LISP("exactly one symbol expected after `&`");
 
       if (args[0].items[args[0].size - 1].type != PN_SYMBOL)
-        return (LispValue){.type = LISP_ERROR,
-                           .error_message = "symbol expected after `&`"};
+        return ERROR_TO_LISP("symbol expected after `&`");
 
       variadic = args[0].items[args[0].size - 1].symbol;
       for (size_t j = 0; j < i; j++)
         if (strcmp(new_args[j], variadic) == 0)
-          return (LispValue){.type = LISP_ERROR,
-                             .error_message = "repeated argument"};
+          return ERROR_TO_LISP("repeated argument");
 
       break;
     }
 
     if (args[0].items[i].type != PN_SYMBOL)
-      return (LispValue){
-          .type = LISP_ERROR,
-          .error_message = "first argument to `fn` must be a tuple of symbols"};
+      return ERROR_TO_LISP("first argument to `fn` must be a tuple of symbols");
 
     for (size_t j = 0; j < i; j++) {
       if (strcmp(new_args[j], args[0].items[i].symbol) == 0)
-        return (LispValue){.type = LISP_ERROR,
-                           .error_message = "repeated argument"};
+        return ERROR_TO_LISP("repeated argument");
     }
 
     new_args[i] = args[0].items[i].symbol;
@@ -843,48 +823,39 @@ LispValue builtin_do(ParserNode *args, size_t arg_count, Environment *env) {
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
     if (args[i].type != LISP_STRING)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "invalid type for argument to print"};
+      return ERROR_TO_LISP("invalid type for argument to `print`");
 
   for (size_t i = 0; i < arg_count; i++) {
     printf("%s\n", args[i].string);
   }
 
-  return (LispValue){.type = LISP_NIL};
+  return NIL_SINGLETON_LISP;
 }
 
 LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
     if (args[i].type != LISP_INT64)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "invalid type for argument to print"};
+      return ERROR_TO_LISP("invalid type for argument to `+`");
 
   int64_t sum = 0;
   for (size_t i = 0; i < arg_count; i++) {
     sum += args[i].integer;
   }
 
-  return (LispValue){.type = LISP_INT64, .integer = sum};
+  return INT64_TO_LISP(sum);
 }
 
 LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
                              Environment *env) {
-  if (arg_count < 1 || arg_count > 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`-` expects either 1 or 2 arguments"};
-  }
+  if (arg_count < 1 || arg_count > 2)
+    return ERROR_TO_LISP("`-` expectes either 1 or 2 arguments");
 
   for (size_t i = 0; i < arg_count; i++)
     if (args[i].type != LISP_INT64)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "invalid type for argument to print"};
+      return ERROR_TO_LISP("invalid type for argument to `-`");
 
-  if (arg_count == 1)
-    return (LispValue){.type = LISP_INT64, .integer = -args[0].integer};
-
-  else
-    return (LispValue){.type = LISP_INT64,
-                       .integer = args[0].integer - args[1].integer};
+  return INT64_TO_LISP(arg_count == 1 ? -args[0].integer
+                                      : args[0].integer - args[1].integer);
 }
 
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
@@ -898,10 +869,8 @@ LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {
   // NOTE: Later, we can change this function to accept any number of arguments.
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`=` expects two arguments"};
-  }
+  if (arg_count != 2)
+    return ERROR_TO_LISP("`=` expects 2 arguments");
 
   return BOOL_TO_LISP(identical_lisp(args[0], args[1]));
 }
@@ -909,14 +878,11 @@ LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {
 LispValue builtin_less_than(LispValue *args, size_t arg_count,
                             Environment *env) {
   // NOTE: Later, we can change this function to accept any number of arguments.
-  if (arg_count != 2) {
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`<` expects two arguments"};
-  }
+  if (arg_count != 2)
+    return ERROR_TO_LISP("`<` expects 2 arguments");
 
   if (args[0].type != LISP_INT64 || args[1].type != LISP_INT64)
-    return (LispValue){.type = LISP_ERROR,
-                       .error_message = "`<` expects two integers"};
+    return ERROR_TO_LISP("`<` expects 2 integers");
 
   return BOOL_TO_LISP(args[0].integer < args[1].integer);
 }
@@ -926,13 +892,11 @@ LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
 
   for (size_t i = 0; i < arg_count; i++) {
     if (args[i].type != LISP_STRING)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "`include` expects strings"};
+      return ERROR_TO_LISP("`include` expects strings");
 
     FILE *file = fopen(args[i].string, "r");
     if (!file)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "could not open file"};
+      return ERROR_TO_LISP("could not open file");
 
     fseek(file, 0, SEEK_END);
     size_t size = ftell(file);
@@ -940,12 +904,10 @@ LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
 
     char *buffer = malloc(size + 1);
     if (!buffer)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "could not allocate buffer"};
+      return ERROR_TO_LISP("could not allocate buffer");
 
     if (fread(buffer, 1, size, file) != size)
-      return (LispValue){.type = LISP_ERROR,
-                         .error_message = "could not read the whole file"};
+      return ERROR_TO_LISP("could not read the whole file");
 
     buffer[size] = '\0';
     return_value = repl(buffer, env);
@@ -960,9 +922,9 @@ int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
 
-  env_set(&global_env, "nil", (LispValue){.type = LISP_NIL});
+  env_set(&global_env, "nil", NIL_SINGLETON_LISP);
 
-  env_set(&global_env, "t", (LispValue){.type = LISP_T});
+  env_set(&global_env, "t", T_SINGLETON_LISP);
 
   env_set(&global_env, "print",
           (LispValue){.type = LISP_BUILTIN_FUNC,
