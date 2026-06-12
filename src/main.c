@@ -190,146 +190,6 @@ void print_lisp_token(Token token) {
 
 // -- END OF Tokenizer --
 
-// -- Parser --
-
-typedef enum {
-  PN_INT64,
-  PN_STRING,
-  PN_SYMBOL,
-  PN_TUPLE,
-  PN_AMPERSAND,
-} ParserNodeType;
-
-typedef struct ParserNode {
-  ParserNodeType type;
-  union {
-    int64_t integer;
-    char *string;
-    char *symbol;
-    struct {
-      struct ParserNode *items;
-      size_t size;
-    };
-  };
-} ParserNode;
-
-typedef struct {
-  ParserNode *array;
-  size_t capacity;
-  size_t size;
-} ParserNodes;
-
-typedef struct {
-  ParserNodes *array;
-  size_t capacity;
-  size_t size;
-} ParserNodesArray;
-
-typedef enum {
-  PARSER_SUCCESS = 0,
-  PARSER_TOO_MANY_CLOSING,
-  PARSER_TOO_MANY_OPENING,
-  PARSER_UNKNOWN_TOKEN,
-} ParseResult;
-
-ParseResult parse(Token *tokens, size_t token_count, ParserNodes *nodes) {
-  ParserNodesArray stack;
-  da_init(&stack);
-
-  for (; token_count > 0; token_count--) {
-    Token t = *tokens++;
-
-    ParserNode pn;
-    switch (t.type) {
-    case T_L_PAREN:
-      da_append(&stack, (ParserNodes){});
-      da_init(&stack.array[stack.size - 1]);
-      continue;
-
-    case T_R_PAREN:
-      if (!stack.size) {
-        da_free(&stack);
-        return PARSER_TOO_MANY_CLOSING;
-      }
-
-      ParserNodes *new_nodes = &stack.array[stack.size - 1];
-      pn = (ParserNode){
-          .type = PN_TUPLE, .items = new_nodes->array, .size = new_nodes->size};
-      stack.size--;
-      break;
-
-    case T_INT64:
-      pn = (ParserNode){.type = PN_INT64, .integer = t.integer};
-      break;
-
-    case T_STRING:
-      pn = (ParserNode){.type = PN_STRING, .string = t.string};
-      break;
-
-    case T_SYMBOL:
-      pn = (ParserNode){.type = PN_SYMBOL, .symbol = t.symbol};
-      break;
-
-    case T_AMPERSAND:
-      pn = (ParserNode){.type = PN_AMPERSAND};
-      break;
-
-    default:
-      TODO();
-      da_free(&stack);
-      return PARSER_UNKNOWN_TOKEN;
-    }
-
-    if (stack.size) {
-      da_append(&stack.array[stack.size - 1], pn);
-    } else {
-      da_append(nodes, pn);
-    }
-  }
-
-  da_free(&stack);
-
-  if (stack.size)
-    return PARSER_TOO_MANY_OPENING;
-
-  return PARSER_SUCCESS;
-}
-
-void print_parser_nodes(ParserNode *nodes, size_t n) {
-  for (size_t i = 0; i < n; i++) {
-    ParserNode pn = nodes[i];
-
-    switch (pn.type) {
-    case PN_INT64:
-      printf("%lu", pn.integer);
-      break;
-
-    case PN_STRING:
-      printf("\"%s\"", pn.string);
-      break;
-
-    case PN_SYMBOL:
-      printf("%s", pn.symbol);
-      break;
-
-    case PN_TUPLE:
-      printf("(");
-      print_parser_nodes(pn.items, pn.size);
-      printf(")");
-      break;
-
-    default:
-      TODO();
-      break;
-    }
-
-    if (i < n - 1)
-      printf(" ");
-  }
-}
-
-// -- END OF Parser --
-
 // -- Lisp Value --
 
 typedef enum {
@@ -342,7 +202,8 @@ typedef enum {
   LISP_BUILTIN,
   LISP_BUILTIN_FUNC,
   LISP_FUNC,
-  LISP_LIST,
+  LISP_TUPLE,
+  LISP_AMPERSAND_SYMBOL,
 } LispType;
 
 typedef struct LispValue {
@@ -352,20 +213,19 @@ typedef struct LispValue {
     char *error_message;
     char *symbol;
     int64_t integer;
-    struct LispValue (*builtin)(ParserNode *, size_t, void *);
+    struct LispValue (*builtin)(struct LispValue *, size_t, void *);
     struct LispValue (*builtin_function)(struct LispValue *, size_t, void *);
     struct {
       char **args;
       size_t arg_count;
-      ParserNode *body;
+      struct LispValue *body;
       size_t body_size;
       char *variadic;
     } function;
     struct {
       struct LispValue *array;
       size_t size;
-      size_t capacity;
-    } list;
+    } items;
   };
 } LispValue;
 
@@ -428,16 +288,16 @@ void print_lisp(LispValue value) {
     printf(")>");
     break;
 
-  case LISP_LIST:
-    printf("[");
-    if (value.list.size > 0)
-      print_lisp(value.list.array[0]);
+  case LISP_TUPLE:
+    printf("(");
+    if (value.items.size > 0)
+      print_lisp(value.items.array[0]);
 
-    for (size_t i = 1; i < value.list.size; i++) {
+    for (size_t i = 1; i < value.items.size; i++) {
       printf(" ");
-      print_lisp(value.list.array[i]);
+      print_lisp(value.items.array[i]);
     }
-    printf("]");
+    printf(")");
     break;
 
   default:
@@ -470,12 +330,12 @@ bool identical_lisp(LispValue a, LispValue b) {
   case LISP_BUILTIN_FUNC:
     return a.builtin_function == b.builtin_function;
 
-  case LISP_LIST:
-    if (a.list.size != b.list.size)
+  case LISP_TUPLE:
+    if (a.items.size != b.items.size)
       return false;
 
-    for (size_t i = 0; i < a.list.size; i++)
-      if (!identical_lisp(a.list.array[i], b.list.array[i]))
+    for (size_t i = 0; i < a.items.size; i++)
+      if (!identical_lisp(a.items.array[i], b.items.array[i]))
         return false;
 
     return true;
@@ -500,6 +360,87 @@ bool identical_lisp(LispValue a, LispValue b) {
   (LispValue) { .type = LISP_T }
 
 // -- END OF Lisp Value --
+
+// -- Parser --
+
+typedef enum {
+  PARSER_SUCCESS = 0,
+  PARSER_TOO_MANY_CLOSING,
+  PARSER_TOO_MANY_OPENING,
+  PARSER_UNKNOWN_TOKEN,
+} ParseResult;
+
+typedef struct {
+  LispValues *array;
+  size_t size;
+  size_t capacity;
+} LispValuesArray;
+
+ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
+  LispValuesArray stack;
+  da_init(&stack);
+
+  for (; token_count > 0; token_count--) {
+    Token t = *tokens++;
+
+    LispValue pn;
+    switch (t.type) {
+    case T_L_PAREN:
+      da_append(&stack, (LispValues){});
+      da_init(&stack.array[stack.size - 1]);
+      continue;
+
+    case T_R_PAREN:
+      if (!stack.size) {
+        da_free(&stack);
+        return PARSER_TOO_MANY_CLOSING;
+      }
+
+      LispValues *new_nodes = &stack.array[stack.size - 1];
+      pn = (LispValue){
+          .type = LISP_TUPLE,
+          .items = {.array = new_nodes->array, .size = new_nodes->size}};
+      stack.size--;
+      break;
+
+    case T_INT64:
+      pn = (LispValue){.type = LISP_INT64, .integer = t.integer};
+      break;
+
+    case T_STRING:
+      pn = (LispValue){.type = LISP_STRING, .string = t.string};
+      break;
+
+    case T_SYMBOL:
+      pn = (LispValue){.type = LISP_SYMBOL, .symbol = t.symbol};
+      break;
+
+    case T_AMPERSAND:
+      pn = (LispValue){.type = LISP_AMPERSAND_SYMBOL};
+      break;
+
+    default:
+      TODO();
+      da_free(&stack);
+      return PARSER_UNKNOWN_TOKEN;
+    }
+
+    if (stack.size) {
+      da_append(&stack.array[stack.size - 1], pn);
+    } else {
+      da_append(nodes, pn);
+    }
+  }
+
+  da_free(&stack);
+
+  if (stack.size)
+    return PARSER_TOO_MANY_OPENING;
+
+  return PARSER_SUCCESS;
+}
+
+// -- END OF Parser --
 
 // -- Environment --
 
@@ -562,16 +503,14 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
 
 // -- Evaluate --
 
-LispValue evaluate_lisp(ParserNode node, Environment *env) {
-  switch (node.type) {
-  case PN_STRING:
-    return STR_TO_LISP(node.string);
+LispValue evaluate_lisp(LispValue lisp, Environment *env) {
+  switch (lisp.type) {
+  case LISP_STRING:
+  case LISP_INT64:
+    return lisp;
 
-  case PN_INT64:
-    return INT64_TO_LISP(node.integer);
-
-  case PN_SYMBOL: {
-    EnvironmentEntry *entry = env_find(env, node.symbol);
+  case LISP_SYMBOL: {
+    EnvironmentEntry *entry = env_find(env, lisp.symbol);
 
     if (entry)
       return entry->value;
@@ -579,36 +518,35 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
     return ERROR_TO_LISP("undefined symbol");
   }
 
-  case PN_TUPLE:
-    if (!node.size)
+  case LISP_TUPLE:
+    if (!lisp.items.size)
       return NIL_SINGLETON_LISP;
 
-    LispValue callable = evaluate_lisp(node.items[0], env);
+    LispValue callable = evaluate_lisp(lisp.items.array[0], env);
 
     switch (callable.type) {
     case LISP_ERROR:
       return callable;
 
     case LISP_BUILTIN:
-      return callable.builtin(node.items + 1, node.size - 1, env);
+      return callable.builtin(lisp.items.array + 1, lisp.items.size - 1, env);
 
     case LISP_BUILTIN_FUNC: {
-      LispValues args;
-      da_init(&args);
+      LispValue *args = calloc(lisp.items.size - 1, sizeof(LispValue));
 
-      for (size_t i = 1; i < node.size; i++) {
-        da_append(&args, evaluate_lisp(node.items[i], env));
+      for (size_t i = 1; i < lisp.items.size; i++) {
+        args[i - 1] = evaluate_lisp(lisp.items.array[i], env);
       }
 
-      return callable.builtin_function(args.array, args.size, env);
+      return callable.builtin_function(args, lisp.items.size - 1, env);
     }
 
     case LISP_FUNC: {
       LispValues args;
       da_init(&args);
 
-      for (size_t i = 1; i < node.size; i++) {
-        da_append(&args, evaluate_lisp(node.items[i], env));
+      for (size_t i = 1; i < lisp.items.size; i++) {
+        da_append(&args, evaluate_lisp(lisp.items.array[i], env));
       }
 
       if ((callable.function.variadic &&
@@ -627,10 +565,14 @@ LispValue evaluate_lisp(ParserNode node, Environment *env) {
       }
 
       if (callable.function.variadic) {
-        LispValue list = {.type = LISP_LIST};
+        LispValue list = {
+            .type = LISP_TUPLE,
+            .items = {.array = calloc(args.size - callable.function.arg_count,
+                                      sizeof(LispValue)),
+                      .size = args.size - callable.function.arg_count}};
 
-        da_init(&list.list);
-        da_append_many(&list.list, args.array, callable.function.arg_count);
+        memcpy(list.items.array, &args.array[callable.function.arg_count],
+               sizeof(LispValue) * (args.size - callable.function.arg_count));
 
         env_set(&new_env, callable.function.variadic, list);
       }
@@ -663,7 +605,7 @@ LispValue repl(char *lisp, Environment *env) {
   if (tokenize_result)
     return ERROR_TO_LISP("could not tokenize lisp");
 
-  ParserNodes nodes;
+  LispValues nodes;
   da_init(&nodes);
 
   ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
@@ -682,11 +624,11 @@ LispValue repl(char *lisp, Environment *env) {
 
 // -- END OF Evaluate --
 
-LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
+LispValue builtin_set(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`set` requires at least 2 arguments");
 
-  if (args[0].type != PN_SYMBOL)
+  if (args[0].type != LISP_SYMBOL)
     return ERROR_TO_LISP("first argument to `set` must be a symbol");
 
   char *symbol = args[0].symbol;
@@ -697,40 +639,40 @@ LispValue builtin_set(ParserNode *args, size_t arg_count, Environment *env) {
   return value;
 }
 
-LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
+LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`let` requires at least 2 arguments");
 
-  ParserNode defs_node = args[0];
+  LispValue defs_node = args[0];
 
-  if (defs_node.type != PN_TUPLE)
+  if (defs_node.type != LISP_TUPLE)
     return ERROR_TO_LISP("first argument to `let` must be a tuple");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
 
-  for (size_t i = 0; i < defs_node.size; i++) {
-    ParserNode def_node = defs_node.items[i];
+  for (size_t i = 0; i < defs_node.items.size; i++) {
+    LispValue def_node = defs_node.items.array[i];
 
-    if (def_node.type != PN_TUPLE)
+    if (def_node.type != LISP_TUPLE)
       return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples");
 
-    if (def_node.size != 2)
+    if (def_node.items.size != 2)
       return ERROR_TO_LISP(
           "first argument to `let` must be a tuple of tuples with sizes 2");
 
-    if (def_node.items[0].type != PN_SYMBOL)
+    if (def_node.items.array[0].type != LISP_SYMBOL)
       return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples "
                            "with first element being a symbol");
 
-    char *symbol = def_node.items[0].symbol;
+    char *symbol = def_node.items.array[0].symbol;
 
     if (env_find_shallow(&new_env, symbol))
       return ERROR_TO_LISP("redefined symbol");
 
     // TODO: Maybe the passed environment should be the new environment.
     // That way one variable defined can be used in the other one.
-    LispValue value = evaluate_lisp(def_node.items[1], env);
+    LispValue value = evaluate_lisp(def_node.items.array[1], env);
 
     env_set(&new_env, symbol, value);
   }
@@ -745,7 +687,7 @@ LispValue builtin_let(ParserNode *args, size_t arg_count, Environment *env) {
   return return_value;
 }
 
-LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
+LispValue builtin_if(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`if` requires at least 2 arguments");
 
@@ -764,24 +706,24 @@ LispValue builtin_if(ParserNode *args, size_t arg_count, Environment *env) {
   return result;
 }
 
-LispValue builtin_fn(ParserNode *args, size_t arg_count, Environment *env) {
+LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
-  if (args[0].type != PN_TUPLE)
+  if (args[0].type != LISP_TUPLE)
     return ERROR_TO_LISP("first argument to `fn` must be a tuple");
 
   char *variadic = NULL;
   char **new_args = malloc(sizeof(char *) * arg_count);
-  for (size_t i = 0; i < args[0].size; i++) {
-    if (args[0].items[i].type == PN_AMPERSAND) {
-      if (i != args[0].size - 2)
+  for (size_t i = 0; i < args[0].items.size; i++) {
+    if (args[0].items.array[i].type == LISP_AMPERSAND_SYMBOL) {
+      if (i != args[0].items.size - 2)
         return ERROR_TO_LISP("exactly one symbol expected after `&`");
 
-      if (args[0].items[args[0].size - 1].type != PN_SYMBOL)
+      if (args[0].items.array[args[0].items.size - 1].type != LISP_SYMBOL)
         return ERROR_TO_LISP("symbol expected after `&`");
 
-      variadic = args[0].items[args[0].size - 1].symbol;
+      variadic = args[0].items.array[args[0].items.size - 1].symbol;
       for (size_t j = 0; j < i; j++)
         if (strcmp(new_args[j], variadic) == 0)
           return ERROR_TO_LISP("repeated argument");
@@ -789,27 +731,27 @@ LispValue builtin_fn(ParserNode *args, size_t arg_count, Environment *env) {
       break;
     }
 
-    if (args[0].items[i].type != PN_SYMBOL)
+    if (args[0].items.array[i].type != LISP_SYMBOL)
       return ERROR_TO_LISP("first argument to `fn` must be a tuple of symbols");
 
     for (size_t j = 0; j < i; j++) {
-      if (strcmp(new_args[j], args[0].items[i].symbol) == 0)
+      if (strcmp(new_args[j], args[0].items.array[i].symbol) == 0)
         return ERROR_TO_LISP("repeated argument");
     }
 
-    new_args[i] = args[0].items[i].symbol;
+    new_args[i] = args[0].items.array[i].symbol;
   }
 
   return (LispValue){
       .type = LISP_FUNC,
       .function = {.args = new_args,
-                   .arg_count = args[0].size - (variadic ? 2 : 0),
+                   .arg_count = args[0].items.size - (variadic ? 2 : 0),
                    .body = args + 1,
                    .body_size = arg_count - 1,
                    .variadic = variadic}};
 }
 
-LispValue builtin_do(ParserNode *args, size_t arg_count, Environment *env) {
+LispValue builtin_do(LispValue *args, size_t arg_count, Environment *env) {
   LispValue result = {.type = LISP_NIL};
   for (size_t i = 0; i < arg_count; i++) {
     result = evaluate_lisp(args[i], env);
@@ -859,12 +801,8 @@ LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
 }
 
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
-  LispValue value = {.type = LISP_LIST};
-
-  da_init(&value.list);
-  da_append_many(&value.list, args, arg_count);
-
-  return value;
+  return (LispValue){.type = LISP_TUPLE,
+                     .items = {.array = args, .size = arg_count}};
 }
 
 LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {
@@ -943,27 +881,27 @@ int main(void) {
 
   env_set(&global_env, "let",
           (LispValue){.type = LISP_BUILTIN,
-                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_let});
 
   env_set(&global_env, "set",
           (LispValue){.type = LISP_BUILTIN,
-                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_set});
 
   env_set(&global_env, "if",
           (LispValue){.type = LISP_BUILTIN,
-                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_if});
 
   env_set(&global_env, "do",
           (LispValue){.type = LISP_BUILTIN,
-                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_do});
 
   env_set(&global_env, "fn",
           (LispValue){.type = LISP_BUILTIN,
-                      .builtin = (LispValue (*)(ParserNode *, size_t,
+                      .builtin = (LispValue (*)(LispValue *, size_t,
                                                 void *))builtin_fn});
 
   env_set(&global_env, "list",
