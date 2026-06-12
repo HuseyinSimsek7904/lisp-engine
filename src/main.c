@@ -856,6 +856,34 @@ LispValue builtin_include(LispValue *args, size_t arg_count, Environment *env) {
   return return_value;
 }
 
+LispValue builtin_read_file(LispValue *args, size_t arg_count,
+                            Environment *env) {
+  if (arg_count != 1)
+    return ERROR_TO_LISP("`read-file` expects 1 arguments");
+
+  if (args[0].type != LISP_STRING)
+    return ERROR_TO_LISP("`read-file` expects strings");
+
+  FILE *file = fopen(args[0].string, "r");
+  if (!file)
+    return ERROR_TO_LISP("could not open file");
+
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *buffer = malloc(size + 1);
+  if (!buffer)
+    return ERROR_TO_LISP("could not allocate buffer");
+
+  if (fread(buffer, 1, size, file) != size)
+    return ERROR_TO_LISP("could not read the whole file");
+
+  buffer[size] = '\0';
+
+  return STR_TO_LISP(buffer);
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -923,6 +951,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(
                           LispValue *, size_t, void *))builtin_include});
+
+  env_set(&global_env, "read-file",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_read_file});
 
   while (true) {
     char *lisp = readline("> ");
