@@ -206,6 +206,7 @@ typedef enum {
   LISP_FUNC,
   LISP_TUPLE,
   LISP_AMPERSAND_SYMBOL,
+  LISP_UNPACKED,
 } LispType;
 
 typedef struct LispValue {
@@ -289,6 +290,9 @@ void print_lisp(LispValue value) {
 
     printf(")>");
     break;
+
+  case LISP_UNPACKED:
+    printf("unpacked");
 
   case LISP_TUPLE:
     printf("(");
@@ -541,13 +545,18 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return callable.builtin(lisp.items.array + 1, lisp.items.size - 1, env);
 
     case LISP_BUILTIN_FUNC: {
-      LispValue *args = calloc(lisp.items.size - 1, sizeof(LispValue));
+      LispValues args;
+      da_init(&args);
 
       for (size_t i = 1; i < lisp.items.size; i++) {
-        args[i - 1] = evaluate_lisp(lisp.items.array[i], env);
+        LispValue arg = evaluate_lisp(lisp.items.array[i], env);
+        if (arg.type == LISP_UNPACKED)
+          da_append_many(&args, arg.items.array, arg.items.size);
+        else
+          da_append(&args, arg);
       }
 
-      return callable.builtin_function(args, lisp.items.size - 1, env);
+      return callable.builtin_function(args.array, args.size, env);
     }
 
     case LISP_FUNC: {
@@ -555,7 +564,11 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       da_init(&args);
 
       for (size_t i = 1; i < lisp.items.size; i++) {
-        da_append(&args, evaluate_lisp(lisp.items.array[i], env));
+        LispValue arg = evaluate_lisp(lisp.items.array[i], env);
+        if (arg.type == LISP_UNPACKED)
+          da_append_many(&args, arg.items.array, arg.items.size);
+        else
+          da_append(&args, arg);
       }
 
       if ((callable.function.variadic &&
@@ -929,6 +942,27 @@ LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
   return return_value;
 }
 
+LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
+  size_t item_count = 0;
+  for (size_t i = 0; i < arg_count; i++) {
+    if (args[i].type != LISP_TUPLE)
+      return ERROR_TO_LISP("`unpack` expects tuples");
+
+    item_count += args[i].items.size;
+  }
+
+  LispValue *array = calloc(item_count, sizeof(LispValue));
+  size_t j = 0;
+  for (size_t i = 0; i < arg_count; i++) {
+    memcpy(&array[j], args[i].items.array,
+           args[i].items.size * sizeof(LispValue));
+    j += args[i].items.size;
+  }
+
+  return (LispValue){.type = LISP_UNPACKED,
+                     .items = {.array = array, .size = item_count}};
+}
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
@@ -1011,6 +1045,11 @@ int main(void) {
           (LispValue){.type = LISP_BUILTIN_FUNC,
                       .builtin_function = (LispValue (*)(LispValue *, size_t,
                                                          void *))builtin_eval});
+
+  env_set(&global_env, "unpack",
+          (LispValue){.type = LISP_BUILTIN_FUNC,
+                      .builtin_function = (LispValue (*)(
+                          LispValue *, size_t, void *))builtin_unpack});
 
   while (true) {
     char *lisp = readline("> ");
