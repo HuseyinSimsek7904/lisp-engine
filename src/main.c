@@ -812,7 +812,8 @@ LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
 
   return (LispValue){
       .type = LISP_FUNC,
-      .custom_function = {.args = new_args,
+      .custom_function = {.is_macro = false,
+                          .args = new_args,
                           .arg_count = args[0].items.size - (variadic ? 1 : 0),
                           .body = args + 1,
                           .body_size = arg_count - 1,
