@@ -985,9 +985,11 @@ int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
 
+  // Singletons
   env_set(&global_env, "nil", NIL_SINGLETON_LISP);
   env_set(&global_env, "t", T_SINGLETON_LISP);
 
+  // Builtin functions
   DEFINE_BUILTIN_FUNCTION("print", builtin_print, false);
   DEFINE_BUILTIN_FUNCTION("+", builtin_sum, false);
   DEFINE_BUILTIN_FUNCTION("-", builtin_neg_or_sub, false);
@@ -999,13 +1001,16 @@ int main(void) {
   DEFINE_BUILTIN_FUNCTION("eval", builtin_eval, false);
   DEFINE_BUILTIN_FUNCTION("unpack", builtin_unpack, false);
 
-  DEFINE_BUILTIN_FUNCTION("let", builtin_let, true);
+  // Builtin macros
   DEFINE_BUILTIN_FUNCTION("set", builtin_set, true);
   DEFINE_BUILTIN_FUNCTION("setg", builtin_setg, true);
+  DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true);
+
+  // Builtin macros with tail call optimization
+  DEFINE_BUILTIN_FUNCTION("let", builtin_let, true);
   DEFINE_BUILTIN_FUNCTION("if", builtin_if, true);
   DEFINE_BUILTIN_FUNCTION("do", builtin_do, true);
   DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true);
-  DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true);
 
   char *startup[] = {"core.l"};
 
