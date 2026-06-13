@@ -210,6 +210,7 @@ typedef struct LispValue {
     int64_t integer;
     struct {
       bool is_macro;
+      bool tail_call;
       struct LispValue (*callback)(struct LispValue *, size_t, void *);
     } builtin_function;
     struct {
@@ -519,116 +520,154 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
 
 // -- Evaluate --
 
-LispValue evaluate_lisp(LispValue lisp, Environment *env) {
-  switch (lisp.type) {
-  case LISP_STRING:
-  case LISP_INT64:
-  case LISP_NIL:
-  case LISP_T:
-  case LISP_BUILTIN_FUNC:
-  case LISP_FUNC:
-  case LISP_ERROR:
-    return lisp;
-
-  case LISP_SYMBOL: {
-    EnvironmentEntry *entry = env_find(env, lisp.symbol);
-
-    if (entry)
-      return entry->value;
-
-    return ERROR_TO_LISP("undefined symbol");
+void roll_env_back(Environment *env, Environment *original) {
+  while (env != original && env->other) {
+    env_free(env);
+    Environment *other = env->other;
+    free(env);
+    env = other;
   }
+}
 
-  case LISP_TUPLE:
-    if (!lisp.items.size)
-      return NIL_SINGLETON_LISP;
+LispValue evaluate_lisp(LispValue lisp, Environment *env) {
+  Environment *original = env;
 
-    LispValue callable = evaluate_lisp(lisp.items.array[0], env);
-
-    switch (callable.type) {
+  do {
+    switch (lisp.type) {
+    case LISP_STRING:
+    case LISP_INT64:
+    case LISP_NIL:
+    case LISP_T:
+    case LISP_BUILTIN_FUNC:
+    case LISP_FUNC:
     case LISP_ERROR:
-      return callable;
+      roll_env_back(env, original);
+      return lisp;
 
-    case LISP_BUILTIN_FUNC: {
-      if (callable.builtin_function.is_macro)
-        return callable.builtin_function.callback(lisp.items.array + 1,
-                                                  lisp.items.size - 1, env);
+    case LISP_SYMBOL: {
+      EnvironmentEntry *entry = env_find(env, lisp.symbol);
 
-      LispValues args;
-      da_init(&args);
-
-      for (size_t i = 1; i < lisp.items.size; i++) {
-        LispValue arg = evaluate_lisp(lisp.items.array[i], env);
-        if (arg.type == LISP_UNPACKED)
-          da_append_many(&args, arg.items.array, arg.items.size);
-        else
-          da_append(&args, arg);
+      if (entry) {
+        roll_env_back(env, original);
+        return entry->value;
       }
 
-      return callable.builtin_function.callback(args.array, args.size, env);
+      roll_env_back(env, original);
+      return ERROR_TO_LISP("undefined symbol");
     }
 
-    case LISP_FUNC: {
-      LispValues args;
-      da_init(&args);
-
-      for (size_t i = 1; i < lisp.items.size; i++) {
-        LispValue arg = evaluate_lisp(lisp.items.array[i], env);
-        if (arg.type == LISP_UNPACKED)
-          da_append_many(&args, arg.items.array, arg.items.size);
-        else
-          da_append(&args, arg);
+    case LISP_TUPLE:
+      if (!lisp.items.size) {
+        roll_env_back(env, original);
+        return NIL_SINGLETON_LISP;
       }
 
-      if ((callable.custom_function.variadic &&
-           args.size < callable.custom_function.arg_count) ||
-          (!callable.custom_function.variadic &&
-           args.size != callable.custom_function.arg_count)) {
+      LispValue callable = evaluate_lisp(lisp.items.array[0], env);
 
-        return ERROR_TO_LISP("incorrect number of parameters");
+      switch (callable.type) {
+      case LISP_ERROR:
+        roll_env_back(env, original);
+        return callable;
+
+      case LISP_BUILTIN_FUNC: {
+        if (callable.builtin_function.is_macro) {
+          lisp = callable.builtin_function.callback(lisp.items.array + 1,
+                                                    lisp.items.size - 1, env);
+        } else {
+          LispValues args;
+          da_init(&args);
+
+          for (size_t i = 1; i < lisp.items.size; i++) {
+            LispValue arg = evaluate_lisp(lisp.items.array[i], env);
+            if (arg.type == LISP_UNPACKED)
+              da_append_many(&args, arg.items.array, arg.items.size);
+            else
+              da_append(&args, arg);
+          }
+
+          lisp = callable.builtin_function.callback(args.array, args.size, env);
+        }
+
+        if (!callable.builtin_function.tail_call) {
+          roll_env_back(env, original);
+          return lisp;
+        }
+      } break;
+
+      case LISP_FUNC: {
+        LispValues args;
+        da_init(&args);
+
+        if (callable.custom_function.is_macro) {
+          for (size_t i = 1; i < lisp.items.size; i++)
+            da_append(&args, lisp.items.array[i]);
+        } else {
+          for (size_t i = 1; i < lisp.items.size; i++) {
+            LispValue arg = evaluate_lisp(lisp.items.array[i], env);
+            if (arg.type == LISP_UNPACKED)
+              da_append_many(&args, arg.items.array, arg.items.size);
+            else
+              da_append(&args, arg);
+          }
+        }
+
+        if ((callable.custom_function.variadic &&
+             args.size < callable.custom_function.arg_count) ||
+            (!callable.custom_function.variadic &&
+             args.size != callable.custom_function.arg_count)) {
+
+          roll_env_back(env, original);
+          return ERROR_TO_LISP("incorrect number of parameters");
+        }
+
+        Environment *new_env = malloc(sizeof(Environment));
+        *new_env = (Environment){.other = env};
+        da_init(new_env);
+
+        for (size_t i = 0; i < callable.custom_function.arg_count; i++) {
+          env_set(new_env, callable.custom_function.args[i], args.array[i]);
+        }
+
+        if (callable.custom_function.variadic) {
+          LispValue list = {
+              .type = LISP_TUPLE,
+              .items = {
+                  .array =
+                      calloc(args.size - callable.custom_function.arg_count,
+                             sizeof(LispValue)),
+                  .size = args.size - callable.custom_function.arg_count}};
+
+          memcpy(list.items.array,
+                 &args.array[callable.custom_function.arg_count],
+                 sizeof(LispValue) *
+                     (args.size - callable.custom_function.arg_count));
+
+          env_set(new_env, callable.custom_function.variadic, list);
+        }
+
+        assert(callable.custom_function.body_size > 0);
+
+        for (size_t i = 0; i < callable.custom_function.body_size - 1; i++) {
+          evaluate_lisp(callable.custom_function.body[i], new_env);
+        }
+
+        lisp = callable.custom_function
+                   .body[callable.custom_function.body_size - 1];
+        env = new_env;
+      } break;
+
+      default:
+        roll_env_back(env, original);
+        return ERROR_TO_LISP("tried to call non-callable");
       }
-
-      Environment new_env = {.other = env};
-      da_init(&new_env);
-
-      for (size_t i = 0; i < callable.custom_function.arg_count; i++) {
-        env_set(&new_env, callable.custom_function.args[i], args.array[i]);
-      }
-
-      if (callable.custom_function.variadic) {
-        LispValue list = {
-            .type = LISP_TUPLE,
-            .items = {.array =
-                          calloc(args.size - callable.custom_function.arg_count,
-                                 sizeof(LispValue)),
-                      .size = args.size - callable.custom_function.arg_count}};
-
-        memcpy(list.items.array,
-               &args.array[callable.custom_function.arg_count],
-               sizeof(LispValue) *
-                   (args.size - callable.custom_function.arg_count));
-
-        env_set(&new_env, callable.custom_function.variadic, list);
-      }
-
-      LispValue result = {.type = LISP_NIL};
-      for (size_t i = 0; i < callable.custom_function.body_size; i++) {
-        result = evaluate_lisp(callable.custom_function.body[i], &new_env);
-      }
-
-      env_free(&new_env);
-
-      return result;
-    }
+      break;
 
     default:
-      return ERROR_TO_LISP("tried to call non-callable");
+      TODO();
+      roll_env_back(env, original);
+      return ERROR_TO_LISP("unknown node while trying to evaluate");
     }
-
-  default:
-    TODO();
-    return ERROR_TO_LISP("unknown node while trying to evaluate");
-  }
+  } while (true);
 }
 
 LispValue repl(char *lisp, Environment *env) {
@@ -974,12 +1013,13 @@ LispValue builtin_quote(LispValue *args, size_t arg_count, Environment *env) {
   return args[0];
 }
 
-#define DEFINE_BUILTIN_FUNCTION(n, c, m)                                       \
+#define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   env_set(&global_env, n,                                                      \
           (LispValue){.type = LISP_BUILTIN_FUNC,                               \
                       .builtin_function = {.callback = (LispValue (*)(         \
                                                LispValue *, size_t, void *))c, \
-                                           .is_macro = m}});
+                                           .is_macro = m,                      \
+                                           .tail_call = t}});
 
 int main(void) {
   Environment global_env = {.other = NULL};
@@ -990,27 +1030,27 @@ int main(void) {
   env_set(&global_env, "t", T_SINGLETON_LISP);
 
   // Builtin functions
-  DEFINE_BUILTIN_FUNCTION("print", builtin_print, false);
-  DEFINE_BUILTIN_FUNCTION("+", builtin_sum, false);
-  DEFINE_BUILTIN_FUNCTION("-", builtin_neg_or_sub, false);
-  DEFINE_BUILTIN_FUNCTION("list", builtin_list, false);
-  DEFINE_BUILTIN_FUNCTION("=", builtin_equal, false);
-  DEFINE_BUILTIN_FUNCTION("<", builtin_less_than, false);
-  DEFINE_BUILTIN_FUNCTION("read-file", builtin_read_file, false);
-  DEFINE_BUILTIN_FUNCTION("parse-lisp", builtin_parse_lisp, false);
-  DEFINE_BUILTIN_FUNCTION("eval", builtin_eval, false);
-  DEFINE_BUILTIN_FUNCTION("unpack", builtin_unpack, false);
+  DEFINE_BUILTIN_FUNCTION("print", builtin_print, false, false);
+  DEFINE_BUILTIN_FUNCTION("+", builtin_sum, false, false);
+  DEFINE_BUILTIN_FUNCTION("-", builtin_neg_or_sub, false, false);
+  DEFINE_BUILTIN_FUNCTION("list", builtin_list, false, false);
+  DEFINE_BUILTIN_FUNCTION("=", builtin_equal, false, false);
+  DEFINE_BUILTIN_FUNCTION("<", builtin_less_than, false, false);
+  DEFINE_BUILTIN_FUNCTION("read-file", builtin_read_file, false, false);
+  DEFINE_BUILTIN_FUNCTION("parse-lisp", builtin_parse_lisp, false, false);
+  DEFINE_BUILTIN_FUNCTION("eval", builtin_eval, false, false);
+  DEFINE_BUILTIN_FUNCTION("unpack", builtin_unpack, false, false);
 
   // Builtin macros
-  DEFINE_BUILTIN_FUNCTION("set", builtin_set, true);
-  DEFINE_BUILTIN_FUNCTION("setg", builtin_setg, true);
-  DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true);
+  DEFINE_BUILTIN_FUNCTION("set", builtin_set, true, false);
+  DEFINE_BUILTIN_FUNCTION("setg", builtin_setg, true, false);
+  DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true, false);
 
   // Builtin macros with tail call optimization
-  DEFINE_BUILTIN_FUNCTION("let", builtin_let, true);
-  DEFINE_BUILTIN_FUNCTION("if", builtin_if, true);
-  DEFINE_BUILTIN_FUNCTION("do", builtin_do, true);
-  DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true);
+  DEFINE_BUILTIN_FUNCTION("let", builtin_let, true, false);
+  DEFINE_BUILTIN_FUNCTION("if", builtin_if, true, false);
+  DEFINE_BUILTIN_FUNCTION("do", builtin_do, true, false);
+  DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true, false);
 
   char *startup[] = {"core.l"};
 
