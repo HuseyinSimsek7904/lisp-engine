@@ -1045,12 +1045,12 @@ int main(void) {
   DEFINE_BUILTIN_FUNCTION("set", builtin_set, true, false);
   DEFINE_BUILTIN_FUNCTION("setg", builtin_setg, true, false);
   DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true, false);
+  DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true, false);
 
   // Builtin macros with tail call optimization
   DEFINE_BUILTIN_FUNCTION("let", builtin_let, true, false);
   DEFINE_BUILTIN_FUNCTION("if", builtin_if, true, false);
   DEFINE_BUILTIN_FUNCTION("do", builtin_do, true, false);
-  DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true, false);
 
   char *startup[] = {"core.l"};
 
