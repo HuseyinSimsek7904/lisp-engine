@@ -266,7 +266,7 @@ void print_lisp(LispValue value) {
     break;
 
   case LISP_FUNC:
-    printf("<function(");
+    printf(value.custom_function.is_macro ? "<macro(" : "<function(");
 
     if (value.custom_function.arg_count > 0)
       printf("%s", value.custom_function.args[0]);
@@ -799,7 +799,8 @@ LispValue builtin_if(LispValue *args, size_t arg_count, Environment *env) {
   return args[arg_count - 1];
 }
 
-LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
+LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
+                             Environment *env, bool is_macro) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
@@ -852,12 +853,20 @@ LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
 
   return (LispValue){
       .type = LISP_FUNC,
-      .custom_function = {.is_macro = false,
+      .custom_function = {.is_macro = is_macro,
                           .args = new_args,
                           .arg_count = args[0].items.size - (variadic ? 1 : 0),
                           .body = args + 1,
                           .body_size = arg_count - 1,
                           .variadic = variadic}};
+}
+
+LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
+  return define_fn_or_macro(args, arg_count, env, false);
+}
+
+LispValue builtin_macro(LispValue *args, size_t arg_count, Environment *env) {
+  return define_fn_or_macro(args, arg_count, env, true);
 }
 
 // TODO: Inside `do`, if any of the items return error, the control flow should
@@ -1046,6 +1055,7 @@ int main(void) {
   DEFINE_BUILTIN_FUNCTION("setg", builtin_setg, true, false);
   DEFINE_BUILTIN_FUNCTION("quote", builtin_quote, true, false);
   DEFINE_BUILTIN_FUNCTION("fn", builtin_fn, true, false);
+  DEFINE_BUILTIN_FUNCTION("macro", builtin_macro, true, false);
 
   // Builtin macros with tail call optimization
   DEFINE_BUILTIN_FUNCTION("let", builtin_let, true, false);
