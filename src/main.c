@@ -731,6 +731,8 @@ LispValue builtin_setg(LispValue *args, size_t arg_count, Environment *env) {
   return value;
 }
 
+// TODO: `let` should be able to do tail calls, but tail calls cannot use new
+// environments currently.
 LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`let` requires at least 2 arguments");
@@ -789,13 +791,12 @@ LispValue builtin_if(LispValue *args, size_t arg_count, Environment *env) {
     return condition;
 
   if (condition.type != LISP_NIL)
-    return evaluate_lisp(args[1], env);
+    return args[1];
 
-  LispValue result = {.type = LISP_NIL};
-  for (size_t i = 2; i < arg_count; i++) {
-    result = evaluate_lisp(args[i], env);
+  for (size_t i = 2; i < arg_count - 1; i++) {
+    evaluate_lisp(args[i], env);
   }
-  return result;
+  return args[arg_count - 1];
 }
 
 LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
@@ -859,15 +860,14 @@ LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
                           .variadic = variadic}};
 }
 
+// TODO: Inside `do`, if any of the items return error, the control flow should
+// be stopped and the error value should be returned.
 LispValue builtin_do(LispValue *args, size_t arg_count, Environment *env) {
-  LispValue result = {.type = LISP_NIL};
-  for (size_t i = 0; i < arg_count; i++) {
-    result = evaluate_lisp(args[i], env);
-
-    if (result.type == LISP_ERROR)
-      return result;
+  for (size_t i = 0; i < arg_count - 1; i++) {
+    evaluate_lisp(args[i], env);
   }
-  return result;
+
+  return args[arg_count - 1];
 }
 
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
@@ -1049,8 +1049,8 @@ int main(void) {
 
   // Builtin macros with tail call optimization
   DEFINE_BUILTIN_FUNCTION("let", builtin_let, true, false);
-  DEFINE_BUILTIN_FUNCTION("if", builtin_if, true, false);
-  DEFINE_BUILTIN_FUNCTION("do", builtin_do, true, false);
+  DEFINE_BUILTIN_FUNCTION("if", builtin_if, true, true);
+  DEFINE_BUILTIN_FUNCTION("do", builtin_do, true, true);
 
   char *startup[] = {"core.l"};
 
