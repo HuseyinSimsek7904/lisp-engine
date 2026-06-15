@@ -1022,6 +1022,34 @@ LispValue builtin_quote(LispValue *args, size_t arg_count, Environment *env) {
   return args[0];
 }
 
+LispValue builtin_head(LispValue *args, size_t arg_count, Environment *env) {
+  if (arg_count != 1)
+    return ERROR_TO_LISP("`head` expects exactly 1 arguments");
+
+  if (args[0].type != LISP_TUPLE)
+    return ERROR_TO_LISP("`head` expects a tuple");
+
+  if (!args[0].items.size)
+    return ERROR_TO_LISP("`head` expects a non-empty tuple");
+
+  return args[0].items.array[0];
+}
+
+LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
+  if (arg_count != 1)
+    return ERROR_TO_LISP("`tail` expects exactly 1 arguments");
+
+  if (args[0].type != LISP_TUPLE)
+    return ERROR_TO_LISP("`tail` expects a tuple");
+
+  if (!args[0].items.size)
+    return ERROR_TO_LISP("`tail` expects a non-empty tuple");
+
+  return (LispValue){.type = LISP_TUPLE,
+                     .items = {.array = args[0].items.array + 1,
+                               .size = args[0].items.size - 1}};
+}
+
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   env_set(&global_env, n,                                                      \
           (LispValue){.type = LISP_BUILTIN_FUNC,                               \
@@ -1049,6 +1077,8 @@ int main(void) {
   DEFINE_BUILTIN_FUNCTION("parse-lisp", builtin_parse_lisp, false, false);
   DEFINE_BUILTIN_FUNCTION("eval", builtin_eval, false, false);
   DEFINE_BUILTIN_FUNCTION("unpack", builtin_unpack, false, false);
+  DEFINE_BUILTIN_FUNCTION("head", builtin_head, false, false);
+  DEFINE_BUILTIN_FUNCTION("tail", builtin_tail, false, false);
 
   // Builtin macros
   DEFINE_BUILTIN_FUNCTION("set", builtin_set, true, false);
