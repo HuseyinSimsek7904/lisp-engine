@@ -189,7 +189,7 @@ void print_lisp_token(Token token) {
 // -- Lisp Value --
 
 typedef enum {
-  LISP_NIL,
+  LISP_NIL = 0,
   LISP_T,
   LISP_ERROR,
   LISP_STRING,
@@ -201,6 +201,26 @@ typedef enum {
   LISP_UNPACKED,
 } LispType;
 
+typedef struct {
+  bool is_macro;
+  bool tail_call;
+  struct LispValue (*callback)(struct LispValue *, size_t, void *);
+} _LispBuiltinFunction;
+
+typedef struct {
+  bool is_macro;
+  char **args;
+  size_t arg_count;
+  struct LispValue *body;
+  size_t body_size;
+  char *variadic;
+} _LispCustomFunction;
+
+typedef struct {
+  struct LispValue *array;
+  size_t size;
+} _LispView;
+
 typedef struct LispValue {
   LispType type;
   union {
@@ -208,23 +228,9 @@ typedef struct LispValue {
     char *error_message;
     char *symbol;
     int64_t integer;
-    struct {
-      bool is_macro;
-      bool tail_call;
-      struct LispValue (*callback)(struct LispValue *, size_t, void *);
-    } builtin_function;
-    struct {
-      bool is_macro;
-      char **args;
-      size_t arg_count;
-      struct LispValue *body;
-      size_t body_size;
-      char *variadic;
-    } custom_function;
-    struct {
-      struct LispValue *array;
-      size_t size;
-    } items;
+    _LispBuiltinFunction builtin_function;
+    _LispCustomFunction custom_function;
+    _LispView items;
   };
 } LispValue;
 
