@@ -15,76 +15,77 @@ LispValue _lisp_init(_LispValue *value) {
   return ptr;
 }
 
-void lisp_print(LispValue value) {
+void lisp_fprint(FILE *file, LispValue value) {
   switch (value->type) {
   case LISP_NIL:
-    printf("NIL");
+    fprintf(file, "NIL");
     break;
 
   case LISP_BOOL:
-    printf(value->boolean ? "true" : "false");
+    fprintf(file, value->boolean ? "true" : "false");
     break;
 
   case LISP_ERROR:
-    printf("<error(%s)>", value->error_message);
+    fprintf(file, "<error(%s)>", value->error_message);
     break;
 
   case LISP_STRING:
-    printf("\"%s\"", value->string);
+    fprintf(file, "\"%s\"", value->string);
     break;
 
   case LISP_SYMBOL:
-    printf("%s", value->symbol);
+    fprintf(file, "%s", value->symbol);
     break;
 
   case LISP_INT64:
-    printf("%ld", value->integer);
+    fprintf(file, "%ld", value->integer);
     break;
 
   case LISP_BUILTIN_FUNC:
-    printf(value->builtin_function.is_macro ? "<builtin-macro>"
-                                            : "<builtin-function>");
+    fprintf(file, value->builtin_function.is_macro ? "<builtin-macro>"
+                                                   : "<builtin-function>");
     break;
 
   case LISP_FUNC:
-    printf(value->custom_function.is_macro ? "<macro(" : "<function(");
+    fprintf(file, value->custom_function.is_macro ? "<macro(" : "<function(");
 
     if (value->custom_function.arg_count > 0)
-      printf("%s", value->custom_function.args[0]);
+      fprintf(file, "%s", value->custom_function.args[0]);
 
     for (size_t i = 1; i < value->custom_function.arg_count; i++) {
-      printf(" %s", value->custom_function.args[i]);
+      fprintf(file, " %s", value->custom_function.args[i]);
     }
 
     if (value->custom_function.variadic) {
       if (value->custom_function.arg_count > 0)
-        printf(" ");
-      printf("(rest %s)", value->custom_function.variadic);
+        fprintf(file, " ");
+      fprintf(file, "(rest %s)", value->custom_function.variadic);
     }
 
-    printf(")>");
+    fprintf(file, ")>");
     break;
 
   case LISP_UNPACKED:
-    printf("unpacked");
+    fprintf(file, "unpacked");
 
   case LISP_TUPLE:
-    printf("(");
+    fprintf(file, "(");
     if (value->items.size > 0)
       lisp_print(value->items.array[0]);
 
     for (size_t i = 1; i < value->items.size; i++) {
-      printf(" ");
+      fprintf(file, " ");
       lisp_print(value->items.array[i]);
     }
-    printf(")");
+    fprintf(file, ")");
     break;
 
   default:
-    printf("%d\n", value->type);
     TODO();
   }
 }
+
+inline void lisp_print(LispValue value) { lisp_fprint(stdout, value); }
 
 bool lisp_is_ident(LispValue a, LispValue b) {
   if (a->type != b->type)

@@ -1,10 +1,12 @@
 #ifndef LISP_VALUE_H
 #define LISP_VALUE_H
 
-#include "lexer.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+
+#include "lexer.h"
 
 typedef enum {
   LISP_NIL = 0,
@@ -89,6 +91,7 @@ LispValue _lisp_init(_LispValue *value);
 
 bool lisp_is_ident(LispValue a, LispValue b);
 
+void lisp_fprint(FILE *file, LispValue value);
 void lisp_print(LispValue value);
 
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes);
