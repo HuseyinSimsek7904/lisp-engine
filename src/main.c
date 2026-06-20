@@ -11,135 +11,7 @@
 #include <readline/readline.h>
 
 #include "core.h"
-// -- Tokenizer --
-
-typedef enum {
-  T_L_PAREN,
-  T_R_PAREN,
-  T_INT64,
-  T_STRING,
-  T_SYMBOL,
-} TokenType;
-
-typedef struct {
-  TokenType type;
-  union {
-    int64_t integer;
-    char *string;
-    char *symbol;
-  };
-} Token;
-
-typedef struct {
-  Token *array;
-  size_t size;
-  size_t capacity;
-} Tokens;
-
-typedef enum {
-  TOKENIZE_SUCCESS = 0,
-  TOKENIZE_UNTERMINATED_STRING,
-  TOKENIZE_UNKNOWN_CHAR,
-} TokenizeResult;
-
-bool is_symbol_char(char c) {
-  return c == '!' || (c >= '#' && c <= '&') || (c >= '*' && c <= '/') ||
-         (c >= ':' && c <= '~');
-}
-
-TokenizeResult tokenize(char *lisp_str, Tokens *tokens) {
-  while (*lisp_str) {
-    char c = *lisp_str++;
-
-    switch (c) {
-    case ' ':
-    case '\n':
-    case '\t':
-      continue;
-
-    case '(':
-      da_append(tokens, (Token){.type = T_L_PAREN});
-      break;
-
-    case ')':
-      da_append(tokens, (Token){.type = T_R_PAREN});
-      break;
-
-    case '0' ... '9': {
-      uint64_t number = c - '0';
-      while (*lisp_str >= '0' && *lisp_str <= '9') {
-        number = 10 * number + *lisp_str++ - '0';
-      }
-      Token token = {.type = T_INT64, .integer = number};
-      da_append(tokens, token);
-    } break;
-
-    case '"': {
-      // TODO: Add escapes.
-      StringBuilder sb;
-      da_init(&sb);
-      while (*lisp_str != '"') {
-        if (*lisp_str == '\0')
-          return TOKENIZE_UNTERMINATED_STRING;
-
-        da_append(&sb, *lisp_str++);
-      }
-      lisp_str++;
-      Token token = {.type = T_STRING, .string = sb.array};
-      da_append(tokens, token);
-    } break;
-
-    case '!':
-    case '#' ... '&':
-    case '*' ... '/':
-    case ':' ... '~': {
-      StringBuilder sb;
-      da_init(&sb);
-      da_append(&sb, c);
-      while (is_symbol_char(*lisp_str)) {
-        da_append(&sb, *lisp_str++);
-      }
-      Token token = {.type = T_SYMBOL, .string = sb.array};
-      da_append(tokens, token);
-    } break;
-
-    default:
-      TODO();
-      return TOKENIZE_UNKNOWN_CHAR;
-    }
-  }
-
-  return TOKENIZE_SUCCESS;
-}
-
-void print_lisp_token(Token token) {
-  switch (token.type) {
-  case T_L_PAREN:
-    printf("(");
-    break;
-
-  case T_R_PAREN:
-    printf(")");
-    break;
-
-  case T_INT64:
-    printf("%lu", token.integer);
-    break;
-
-  case T_STRING:
-    printf("string[%s]", token.string);
-    break;
-
-  case T_SYMBOL:
-    printf("symbol[%s]", token.symbol);
-    break;
-
-  default:
-    TODO();
-  }
-}
-
-// -- END OF Tokenizer --
+#include "lexer.h"
 
 // -- Lisp Value --
 
@@ -648,10 +520,10 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 LispValue repl(char *lisp, Environment *env) {
   Tokens tokens;
   da_init(&tokens);
-  TokenizeResult tokenize_result = tokenize(lisp, &tokens);
+  LexerResult lexer_result = generate_tokens(lisp, &tokens);
 
-  if (tokenize_result)
-    return ERROR_TO_LISP("could not tokenize lisp");
+  if (lexer_result)
+    return ERROR_TO_LISP("could not generate tokens for lisp");
 
   LispValues nodes;
   da_init(&nodes);
@@ -946,10 +818,10 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
 
   Tokens tokens;
   da_init(&tokens);
-  TokenizeResult tokenize_result = tokenize(args[0]->string, &tokens);
+  LexerResult lexer_result = generate_tokens(args[0]->string, &tokens);
 
-  if (tokenize_result)
-    return ERROR_TO_LISP("could not tokenize lisp");
+  if (lexer_result)
+    return ERROR_TO_LISP("could not generate tokens for lisp");
 
   LispValues nodes;
   da_init(&nodes);
