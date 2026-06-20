@@ -14,32 +14,6 @@
 #include "lexer.h"
 #include "lisp_value.h"
 
-// -- Utils --
-
-char *read_file(char *file_name) {
-  FILE *file = fopen(file_name, "r");
-  if (!file)
-    return NULL;
-
-  fseek(file, 0, SEEK_END);
-  size_t size = ftell(file);
-  fseek(file, 0, SEEK_SET);
-
-  char *buffer = malloc(size + 1);
-  if (!buffer)
-    return NULL;
-
-  if (fread(buffer, 1, size, file) != size)
-    return NULL;
-
-  buffer[size] = '\0';
-  return buffer;
-}
-
-// -- END OF Utils --
-
-// -- Evaluate --
-
 void roll_env_back(Environment *env, Environment *original) {
   while (env != original && env->other) {
     env_free(env);
@@ -216,8 +190,6 @@ LispValue repl(char *lisp, Environment *env) {
 
   return return_value;
 }
-
-// -- END OF Evaluate --
 
 LispValue builtin_set(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)

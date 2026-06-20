@@ -50,4 +50,6 @@ typedef struct {
     fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);          \
   } while (0)
 
+char *read_file(char *file_name);
+
 #endif
