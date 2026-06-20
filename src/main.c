@@ -8,8 +8,8 @@
 #include <sys/cdefs.h>
 
 #include <readline/chardefs.h>
-#include <readline/readline.h>
 #include <readline/history.h>
+#include <readline/readline.h>
 
 // -- Dynamic Array --
 #define DA_INIT_CAP 0x100
@@ -191,10 +191,10 @@ void print_lisp_token(Token token) {
 
 typedef enum {
   LISP_NIL = 0,
-  LISP_T,
   LISP_ERROR,
   LISP_STRING,
   LISP_INT64,
+  LISP_BOOL,
   LISP_SYMBOL,
   LISP_BUILTIN_FUNC,
   LISP_FUNC,
@@ -229,6 +229,7 @@ typedef struct LispValue {
     char *error_message;
     char *symbol;
     int64_t integer;
+    bool boolean;
     _LispBuiltinFunction builtin_function;
     _LispCustomFunction custom_function;
     _LispView items;
@@ -247,8 +248,8 @@ void print_lisp(LispValue value) {
     printf("NIL");
     break;
 
-  case LISP_T:
-    printf("t");
+  case LISP_BOOL:
+    printf(value.boolean ? "true" : "false");
     break;
 
   case LISP_ERROR:
@@ -318,8 +319,10 @@ bool identical_lisp(LispValue a, LispValue b) {
 
   switch (a.type) {
   case LISP_NIL:
-  case LISP_T:
     return true;
+
+  case LISP_BOOL:
+    return a.boolean == b.boolean;
 
   case LISP_ERROR:
     return a.error_message == b.error_message;
@@ -351,7 +354,7 @@ bool identical_lisp(LispValue a, LispValue b) {
 }
 
 #define BOOL_TO_LISP(x)                                                        \
-  (LispValue) { .type = x ? LISP_T : LISP_NIL }
+  (LispValue) { .type = LISP_BOOL, .boolean = x }
 #define INT64_TO_LISP(x)                                                       \
   (LispValue) { .type = LISP_INT64, .integer = x }
 #define ERROR_TO_LISP(x)                                                       \
@@ -360,8 +363,6 @@ bool identical_lisp(LispValue a, LispValue b) {
   (LispValue) { .type = LISP_STRING, .string = x }
 #define NIL_SINGLETON_LISP                                                     \
   (LispValue) { .type = LISP_NIL }
-#define T_SINGLETON_LISP                                                       \
-  (LispValue) { .type = LISP_T }
 
 // -- END OF Lisp Value --
 
@@ -544,7 +545,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     case LISP_STRING:
     case LISP_INT64:
     case LISP_NIL:
-    case LISP_T:
+    case LISP_BOOL:
     case LISP_BUILTIN_FUNC:
     case LISP_FUNC:
     case LISP_ERROR:
@@ -797,7 +798,10 @@ LispValue builtin_if(LispValue *args, size_t arg_count, Environment *env) {
   if (condition.type == LISP_ERROR)
     return condition;
 
-  if (condition.type != LISP_NIL)
+  if (condition.type != LISP_BOOL)
+    return ERROR_TO_LISP("`if` requires a boolean");
+
+  if (condition.boolean)
     return args[1];
 
   for (size_t i = 2; i < arg_count - 1; i++) {
@@ -1071,7 +1075,8 @@ int main(void) {
 
   // Singletons
   env_set(&global_env, "nil", NIL_SINGLETON_LISP);
-  env_set(&global_env, "t", T_SINGLETON_LISP);
+  env_set(&global_env, "true", BOOL_TO_LISP(true));
+  env_set(&global_env, "false", BOOL_TO_LISP(false));
 
   // Builtin functions
   DEFINE_BUILTIN_FUNCTION("print", builtin_print, false, false);
