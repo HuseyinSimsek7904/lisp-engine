@@ -9,6 +9,7 @@
 
 #include <readline/chardefs.h>
 #include <readline/readline.h>
+#include <readline/history.h>
 
 // -- Dynamic Array --
 #define DA_INIT_CAP 0x100
@@ -1113,6 +1114,8 @@ int main(void) {
 
     if (!lisp)
       exit(0);
+
+    add_history(lisp);
 
     LispValue return_value = repl(lisp, &global_env);
 
