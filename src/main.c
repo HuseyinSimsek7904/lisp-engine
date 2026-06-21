@@ -28,17 +28,17 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
   do {
     switch (lisp->type) {
-    case LISP_STRING:
-    case LISP_INT64:
-    case LISP_NIL:
-    case LISP_BOOL:
-    case LISP_BUILTIN_FUNC:
-    case LISP_FUNC:
-    case LISP_ERROR:
+    case LISP_STRING_T:
+    case LISP_INT64_T:
+    case LISP_NIL_T:
+    case LISP_BOOL_T:
+    case LISP_BUILTIN_FUNC_T:
+    case LISP_FUNC_T:
+    case LISP_ERROR_T:
       roll_env_back(env, original);
       return lisp;
 
-    case LISP_SYMBOL: {
+    case LISP_SYMBOL_T: {
       EnvironmentEntry *entry = env_find(env, lisp->symbol);
 
       if (entry) {
@@ -50,7 +50,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
-    case LISP_TUPLE:
+    case LISP_TUPLE_T:
       if (!lisp->items.size) {
         roll_env_back(env, original);
         return NIL_SINGLETON_LISP;
@@ -59,11 +59,11 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       LispValue callable = evaluate_lisp(lisp->items.array[0], env);
 
       switch (callable->type) {
-      case LISP_ERROR:
+      case LISP_ERROR_T:
         roll_env_back(env, original);
         return callable;
 
-      case LISP_BUILTIN_FUNC: {
+      case LISP_BUILTIN_FUNC_T: {
         if (callable->builtin_function.is_macro) {
           lisp = callable->builtin_function.callback(lisp->items.array + 1,
                                                      lisp->items.size - 1, env);
@@ -73,7 +73,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
           for (size_t i = 1; i < lisp->items.size; i++) {
             LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-            if (arg->type == LISP_UNPACKED)
+            if (arg->type == LISP_UNPACKED_T)
               da_append_many(&args, arg->items.array, arg->items.size);
             else
               da_append(&args, arg);
@@ -89,7 +89,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         }
       } break;
 
-      case LISP_FUNC: {
+      case LISP_FUNC_T: {
         LispValues args;
         da_init(&args);
 
@@ -99,7 +99,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         } else {
           for (size_t i = 1; i < lisp->items.size; i++) {
             LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-            if (arg->type == LISP_UNPACKED)
+            if (arg->type == LISP_UNPACKED_T)
               da_append_many(&args, arg->items.array, arg->items.size);
             else
               da_append(&args, arg);
@@ -125,7 +125,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         if (callable->custom_function.variadic) {
           _LispValue list = {
-              .type = LISP_TUPLE,
+              .type = LISP_TUPLE_T,
               .items = {
                   .array =
                       calloc(args.size - callable->custom_function.arg_count,
@@ -195,7 +195,7 @@ LispValue builtin_set(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`set` requires at least 2 arguments");
 
-  if (args[0]->type != LISP_SYMBOL)
+  if (args[0]->type != LISP_SYMBOL_T)
     return ERROR_TO_LISP("first argument to `set` must be a symbol");
 
   char *symbol = args[0]->symbol;
@@ -210,7 +210,7 @@ LispValue builtin_setg(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count < 2)
     return ERROR_TO_LISP("`setg` requires at least 2 arguments");
 
-  if (args[0]->type != LISP_SYMBOL)
+  if (args[0]->type != LISP_SYMBOL_T)
     return ERROR_TO_LISP("first argument to `setg` must be a symbol");
 
   char *symbol = args[0]->symbol;
@@ -233,7 +233,7 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
 
   LispValue defs_node = args[0];
 
-  if (defs_node->type != LISP_TUPLE)
+  if (defs_node->type != LISP_TUPLE_T)
     return ERROR_TO_LISP("first argument to `let` must be a tuple");
 
   Environment new_env = {.other = env};
@@ -242,14 +242,14 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < defs_node->items.size; i++) {
     LispValue def_node = defs_node->items.array[i];
 
-    if (def_node->type != LISP_TUPLE)
+    if (def_node->type != LISP_TUPLE_T)
       return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples");
 
     if (def_node->items.size != 2)
       return ERROR_TO_LISP(
           "first argument to `let` must be a tuple of tuples with sizes 2");
 
-    if (def_node->items.array[0]->type != LISP_SYMBOL)
+    if (def_node->items.array[0]->type != LISP_SYMBOL_T)
       return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples "
                            "with first element being a symbol");
 
@@ -281,10 +281,10 @@ LispValue builtin_if(LispValue *args, size_t arg_count, Environment *env) {
 
   LispValue condition = evaluate_lisp(args[0], env);
 
-  if (condition->type == LISP_ERROR)
+  if (condition->type == LISP_ERROR_T)
     return condition;
 
-  if (condition->type != LISP_BOOL)
+  if (condition->type != LISP_BOOL_T)
     return ERROR_TO_LISP("`if` requires a boolean");
 
   if (condition->boolean)
@@ -301,7 +301,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
   if (arg_count < 2)
     return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
-  if (args[0]->type != LISP_TUPLE)
+  if (args[0]->type != LISP_TUPLE_T)
     return ERROR_TO_LISP("first argument to `fn` must be a tuple");
 
   char *variadic = NULL;
@@ -309,8 +309,8 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
   for (size_t i = 0; i < args[0]->items.size; i++) {
     LispValue arg = args[0]->items.array[i];
 
-    if (arg->type == LISP_SYMBOL) {
-      if (args[0]->items.array[i]->type != LISP_SYMBOL)
+    if (arg->type == LISP_SYMBOL_T) {
+      if (args[0]->items.array[i]->type != LISP_SYMBOL_T)
         return ERROR_TO_LISP("`fn` argument list must be a tuple of symbols");
 
       for (size_t j = 0; j < i; j++) {
@@ -320,7 +320,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
 
       new_args[i] = arg->symbol;
 
-    } else if (arg->type == LISP_TUPLE) {
+    } else if (arg->type == LISP_TUPLE_T) {
       if (i != args[0]->items.size - 1) {
         TODO();
         return ERROR_TO_LISP(
@@ -331,12 +331,12 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
         return ERROR_TO_LISP(
             "tuple inside `fn` arguments list must be of size 2");
 
-      if (arg->items.array[0]->type != LISP_SYMBOL ||
+      if (arg->items.array[0]->type != LISP_SYMBOL_T ||
           strcmp(arg->items.array[0]->string, "rest"))
         return ERROR_TO_LISP("first item in the tuple in the `fn` arguments "
                              "list must be a `rest` symbol");
 
-      if (arg->items.array[1]->type != LISP_SYMBOL)
+      if (arg->items.array[1]->type != LISP_SYMBOL_T)
         return ERROR_TO_LISP("`rest` argument must be a symbol");
 
       assert(!variadic);
@@ -349,7 +349,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
   }
 
   return _lisp_init(&(_LispValue){
-      .type = LISP_FUNC,
+      .type = LISP_FUNC_T,
       .custom_function = {.is_macro = is_macro,
                           .args = new_args,
                           .arg_count = args[0]->items.size - (variadic ? 1 : 0),
@@ -378,7 +378,7 @@ LispValue builtin_do(LispValue *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_STRING)
+    if (args[i]->type != LISP_STRING_T)
       return ERROR_TO_LISP("invalid type for argument to `print`");
 
   for (size_t i = 0; i < arg_count; i++) {
@@ -390,7 +390,7 @@ LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
 
 LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_INT64)
+    if (args[i]->type != LISP_INT64_T)
       return ERROR_TO_LISP("invalid type for argument to `+`");
 
   int64_t sum = 0;
@@ -407,7 +407,7 @@ LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
     return ERROR_TO_LISP("`-` expectes either 1 or 2 arguments");
 
   for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_INT64)
+    if (args[i]->type != LISP_INT64_T)
       return ERROR_TO_LISP("invalid type for argument to `-`");
 
   return INT64_TO_LISP(arg_count == 1 ? -args[0]->integer
@@ -415,7 +415,7 @@ LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
 }
 
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
-  return _lisp_init(&(_LispValue){.type = LISP_TUPLE,
+  return _lisp_init(&(_LispValue){.type = LISP_TUPLE_T,
                                   .items = {.array = args, .size = arg_count}});
 }
 
@@ -433,7 +433,7 @@ LispValue builtin_less_than(LispValue *args, size_t arg_count,
   if (arg_count != 2)
     return ERROR_TO_LISP("`<` expects 2 arguments");
 
-  if (args[0]->type != LISP_INT64 || args[1]->type != LISP_INT64)
+  if (args[0]->type != LISP_INT64_T || args[1]->type != LISP_INT64_T)
     return ERROR_TO_LISP("`<` expects 2 integers");
 
   return BOOL_TO_LISP(args[0]->integer < args[1]->integer);
@@ -444,7 +444,7 @@ LispValue builtin_read_file(LispValue *args, size_t arg_count,
   if (arg_count != 1)
     return ERROR_TO_LISP("`read-file` expects 1 arguments");
 
-  if (args[0]->type != LISP_STRING)
+  if (args[0]->type != LISP_STRING_T)
     return ERROR_TO_LISP("`read-file` expects strings");
 
   char *buffer = read_file(args[0]->string);
@@ -460,7 +460,7 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
   if (arg_count != 1)
     return ERROR_TO_LISP("`read-file` expects 1 arguments");
 
-  if (args[0]->type != LISP_STRING)
+  if (args[0]->type != LISP_STRING_T)
     return ERROR_TO_LISP("`read-file` expects strings");
 
   Tokens tokens;
@@ -479,8 +479,9 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
   if (parser_result)
     return ERROR_TO_LISP("could not parse");
 
-  return _lisp_init(&(_LispValue){
-      .type = LISP_TUPLE, .items = {.array = nodes.array, .size = nodes.size}});
+  return _lisp_init(
+      &(_LispValue){.type = LISP_TUPLE_T,
+                    .items = {.array = nodes.array, .size = nodes.size}});
 }
 
 LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
@@ -494,7 +495,7 @@ LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
 LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
   size_t item_count = 0;
   for (size_t i = 0; i < arg_count; i++) {
-    if (args[i]->type != LISP_TUPLE)
+    if (args[i]->type != LISP_TUPLE_T)
       return ERROR_TO_LISP("`unpack` expects tuples");
 
     item_count += args[i]->items.size;
@@ -509,7 +510,7 @@ LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
   }
 
   return _lisp_init(&(_LispValue){
-      .type = LISP_UNPACKED, .items = {.array = array, .size = item_count}});
+      .type = LISP_UNPACKED_T, .items = {.array = array, .size = item_count}});
 }
 
 LispValue builtin_quote(LispValue *args, size_t arg_count, Environment *env) {
@@ -523,7 +524,7 @@ LispValue builtin_head(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`head` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_TUPLE)
+  if (args[0]->type != LISP_TUPLE_T)
     return ERROR_TO_LISP("`head` expects a tuple");
 
   if (!args[0]->items.size)
@@ -536,13 +537,13 @@ LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`tail` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_TUPLE)
+  if (args[0]->type != LISP_TUPLE_T)
     return ERROR_TO_LISP("`tail` expects a tuple");
 
   if (!args[0]->items.size)
     return ERROR_TO_LISP("`tail` expects a non-empty tuple");
 
-  return _lisp_init(&(_LispValue){.type = LISP_TUPLE,
+  return _lisp_init(&(_LispValue){.type = LISP_TUPLE_T,
                                   .items = {.array = args[0]->items.array + 1,
                                             .size = args[0]->items.size - 1}});
 }
@@ -550,7 +551,7 @@ LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   env_set(&global_env, n,                                                      \
           _lisp_init(&(_LispValue){                                            \
-              .type = LISP_BUILTIN_FUNC,                                       \
+              .type = LISP_BUILTIN_FUNC_T,                                     \
               .builtin_function = {                                            \
                   .callback = (LispValue (*)(LispValue *, size_t, void *))c,   \
                   .is_macro = m,                                               \

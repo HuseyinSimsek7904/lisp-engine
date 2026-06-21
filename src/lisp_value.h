@@ -9,16 +9,16 @@
 #include "lexer.h"
 
 typedef enum {
-  LISP_NIL = 0,
-  LISP_ERROR,
-  LISP_STRING,
-  LISP_INT64,
-  LISP_BOOL,
-  LISP_SYMBOL,
-  LISP_BUILTIN_FUNC,
-  LISP_FUNC,
-  LISP_TUPLE,
-  LISP_UNPACKED,
+  LISP_NIL_T = 0,
+  LISP_ERROR_T,
+  LISP_STRING_T,
+  LISP_INT64_T,
+  LISP_BOOL_T,
+  LISP_SYMBOL_T,
+  LISP_BUILTIN_FUNC_T,
+  LISP_FUNC_T,
+  LISP_TUPLE_T,
+  LISP_UNPACKED_T,
 } LispType;
 
 typedef struct _LispValue _LispValue;
@@ -79,14 +79,14 @@ typedef struct {
 } LispValuesArray;
 
 #define BOOL_TO_LISP(x)                                                        \
-  _lisp_init(&(_LispValue){.type = LISP_BOOL, .boolean = x})
+  _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = x})
 #define INT64_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_INT64, .integer = x})
+  _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = x})
 #define ERROR_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_ERROR, .error_message = x})
+  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
 #define STR_TO_LISP(x)                                                         \
-  _lisp_init(&(_LispValue){.type = LISP_STRING, .string = x})
-#define NIL_SINGLETON_LISP _lisp_init(&(_LispValue){.type = LISP_NIL})
+  _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = x})
+#define NIL_SINGLETON_LISP _lisp_init(&(_LispValue){.type = LISP_NIL_T})
 
 LispValue _lisp_init(_LispValue *value);
 

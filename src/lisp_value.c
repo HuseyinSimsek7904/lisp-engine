@@ -21,38 +21,38 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     // representation is their symbol itself. Singleton symbols could be
     // printed better.
 
-  case LISP_NIL:
+  case LISP_NIL_T:
     fprintf(file, "nil");
     break;
 
-  case LISP_BOOL:
+  case LISP_BOOL_T:
     fprintf(file, value->boolean ? "true" : "false");
     break;
 
-  case LISP_ERROR:
+  case LISP_ERROR_T:
     fprintf(file, pretty ? "<error(%s)>" : "error: %s", value->error_message);
     break;
 
-  case LISP_STRING:
+  case LISP_STRING_T:
     fprintf(file, pretty ? "\"%s\"" : "%s", value->string);
     break;
 
-  case LISP_SYMBOL:
+  case LISP_SYMBOL_T:
     fprintf(file, "%s", value->symbol);
     break;
 
-  case LISP_INT64:
+  case LISP_INT64_T:
     fprintf(file, "%ld", value->integer);
     break;
 
-  case LISP_BUILTIN_FUNC:
+  case LISP_BUILTIN_FUNC_T:
     fprintf(file,
             value->builtin_function.is_macro ? "<builtin-macro `%s`>"
                                              : "<builtin-function `%s`>",
             value->builtin_function.name);
     break;
 
-  case LISP_FUNC:
+  case LISP_FUNC_T:
     fprintf(file, value->custom_function.is_macro ? "<macro(" : "<function(");
 
     if (value->custom_function.arg_count > 0)
@@ -71,10 +71,10 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     fprintf(file, ")>");
     break;
 
-  case LISP_UNPACKED:
+  case LISP_UNPACKED_T:
     fprintf(file, "unpacked");
 
-  case LISP_TUPLE:
+  case LISP_TUPLE_T:
     fprintf(file, "(");
     if (value->items.size > 0)
       lisp_fprint(file, value->items.array[0], true);
@@ -100,26 +100,26 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return false;
 
   switch (a->type) {
-  case LISP_NIL:
+  case LISP_NIL_T:
     return true;
 
-  case LISP_BOOL:
+  case LISP_BOOL_T:
     return a->boolean == b->boolean;
 
-  case LISP_ERROR:
+  case LISP_ERROR_T:
     return a->error_message == b->error_message;
 
-  case LISP_INT64:
+  case LISP_INT64_T:
     return a->integer == b->integer;
 
-  case LISP_STRING:
+  case LISP_STRING_T:
     return strcmp(a->string, b->string);
 
-  case LISP_BUILTIN_FUNC:
+  case LISP_BUILTIN_FUNC_T:
     return a->builtin_function.is_macro == b->builtin_function.is_macro &&
            a->builtin_function.callback == b->builtin_function.callback;
 
-  case LISP_TUPLE:
+  case LISP_TUPLE_T:
     if (a->items.size != b->items.size)
       return false;
 
@@ -157,21 +157,21 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
 
       LispValues *new_nodes = &stack.array[stack.size - 1];
       pn = (_LispValue){
-          .type = LISP_TUPLE,
+          .type = LISP_TUPLE_T,
           .items = {.array = new_nodes->array, .size = new_nodes->size}};
       stack.size--;
       break;
 
     case T_INT64:
-      pn = (_LispValue){.type = LISP_INT64, .integer = t.integer};
+      pn = (_LispValue){.type = LISP_INT64_T, .integer = t.integer};
       break;
 
     case T_STRING:
-      pn = (_LispValue){.type = LISP_STRING, .string = t.string};
+      pn = (_LispValue){.type = LISP_STRING_T, .string = t.string};
       break;
 
     case T_SYMBOL:
-      pn = (_LispValue){.type = LISP_SYMBOL, .symbol = t.symbol};
+      pn = (_LispValue){.type = LISP_SYMBOL_T, .symbol = t.symbol};
       break;
 
     default:
