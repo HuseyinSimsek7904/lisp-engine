@@ -46,8 +46,10 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     break;
 
   case LISP_BUILTIN_FUNC:
-    fprintf(file, value->builtin_function.is_macro ? "<builtin-macro>"
-                                                   : "<builtin-function>");
+    fprintf(file,
+            value->builtin_function.is_macro ? "<builtin-macro `%s`>"
+                                             : "<builtin-function `%s`>",
+            value->builtin_function.name);
     break;
 
   case LISP_FUNC:

@@ -554,7 +554,8 @@ LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
               .builtin_function = {                                            \
                   .callback = (LispValue (*)(LispValue *, size_t, void *))c,   \
                   .is_macro = m,                                               \
-                  .tail_call = t}}));
+                  .tail_call = t,                                              \
+                  .name = n}}));
 
 int main(void) {
   Environment global_env = {.other = NULL};
