@@ -78,15 +78,21 @@ typedef struct {
   size_t capacity;
 } LispValuesArray;
 
-#define BOOL_TO_LISP(x)                                                        \
-  _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = x})
+// Singleton values.
+extern LispValue LISP_NIL;
+extern LispValue LISP_TRUE;
+extern LispValue LISP_FALSE;
+
+#define BOOL_TO_LISP(x) x ? LISP_TRUE : LISP_FALSE
+
 #define INT64_TO_LISP(x)                                                       \
   _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = x})
-#define ERROR_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
+
 #define STR_TO_LISP(x)                                                         \
   _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = x})
-#define NIL_SINGLETON_LISP _lisp_init(&(_LispValue){.type = LISP_NIL_T})
+
+#define ERROR_TO_LISP(x)                                                       \
+  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
 
 LispValue _lisp_init(_LispValue *value);
 

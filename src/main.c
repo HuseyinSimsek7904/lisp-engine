@@ -53,7 +53,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     case LISP_TUPLE_T:
       if (!lisp->items.size) {
         roll_env_back(env, original);
-        return NIL_SINGLETON_LISP;
+        return LISP_NIL;
       }
 
       LispValue callable = evaluate_lisp(lisp->items.array[0], env);
@@ -183,7 +183,7 @@ LispValue repl(char *lisp, Environment *env) {
   if (parser_result)
     return ERROR_TO_LISP("could not parse");
 
-  LispValue return_value = NIL_SINGLETON_LISP;
+  LispValue return_value = LISP_NIL;
   for (size_t i = 0; i < nodes.size; i++) {
     return_value = evaluate_lisp(nodes.array[i], env);
   }
@@ -265,7 +265,7 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
     env_set(&new_env, symbol, value);
   }
 
-  LispValue return_value = NIL_SINGLETON_LISP;
+  LispValue return_value = LISP_NIL;
   for (size_t i = 1; i < arg_count; i++) {
     return_value = evaluate_lisp(args[i], &new_env);
   }
@@ -385,7 +385,7 @@ LispValue builtin_print(LispValue *args, size_t arg_count, Environment *env) {
     printf("%s\n", args[i]->string);
   }
 
-  return NIL_SINGLETON_LISP;
+  return LISP_NIL;
 }
 
 LispValue builtin_sum(LispValue *args, size_t arg_count, Environment *env) {
@@ -485,7 +485,7 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
 }
 
 LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
-  LispValue return_value = NIL_SINGLETON_LISP;
+  LispValue return_value = LISP_NIL;
   for (size_t i = 0; i < arg_count; i++) {
     return_value = evaluate_lisp(args[i], env);
   }
@@ -558,14 +558,22 @@ LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
                   .tail_call = t,                                              \
                   .name = n}}));
 
+LispValue LISP_NIL;
+LispValue LISP_TRUE;
+LispValue LISP_FALSE;
+
 int main(void) {
   Environment global_env = {.other = NULL};
   da_init(&global_env);
 
   // Singletons
-  env_set(&global_env, "nil", NIL_SINGLETON_LISP);
-  env_set(&global_env, "true", BOOL_TO_LISP(true));
-  env_set(&global_env, "false", BOOL_TO_LISP(false));
+  LISP_NIL = _lisp_init(&(_LispValue){.type = LISP_NIL_T});
+  LISP_FALSE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = false});
+  LISP_TRUE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = true});
+
+  env_set(&global_env, "nil", LISP_NIL);
+  env_set(&global_env, "false", LISP_FALSE);
+  env_set(&global_env, "true", LISP_TRUE);
 
   // Builtin functions
   DEFINE_BUILTIN_FUNCTION("print", builtin_print, false, false);
