@@ -15,10 +15,14 @@ LispValue _lisp_init(_LispValue *value) {
   return ptr;
 }
 
-void lisp_fprint(FILE *file, LispValue value) {
+void lisp_fprint(FILE *file, LispValue value, bool pretty) {
   switch (value->type) {
+    // TODO: nil and bools are singletons, and because of this, their
+    // representation is their symbol itself. Singleton symbols could be
+    // printed better.
+
   case LISP_NIL:
-    fprintf(file, "NIL");
+    fprintf(file, "nil");
     break;
 
   case LISP_BOOL:
@@ -26,11 +30,11 @@ void lisp_fprint(FILE *file, LispValue value) {
     break;
 
   case LISP_ERROR:
-    fprintf(file, "<error(%s)>", value->error_message);
+    fprintf(file, pretty ? "<error(%s)>" : "error: %s", value->error_message);
     break;
 
   case LISP_STRING:
-    fprintf(file, "\"%s\"", value->string);
+    fprintf(file, pretty ? "\"%s\"" : "%s", value->string);
     break;
 
   case LISP_SYMBOL:
@@ -71,11 +75,11 @@ void lisp_fprint(FILE *file, LispValue value) {
   case LISP_TUPLE:
     fprintf(file, "(");
     if (value->items.size > 0)
-      lisp_print(value->items.array[0]);
+      lisp_fprint(file, value->items.array[0], true);
 
     for (size_t i = 1; i < value->items.size; i++) {
       fprintf(file, " ");
-      lisp_print(value->items.array[i]);
+      lisp_fprint(file, value->items.array[i], true);
     }
     fprintf(file, ")");
     break;
@@ -85,7 +89,9 @@ void lisp_fprint(FILE *file, LispValue value) {
   }
 }
 
-inline void lisp_print(LispValue value) { lisp_fprint(stdout, value); }
+inline void lisp_print(LispValue value, bool pretty) {
+  lisp_fprint(stdout, value, pretty);
+}
 
 bool lisp_is_ident(LispValue a, LispValue b) {
   if (a->type != b->type)

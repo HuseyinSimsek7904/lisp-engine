@@ -613,7 +613,7 @@ int main(void) {
 
     free(lisp);
 
-    lisp_print(return_value);
+    lisp_print(return_value, true);
     printf("\n");
   }
 }

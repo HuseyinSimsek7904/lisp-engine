@@ -91,8 +91,8 @@ LispValue _lisp_init(_LispValue *value);
 
 bool lisp_is_ident(LispValue a, LispValue b);
 
-void lisp_fprint(FILE *file, LispValue value);
-void lisp_print(LispValue value);
+void lisp_fprint(FILE *file, LispValue value, bool pretty);
+void lisp_print(LispValue value, bool pretty);
 
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes);
 
