@@ -74,7 +74,7 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
   case LISP_UNPACKED_T:
     fprintf(file, "unpacked");
 
-  case LISP_TUPLE_T:
+  case LISP_LIST_T:
     fprintf(file, "(");
     if (value->items.size > 0)
       lisp_fprint(file, value->items.array[0], true);
@@ -119,7 +119,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->builtin_function.is_macro == b->builtin_function.is_macro &&
            a->builtin_function.callback == b->builtin_function.callback;
 
-  case LISP_TUPLE_T:
+  case LISP_LIST_T:
     if (a->items.size != b->items.size)
       return false;
 
@@ -157,7 +157,7 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
 
       LispValues *new_nodes = &stack.array[stack.size - 1];
       pn = (_LispValue){
-          .type = LISP_TUPLE_T,
+          .type = LISP_LIST_T,
           .items = {.array = new_nodes->array, .size = new_nodes->size}};
       stack.size--;
       break;

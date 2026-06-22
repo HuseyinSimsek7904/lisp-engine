@@ -17,7 +17,7 @@ typedef enum {
   LISP_SYMBOL_T,
   LISP_BUILTIN_FUNC_T,
   LISP_FUNC_T,
-  LISP_TUPLE_T,
+  LISP_LIST_T,
   LISP_UNPACKED_T,
 } LispType;
 

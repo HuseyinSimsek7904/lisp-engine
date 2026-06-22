@@ -50,7 +50,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
-    case LISP_TUPLE_T:
+    case LISP_LIST_T:
       if (!lisp->items.size) {
         roll_env_back(env, original);
         return LISP_NIL;
@@ -125,7 +125,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         if (callable->custom_function.variadic) {
           _LispValue list = {
-              .type = LISP_TUPLE_T,
+              .type = LISP_LIST_T,
               .items = {
                   .array =
                       calloc(args.size - callable->custom_function.arg_count,
@@ -233,7 +233,7 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
 
   LispValue defs_node = args[0];
 
-  if (defs_node->type != LISP_TUPLE_T)
+  if (defs_node->type != LISP_LIST_T)
     return ERROR_TO_LISP("first argument to `let` must be a tuple");
 
   Environment new_env = {.other = env};
@@ -242,7 +242,7 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < defs_node->items.size; i++) {
     LispValue def_node = defs_node->items.array[i];
 
-    if (def_node->type != LISP_TUPLE_T)
+    if (def_node->type != LISP_LIST_T)
       return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples");
 
     if (def_node->items.size != 2)
@@ -301,7 +301,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
   if (arg_count < 2)
     return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
-  if (args[0]->type != LISP_TUPLE_T)
+  if (args[0]->type != LISP_LIST_T)
     return ERROR_TO_LISP("first argument to `fn` must be a tuple");
 
   char *variadic = NULL;
@@ -320,7 +320,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
 
       new_args[i] = arg->symbol;
 
-    } else if (arg->type == LISP_TUPLE_T) {
+    } else if (arg->type == LISP_LIST_T) {
       if (i != args[0]->items.size - 1) {
         TODO();
         return ERROR_TO_LISP(
@@ -415,7 +415,7 @@ LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
 }
 
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
-  return _lisp_init(&(_LispValue){.type = LISP_TUPLE_T,
+  return _lisp_init(&(_LispValue){.type = LISP_LIST_T,
                                   .items = {.array = args, .size = arg_count}});
 }
 
@@ -480,7 +480,7 @@ LispValue builtin_parse_lisp(LispValue *args, size_t arg_count,
     return ERROR_TO_LISP("could not parse");
 
   return _lisp_init(
-      &(_LispValue){.type = LISP_TUPLE_T,
+      &(_LispValue){.type = LISP_LIST_T,
                     .items = {.array = nodes.array, .size = nodes.size}});
 }
 
@@ -495,7 +495,7 @@ LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
 LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
   size_t item_count = 0;
   for (size_t i = 0; i < arg_count; i++) {
-    if (args[i]->type != LISP_TUPLE_T)
+    if (args[i]->type != LISP_LIST_T)
       return ERROR_TO_LISP("`unpack` expects tuples");
 
     item_count += args[i]->items.size;
@@ -524,7 +524,7 @@ LispValue builtin_head(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`head` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_TUPLE_T)
+  if (args[0]->type != LISP_LIST_T)
     return ERROR_TO_LISP("`head` expects a tuple");
 
   if (!args[0]->items.size)
@@ -537,13 +537,13 @@ LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`tail` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_TUPLE_T)
+  if (args[0]->type != LISP_LIST_T)
     return ERROR_TO_LISP("`tail` expects a tuple");
 
   if (!args[0]->items.size)
     return ERROR_TO_LISP("`tail` expects a non-empty tuple");
 
-  return _lisp_init(&(_LispValue){.type = LISP_TUPLE_T,
+  return _lisp_init(&(_LispValue){.type = LISP_LIST_T,
                                   .items = {.array = args[0]->items.array + 1,
                                             .size = args[0]->items.size - 1}});
 }
