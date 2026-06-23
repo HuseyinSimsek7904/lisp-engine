@@ -110,7 +110,9 @@ bool lisp_is_ident(LispValue a, LispValue b);
 void lisp_fprint(FILE *file, LispValue value, bool pretty);
 void lisp_print(LispValue value, bool pretty);
 
+LispValue lisp_make_cons(LispValue head, LispValue tail);
 LispValue lisp_listify(LispValue lisp);
+LispValue lisp_consify(LispValue lisp);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
 
