@@ -50,6 +50,10 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
+    case LISP_CONS_T:
+      lisp = lisp_listify(lisp);
+      break;
+
     case LISP_LIST_T:
       if (!lisp->items.size) {
         roll_env_back(env, original);
@@ -233,8 +237,11 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
 
   LispValue defs_node = args[0];
 
-  if (defs_node->type != LISP_LIST_T)
-    return ERROR_TO_LISP("first argument to `let` must be a tuple");
+  if (defs_node->type == LISP_CONS_T)
+    defs_node = lisp_listify(defs_node);
+
+  else if (defs_node->type != LISP_LIST_T)
+    return ERROR_TO_LISP("first argument to `let` must be a tuple-like");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
@@ -242,8 +249,12 @@ LispValue builtin_let(LispValue *args, size_t arg_count, Environment *env) {
   for (size_t i = 0; i < defs_node->items.size; i++) {
     LispValue def_node = defs_node->items.array[i];
 
-    if (def_node->type != LISP_LIST_T)
-      return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples");
+    if (def_node->type == LISP_CONS_T)
+      def_node = lisp_listify(def_node);
+
+    else if (def_node->type != LISP_LIST_T)
+      return ERROR_TO_LISP(
+          "first argument to `let` must be a tuple of tuple-likes");
 
     if (def_node->items.size != 2)
       return ERROR_TO_LISP(
@@ -301,8 +312,11 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
   if (arg_count < 2)
     return ERROR_TO_LISP("`fn` requires at least 2 arguments");
 
-  if (args[0]->type != LISP_LIST_T)
-    return ERROR_TO_LISP("first argument to `fn` must be a tuple");
+  if (args[0]->type == LISP_CONS_T)
+    args[0] = lisp_listify(args[0]);
+
+  else if (args[0]->type != LISP_LIST_T)
+    return ERROR_TO_LISP("first argument to `fn` must be a tuple-like");
 
   char *variadic = NULL;
   char **new_args = malloc(sizeof(char *) * arg_count);
@@ -495,8 +509,10 @@ LispValue builtin_eval(LispValue *args, size_t arg_count, Environment *env) {
 LispValue builtin_unpack(LispValue *args, size_t arg_count, Environment *env) {
   size_t item_count = 0;
   for (size_t i = 0; i < arg_count; i++) {
-    if (args[i]->type != LISP_LIST_T)
-      return ERROR_TO_LISP("`unpack` expects tuples");
+    if (args[i]->type == LISP_CONS_T)
+      args[i] = lisp_listify(args[i]);
+    else if (args[i]->type != LISP_LIST_T)
+      return ERROR_TO_LISP("`unpack` expects tuple-likes");
 
     item_count += args[i]->items.size;
   }
@@ -524,28 +540,24 @@ LispValue builtin_head(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`head` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_LIST_T)
-    return ERROR_TO_LISP("`head` expects a tuple");
+  LispValue head = lisp_head(args[0]);
 
-  if (!args[0]->items.size)
-    return ERROR_TO_LISP("`head` expects a non-empty tuple");
+  if (!head)
+    return ERROR_TO_LISP("cannot `head` on value");
 
-  return args[0]->items.array[0];
+  return head;
 }
 
 LispValue builtin_tail(LispValue *args, size_t arg_count, Environment *env) {
   if (arg_count != 1)
     return ERROR_TO_LISP("`tail` expects exactly 1 arguments");
 
-  if (args[0]->type != LISP_LIST_T)
-    return ERROR_TO_LISP("`tail` expects a tuple");
+  LispValue tail = lisp_tail(args[0]);
 
-  if (!args[0]->items.size)
-    return ERROR_TO_LISP("`tail` expects a non-empty tuple");
+  if (!tail)
+    return ERROR_TO_LISP("cannot `tail` on value");
 
-  return _lisp_init(&(_LispValue){.type = LISP_LIST_T,
-                                  .items = {.array = args[0]->items.array + 1,
-                                            .size = args[0]->items.size - 1}});
+  return tail;
 }
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \

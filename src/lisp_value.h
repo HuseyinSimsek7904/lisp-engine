@@ -19,6 +19,7 @@ typedef enum {
   LISP_FUNC_T,
   LISP_LIST_T,
   LISP_UNPACKED_T,
+  LISP_CONS_T,
 } LispType;
 
 typedef struct _LispValue _LispValue;
@@ -45,6 +46,13 @@ typedef struct {
   size_t size;
 } _LispView;
 
+typedef struct {
+  LispValue head;
+
+  // tail must be either another LISP_CONS_T or LISP_NIL_T.
+  LispValue tail;
+} _LispCons;
+
 struct _LispValue {
   LispType type;
   union {
@@ -56,6 +64,7 @@ struct _LispValue {
     _LispBuiltinFunction builtin_function;
     _LispCustomFunction custom_function;
     _LispView items;
+    _LispCons cons;
   };
 };
 
@@ -100,6 +109,10 @@ bool lisp_is_ident(LispValue a, LispValue b);
 
 void lisp_fprint(FILE *file, LispValue value, bool pretty);
 void lisp_print(LispValue value, bool pretty);
+
+LispValue lisp_listify(LispValue lisp);
+LispValue lisp_head(LispValue lisp);
+LispValue lisp_tail(LispValue lisp);
 
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes);
 

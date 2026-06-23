@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,6 +87,19 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     fprintf(file, ")");
     break;
 
+  case LISP_CONS_T:
+    fprintf(file, "<cons(");
+    lisp_fprint(file, value->cons.head, true);
+
+    while (value->cons.tail->type != LISP_NIL_T) {
+      value = value->cons.tail;
+
+      fprintf(file, " ");
+      lisp_fprint(file, value->cons.head, true);
+    }
+    fprintf(file, ")>");
+    break;
+
   default:
     TODO();
   }
@@ -129,10 +143,80 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
     return true;
 
+  case LISP_CONS_T:
+    do {
+      if (lisp_is_ident(a->cons.head, b->cons.head))
+        return false;
+
+      a = a->cons.tail;
+      b = b->cons.tail;
+    } while (a->type == LISP_CONS_T && b->type == LISP_CONS_T);
+
+    return a->type == b->type;
+
   default:
     TODO();
     return false;
   }
+}
+
+LispValue lisp_make_cons(LispValue head, LispValue tail) {
+  return _lisp_init(
+      &(_LispValue){.type = LISP_CONS_T, .cons = {.head = head, .tail = tail}});
+}
+
+LispValue lisp_listify(LispValue lisp) {
+  LispValues items;
+  da_init(&items);
+
+  while (lisp->type != LISP_NIL_T) {
+    assert(lisp->type == LISP_CONS_T);
+    da_append(&items, lisp->cons.head);
+    lisp = lisp->cons.tail;
+  }
+
+  return _lisp_init(
+      &(_LispValue){.type = LISP_LIST_T,
+                    .items = {.array = items.array, .size = items.size}});
+}
+
+LispValue lisp_consify(LispValue lisp) {
+  LispValue cons = LISP_NIL;
+
+  for (size_t i = lisp->items.size; i-- > 0;) {
+    cons = lisp_make_cons(lisp->items.array[i], cons);
+  }
+
+  return cons;
+}
+
+LispValue lisp_head(LispValue lisp) {
+  if (lisp->type == LISP_CONS_T)
+    return lisp->cons.head;
+
+  else if (lisp->type == LISP_LIST_T) {
+    if (!lisp->items.size)
+      return NULL;
+
+    return lisp->items.array[0];
+
+  } else
+    return NULL;
+}
+
+LispValue lisp_tail(LispValue lisp) {
+  if (lisp->type == LISP_CONS_T)
+    return lisp->cons.tail;
+
+  else if (lisp->type == LISP_LIST_T) {
+    if (!lisp->items.size)
+      return NULL;
+
+    LispValue cons = lisp_consify(lisp);
+    return cons->cons.tail;
+
+  } else
+    return NULL;
 }
 
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
