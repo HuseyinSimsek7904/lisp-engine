@@ -177,13 +177,14 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
     }
   }
 
+  LispValue body = lisp_consify_array(args + 1, arg_count - 1);
+
   return _lisp_init(&(_LispValue){
       .type = LISP_FUNC_T,
       .custom_function = {.is_macro = is_macro,
                           .args = new_args,
                           .arg_count = args[0]->items.size - (variadic ? 1 : 0),
-                          .body = args + 1,
-                          .body_size = arg_count - 1,
+                          .body = body,
                           .variadic = variadic}});
 }
 

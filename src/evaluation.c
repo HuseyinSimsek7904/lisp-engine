@@ -146,14 +146,15 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           env_set(new_env, callable->custom_function.variadic, remaining_args);
         }
 
-        assert(callable->custom_function.body_size > 0);
+        assert(callable->custom_function.body->type == LISP_CONS_T);
+        LispValue remaining_body = callable->custom_function.body;
 
-        for (size_t i = 0; i < callable->custom_function.body_size - 1; i++) {
-          evaluate_lisp(callable->custom_function.body[i], new_env);
+        while (remaining_body->cons.tail->type != LISP_NIL_T) {
+          evaluate_lisp(remaining_body->cons.head, new_env);
+          remaining_body = remaining_body->cons.tail;
         }
 
-        lisp = callable->custom_function
-                   .body[callable->custom_function.body_size - 1];
+        lisp = remaining_body->cons.head;
         env = new_env;
       } break;
 
