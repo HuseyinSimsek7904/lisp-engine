@@ -115,6 +115,7 @@ LispValue lisp_consify(LispValue lisp);
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
+LispValue *lisp_cons_find_term_nil(LispValue *lisp);
 size_t lisp_get_len(LispValue lisp);
 
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes);

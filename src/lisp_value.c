@@ -232,6 +232,15 @@ LispValue lisp_tail(LispValue lisp) {
     return NULL;
 }
 
+LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
+  while ((*lisp)->type != LISP_NIL_T) {
+    assert((*lisp)->type == LISP_CONS_T);
+    lisp = &((*lisp)->cons.tail);
+  }
+
+  return lisp;
+}
+
 size_t lisp_get_len(LispValue lisp) {
   if (lisp->type == LISP_LIST_T)
     return lisp->items.size;
