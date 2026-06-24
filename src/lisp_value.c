@@ -232,6 +232,21 @@ LispValue lisp_tail(LispValue lisp) {
     return NULL;
 }
 
+size_t lisp_get_len(LispValue lisp) {
+  if (lisp->type == LISP_LIST_T)
+    return lisp->items.size;
+
+  assert(lisp->type == LISP_CONS_T);
+
+  size_t count = 0;
+  for (; lisp->type != LISP_NIL_T; count++) {
+    assert(lisp->type == LISP_CONS_T);
+    lisp = lisp->cons.tail;
+  }
+
+  return count;
+}
+
 ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
   LispValuesArray stack;
   da_init(&stack);
