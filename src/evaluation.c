@@ -1,8 +1,10 @@
 #include <assert.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 #include "core.h"
 #include "evaluation.h"
+#include "lisp_value.h"
 
 void roll_env_back(Environment *env, Environment *original) {
   while (env != original && env->other) {
@@ -85,26 +87,43 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       } break;
 
       case LISP_FUNC_T: {
-        LispValues args;
-        da_init(&args);
+        LispValue args = LISP_NIL;
+        size_t arg_count = 0;
 
-        if (callable->custom_function.is_macro) {
-          for (size_t i = 1; i < lisp->items.size; i++)
-            da_append(&args, lisp->items.array[i]);
-        } else {
-          for (size_t i = 1; i < lisp->items.size; i++) {
-            LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-            if (arg->type == LISP_UNPACKED_T)
-              da_append_many(&args, arg->items.array, arg->items.size);
-            else
-              da_append(&args, arg);
+        {
+          LispValue *last = &args;
+
+          if (callable->custom_function.is_macro) {
+            for (size_t i = 1; i < lisp->items.size; i++) {
+              *last = lisp_make_cons(lisp->items.array[i], *last);
+              last = &((*last)->cons.tail);
+            }
+            arg_count += lisp->items.size;
+
+          } else {
+            for (size_t i = 1; i < lisp->items.size; i++) {
+              LispValue arg = evaluate_lisp(lisp->items.array[i], env);
+
+              if (arg->type == LISP_UNPACKED_T) {
+                for (size_t i = 0; i < arg->items.size; i++) {
+                  *last = lisp_make_cons(arg->items.array[i], *last);
+                  last = &((*last)->cons.tail);
+                }
+                arg_count += arg->items.size;
+
+              } else {
+                *last = lisp_make_cons(arg, *last);
+                last = &((*last)->cons.tail);
+                arg_count++;
+              }
+            }
           }
         }
 
         if ((callable->custom_function.variadic &&
-             args.size < callable->custom_function.arg_count) ||
+             arg_count < callable->custom_function.arg_count) ||
             (!callable->custom_function.variadic &&
-             args.size != callable->custom_function.arg_count)) {
+             arg_count != callable->custom_function.arg_count)) {
 
           roll_env_back(env, original);
           return ERROR_TO_LISP("incorrect number of parameters");
@@ -114,26 +133,17 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         *new_env = (Environment){.other = env};
         da_init(new_env);
 
+        LispValue remaining_args = args;
         for (size_t i = 0; i < callable->custom_function.arg_count; i++) {
-          env_set(new_env, callable->custom_function.args[i], args.array[i]);
+          assert(remaining_args->type == LISP_CONS_T);
+
+          env_set(new_env, callable->custom_function.args[i],
+                  remaining_args->cons.head);
+          remaining_args = remaining_args->cons.tail;
         }
 
         if (callable->custom_function.variadic) {
-          _LispValue list = {
-              .type = LISP_LIST_T,
-              .items = {
-                  .array =
-                      calloc(args.size - callable->custom_function.arg_count,
-                             sizeof(LispValue)),
-                  .size = args.size - callable->custom_function.arg_count}};
-
-          memcpy(list.items.array,
-                 &args.array[callable->custom_function.arg_count],
-                 sizeof(LispValue) *
-                     (args.size - callable->custom_function.arg_count));
-
-          env_set(new_env, callable->custom_function.variadic,
-                  _lisp_init(&list));
+          env_set(new_env, callable->custom_function.variadic, remaining_args);
         }
 
         assert(callable->custom_function.body_size > 0);
