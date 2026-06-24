@@ -21,9 +21,9 @@ EXTCFLAGS	:= $(shell pkg-config --cflags --libs $(EXTDEPS))
 .PHONY: all debug build \
 	clean gen-bear tests
 
-all: build
+all: debug
 
-debug: CFLAGS += -g
+debug: CFLAGS += -ggdb
 debug: $(OBJDIRS) $(EXECUTABLE)
 
 build: CFLAGS += -O3
@@ -52,4 +52,4 @@ clean:
 	rm -rf $(BINDIR)
 
 gen-bear: clean
-	bear -- make
+	bear -- make debug
