@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "core.h"
@@ -61,24 +63,38 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return callable;
 
       case LISP_BUILTIN_FUNC_T: {
-        if (callable->builtin_function.is_macro) {
-          lisp = callable->builtin_function.callback(lisp->items.array + 1,
-                                                     lisp->items.size - 1, env);
-        } else {
-          LispValues args;
-          da_init(&args);
+        LispValue args = LISP_NIL;
 
-          for (size_t i = 1; i < lisp->items.size; i++) {
-            LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-            if (arg->type == LISP_UNPACKED_T)
-              da_append_many(&args, arg->items.array, arg->items.size);
-            else
-              da_append(&args, arg);
+        {
+          LispValue *last = &args;
+
+          if (callable->builtin_function.is_macro) {
+            for (size_t i = 1; i < lisp->items.size; i++) {
+              *last = lisp_make_cons(lisp->items.array[i], *last);
+              last = &((*last)->cons.tail);
+            }
+
+          } else {
+            for (size_t i = 1; i < lisp->items.size; i++) {
+              LispValue arg = evaluate_lisp(lisp->items.array[i], env);
+
+              if (arg->type == LISP_UNPACKED_T) {
+                for (size_t i = 0; i < arg->items.size; i++) {
+                  *last = lisp_make_cons(arg->items.array[i], *last);
+                  last = &((*last)->cons.tail);
+                }
+
+              } else {
+                *last = lisp_make_cons(arg, *last);
+                last = &((*last)->cons.tail);
+              }
+            }
           }
-
-          lisp =
-              callable->builtin_function.callback(args.array, args.size, env);
         }
+
+        LispValue args_list = lisp_listify(args);
+        lisp = callable->builtin_function.callback(args_list->items.array,
+                                                   args_list->items.size, env);
 
         if (!callable->builtin_function.tail_call) {
           roll_env_back(env, original);
