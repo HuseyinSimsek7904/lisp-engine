@@ -17,6 +17,36 @@ void roll_env_back(Environment *env, Environment *original) {
   }
 }
 
+LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
+  LispValue args = LISP_NIL;
+  LispValue *last = &args;
+
+  if (is_macro) {
+    for (size_t i = 1; i < lisp->items.size; i++) {
+      *last = lisp_make_cons(lisp->items.array[i], *last);
+      last = &((*last)->cons.tail);
+    }
+
+  } else {
+    for (size_t i = 1; i < lisp->items.size; i++) {
+      LispValue arg = evaluate_lisp(lisp->items.array[i], env);
+
+      if (arg->type == LISP_UNPACKED_T) {
+        for (size_t i = 0; i < arg->items.size; i++) {
+          *last = lisp_make_cons(arg->items.array[i], *last);
+          last = &((*last)->cons.tail);
+        }
+
+      } else {
+        *last = lisp_make_cons(arg, *last);
+        last = &((*last)->cons.tail);
+      }
+    }
+  }
+
+  return args;
+}
+
 LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   Environment *original = env;
 
@@ -63,36 +93,10 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return callable;
 
       case LISP_BUILTIN_FUNC_T: {
-        LispValue args = LISP_NIL;
-
-        {
-          LispValue *last = &args;
-
-          if (callable->builtin_function.is_macro) {
-            for (size_t i = 1; i < lisp->items.size; i++) {
-              *last = lisp_make_cons(lisp->items.array[i], *last);
-              last = &((*last)->cons.tail);
-            }
-
-          } else {
-            for (size_t i = 1; i < lisp->items.size; i++) {
-              LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-
-              if (arg->type == LISP_UNPACKED_T) {
-                for (size_t i = 0; i < arg->items.size; i++) {
-                  *last = lisp_make_cons(arg->items.array[i], *last);
-                  last = &((*last)->cons.tail);
-                }
-
-              } else {
-                *last = lisp_make_cons(arg, *last);
-                last = &((*last)->cons.tail);
-              }
-            }
-          }
-        }
-
+        LispValue args =
+            generate_args(lisp, env, callable->builtin_function.is_macro);
         LispValue args_list = lisp_listify(args);
+
         lisp = callable->builtin_function.callback(args_list->items.array,
                                                    args_list->items.size, env);
 
@@ -103,38 +107,9 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       } break;
 
       case LISP_FUNC_T: {
-        LispValue args = LISP_NIL;
-        size_t arg_count = 0;
-
-        {
-          LispValue *last = &args;
-
-          if (callable->custom_function.is_macro) {
-            for (size_t i = 1; i < lisp->items.size; i++) {
-              *last = lisp_make_cons(lisp->items.array[i], *last);
-              last = &((*last)->cons.tail);
-            }
-            arg_count += lisp->items.size;
-
-          } else {
-            for (size_t i = 1; i < lisp->items.size; i++) {
-              LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-
-              if (arg->type == LISP_UNPACKED_T) {
-                for (size_t i = 0; i < arg->items.size; i++) {
-                  *last = lisp_make_cons(arg->items.array[i], *last);
-                  last = &((*last)->cons.tail);
-                }
-                arg_count += arg->items.size;
-
-              } else {
-                *last = lisp_make_cons(arg, *last);
-                last = &((*last)->cons.tail);
-                arg_count++;
-              }
-            }
-          }
-        }
+        LispValue args =
+            generate_args(lisp, env, callable->builtin_function.is_macro);
+        size_t arg_count = lisp_get_len(args);
 
         if ((callable->custom_function.variadic &&
              arg_count < callable->custom_function.arg_count) ||
