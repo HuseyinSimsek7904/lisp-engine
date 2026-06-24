@@ -73,13 +73,6 @@ typedef struct {
   size_t capacity;
 } LispValues;
 
-typedef enum {
-  PARSER_SUCCESS = 0,
-  PARSER_TOO_MANY_CLOSING,
-  PARSER_TOO_MANY_OPENING,
-  PARSER_UNKNOWN_TOKEN,
-} ParseResult;
-
 typedef struct {
   LispValues *array;
   size_t size;
@@ -118,7 +111,7 @@ LispValue lisp_tail(LispValue lisp);
 LispValue *lisp_cons_find_term_nil(LispValue *lisp);
 size_t lisp_get_len(LispValue lisp);
 
-ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes);
+LispValue parse(Token *tokens, size_t token_count);
 
 typedef struct {
   char *symbol;

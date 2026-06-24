@@ -256,9 +256,14 @@ size_t lisp_get_len(LispValue lisp) {
   return count;
 }
 
-ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
+LispValue parse(Token *tokens, size_t token_count) {
+  LispValues nodes;
+  da_init(&nodes);
+
   LispValuesArray stack;
   da_init(&stack);
+
+  LispValue result;
 
   for (; token_count > 0; token_count--) {
     Token t = *tokens++;
@@ -272,8 +277,8 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
 
     case T_R_PAREN:
       if (!stack.size) {
-        da_free(&stack);
-        return PARSER_TOO_MANY_CLOSING;
+        result = ERROR_TO_LISP("too many closing parenthesis");
+        goto result;
       }
 
       LispValues *new_nodes = &stack.array[stack.size - 1];
@@ -297,8 +302,8 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
 
     default:
       TODO();
-      da_free(&stack);
-      return PARSER_UNKNOWN_TOKEN;
+      result = ERROR_TO_LISP("unknown token type");
+      goto result;
     }
 
     LispValue node = _lisp_init(&pn);
@@ -306,16 +311,20 @@ ParseResult parse(Token *tokens, size_t token_count, LispValues *nodes) {
     if (stack.size) {
       da_append(&stack.array[stack.size - 1], node);
     } else {
-      da_append(nodes, node);
+      da_append(&nodes, node);
     }
   }
 
-  da_free(&stack);
-
   if (stack.size)
-    return PARSER_TOO_MANY_OPENING;
+    result = ERROR_TO_LISP("too many opening parenthesis");
+  else
+    result = lisp_consify_array(nodes.array, nodes.size);
 
-  return PARSER_SUCCESS;
+result:
+  da_free(&stack);
+  da_free(&nodes);
+
+  return result;
 }
 
 void env_free(Environment *env) {

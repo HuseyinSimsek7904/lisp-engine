@@ -171,18 +171,17 @@ LispValue repl(char *lisp, Environment *env) {
   if (lexer_result)
     return ERROR_TO_LISP("could not generate tokens for lisp");
 
-  LispValues nodes;
-  da_init(&nodes);
-
-  ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
+  LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);
 
-  if (parser_result)
-    return ERROR_TO_LISP("could not parse");
+  if (parser_result->type == LISP_ERROR_T)
+    return parser_result;
 
+  LispValue remaining_lisp = parser_result;
   LispValue return_value = LISP_NIL;
-  for (size_t i = 0; i < nodes.size; i++) {
-    return_value = evaluate_lisp(nodes.array[i], env);
+  while (remaining_lisp->type != LISP_NIL_T) {
+    return_value = evaluate_lisp(remaining_lisp->cons.head, env);
+    remaining_lisp = remaining_lisp->cons.tail;
   }
 
   return return_value;

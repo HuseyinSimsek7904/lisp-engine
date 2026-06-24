@@ -303,18 +303,10 @@ DEFINE_BUILTIN(parse_lisp) {
   if (lexer_result)
     return ERROR_TO_LISP("could not generate tokens for lisp");
 
-  LispValues nodes;
-  da_init(&nodes);
-
-  ParseResult parser_result = parse(tokens.array, tokens.size, &nodes);
+  LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);
 
-  if (parser_result)
-    return ERROR_TO_LISP("could not parse");
-
-  return _lisp_init(
-      &(_LispValue){.type = LISP_LIST_T,
-                    .items = {.array = nodes.array, .size = nodes.size}});
+  return parser_result;
 }
 
 DEFINE_BUILTIN(eval) {
