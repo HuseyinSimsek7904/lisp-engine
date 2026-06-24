@@ -244,13 +244,7 @@ LispValue builtin_neg_or_sub(LispValue *args, size_t arg_count,
 }
 
 LispValue builtin_list(LispValue *args, size_t arg_count, Environment *env) {
-  LispValue cons = LISP_NIL;
-
-  for (size_t i = arg_count; i-- > 0;) {
-    cons = lisp_make_cons(args[i], cons);
-  }
-
-  return cons;
+  return lisp_consify_array(args, arg_count);
 }
 
 LispValue builtin_equal(LispValue *args, size_t arg_count, Environment *env) {

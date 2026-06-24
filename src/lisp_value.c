@@ -166,6 +166,11 @@ LispValue lisp_make_cons(LispValue head, LispValue tail) {
 }
 
 LispValue lisp_listify(LispValue lisp) {
+  if (lisp->type == LISP_LIST_T)
+    return lisp;
+
+  assert(lisp->type == LISP_CONS_T);
+
   LispValues items;
   da_init(&items);
 
@@ -181,10 +186,18 @@ LispValue lisp_listify(LispValue lisp) {
 }
 
 LispValue lisp_consify(LispValue lisp) {
+  if (lisp->type == LISP_CONS_T)
+    return lisp;
+
+  assert(lisp->type == LISP_LIST_T);
+  return lisp_consify_array(lisp->items.array, lisp->items.size);
+}
+
+LispValue lisp_consify_array(LispValue *array, size_t size) {
   LispValue cons = LISP_NIL;
 
-  for (size_t i = lisp->items.size; i-- > 0;) {
-    cons = lisp_make_cons(lisp->items.array[i], cons);
+  for (size_t i = size; i-- > 0;) {
+    cons = lisp_make_cons(array[i], cons);
   }
 
   return cons;
