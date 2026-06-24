@@ -32,8 +32,9 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       EnvironmentEntry *entry = env_find(env, lisp->symbol);
 
       if (entry) {
+        LispValue value = entry->value;
         roll_env_back(env, original);
-        return entry->value;
+        return value;
       }
 
       roll_env_back(env, original);
