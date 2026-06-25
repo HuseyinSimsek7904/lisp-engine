@@ -18,28 +18,26 @@ void roll_env_back(Environment *env, Environment *original) {
 }
 
 LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
+  if (is_macro)
+    return lisp->cons.tail;
+
   LispValue args = LISP_NIL;
   LispValue *last = &args;
 
-  if (is_macro) {
-    for (size_t i = 1; i < lisp->items.size; i++) {
-      lisp_rappend_use_last(last, lisp->items.array[i]);
+  lisp = lisp->cons.tail;
+
+  for (; lisp->type != LISP_NIL_T; lisp = lisp->cons.tail) {
+
+    LispValue arg = evaluate_lisp(lisp->cons.head, env);
+
+    if (arg->type == LISP_UNPACKED_T) {
+      assert(arg->item->type == LISP_CONS_T);
+      *last = arg->item;
+      last = lisp_cons_find_term_nil(last);
+
+    } else {
+      lisp_rappend_use_last(last, arg);
       last = &((*last)->cons.tail);
-    }
-
-  } else {
-    for (size_t i = 1; i < lisp->items.size; i++) {
-      LispValue arg = evaluate_lisp(lisp->items.array[i], env);
-
-      if (arg->type == LISP_UNPACKED_T) {
-        assert(arg->item->type == LISP_CONS_T);
-        *last = arg->item;
-        last = lisp_cons_find_term_nil(last);
-
-      } else {
-        lisp_rappend_use_last(last, arg);
-        last = &((*last)->cons.tail);
-      }
     }
   }
 
@@ -74,17 +72,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
-    case LISP_CONS_T:
-      lisp = lisp_listify(lisp);
+    case LISP_LIST_T:
+      lisp = lisp_consify(lisp);
       break;
 
-    case LISP_LIST_T:
-      if (!lisp->items.size) {
-        roll_env_back(env, original);
-        return LISP_NIL;
-      }
-
-      LispValue callable = evaluate_lisp(lisp->items.array[0], env);
+    case LISP_CONS_T: {
+      LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
       switch (callable->type) {
       case LISP_ERROR_T:
@@ -152,7 +145,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         roll_env_back(env, original);
         return ERROR_TO_LISP("tried to call non-callable");
       }
-      break;
+    } break;
 
     default:
       TODO();
