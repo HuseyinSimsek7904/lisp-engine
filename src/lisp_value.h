@@ -64,6 +64,7 @@ struct _LispValue {
     _LispCustomFunction custom_function;
     _LispView items;
     _LispCons cons;
+    LispValue item;
   };
 };
 

@@ -32,10 +32,9 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
       LispValue arg = evaluate_lisp(lisp->items.array[i], env);
 
       if (arg->type == LISP_UNPACKED_T) {
-        for (size_t i = 0; i < arg->items.size; i++) {
-          lisp_rappend_use_last(last, arg->items.array[i]);
-          last = &((*last)->cons.tail);
-        }
+        assert(arg->item->type == LISP_CONS_T);
+        *last = arg->item;
+        last = lisp_cons_find_term_nil(last);
 
       } else {
         lisp_rappend_use_last(last, arg);

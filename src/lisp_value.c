@@ -73,7 +73,18 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     break;
 
   case LISP_UNPACKED_T:
-    fprintf(file, "unpacked");
+    assert(value->item->type == LISP_CONS_T);
+    fprintf(file, "<unpacked");
+    lisp_fprint(file, value->cons.head, true);
+
+    while (value->item->cons.tail->type != LISP_NIL_T) {
+      value = value->cons.tail;
+
+      fprintf(file, " ");
+      lisp_fprint(file, value->item->cons.head, true);
+    }
+    fprintf(file, ")>");
+    break;
 
   case LISP_LIST_T:
     fprintf(file, "(");

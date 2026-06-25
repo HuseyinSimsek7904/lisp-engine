@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #include <readline/chardefs.h>
@@ -318,26 +319,26 @@ DEFINE_BUILTIN(eval) {
 }
 
 DEFINE_BUILTIN(unpack) {
-  size_t item_count = 0;
+  LispValue items = LISP_NIL;
+  LispValue *last = &items;
+
   for (size_t i = 0; i < arg_count; i++) {
-    if (args[i]->type == LISP_CONS_T)
-      args[i] = lisp_listify(args[i]);
+    if (args[i]->type == LISP_CONS_T) {
+      *last = args[i];
+      last = lisp_cons_find_term_nil(last);
+      continue;
+    }
+
     else if (args[i]->type != LISP_LIST_T)
       return ERROR_TO_LISP("`unpack` expects tuple-likes");
 
-    item_count += args[i]->items.size;
+    for (size_t j = 0; j < args[i]->items.size; j++) {
+      lisp_rappend_use_last(last, args[i]->items.array[i]);
+      last = &((*last)->cons.tail);
+    }
   }
 
-  LispValue *array = calloc(item_count, sizeof(LispValue));
-  size_t j = 0;
-  for (size_t i = 0; i < arg_count; i++) {
-    memcpy(&array[j], args[i]->items.array,
-           args[i]->items.size * sizeof(LispValue));
-    j += args[i]->items.size;
-  }
-
-  return _lisp_init(&(_LispValue){
-      .type = LISP_UNPACKED_T, .items = {.array = array, .size = item_count}});
+  return _lisp_init(&(_LispValue){.type = LISP_UNPACKED_T, .item = items});
 }
 
 DEFINE_BUILTIN(quote) {
