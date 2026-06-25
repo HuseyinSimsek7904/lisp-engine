@@ -23,7 +23,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
 
   if (is_macro) {
     for (size_t i = 1; i < lisp->items.size; i++) {
-      *last = lisp_make_cons(lisp->items.array[i], *last);
+      lisp_rappend_use_last(last, lisp->items.array[i]);
       last = &((*last)->cons.tail);
     }
 
@@ -33,12 +33,12 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
 
       if (arg->type == LISP_UNPACKED_T) {
         for (size_t i = 0; i < arg->items.size; i++) {
-          *last = lisp_make_cons(arg->items.array[i], *last);
+          lisp_rappend_use_last(last, arg->items.array[i]);
           last = &((*last)->cons.tail);
         }
 
       } else {
-        *last = lisp_make_cons(arg, *last);
+        lisp_rappend_use_last(last, arg);
         last = &((*last)->cons.tail);
       }
     }

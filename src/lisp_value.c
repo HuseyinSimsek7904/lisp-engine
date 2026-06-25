@@ -256,6 +256,24 @@ size_t lisp_get_len(LispValue lisp) {
   return count;
 }
 
+LispValue lisp_lappend(LispValue lisp, LispValue value) {
+  assert(lisp->type == LISP_CONS_T || lisp->type == LISP_NIL_T);
+  return lisp_make_cons(value, lisp);
+}
+
+LispValue lisp_rappend(LispValue lisp, LispValue value) {
+  assert(lisp->type == LISP_CONS_T || lisp->type == LISP_NIL_T);
+  LispValue *last = lisp_cons_find_term_nil(&lisp);
+  lisp_rappend_use_last(last, value);
+  return lisp;
+}
+
+LispValue lisp_rappend_use_last(LispValue *last, LispValue value) {
+  assert((*last)->type == LISP_NIL_T);
+  *last = lisp_make_cons(value, LISP_NIL);
+  return *last;
+}
+
 LispValue parse(Token *tokens, size_t token_count) {
   LispValues nodes;
   da_init(&nodes);

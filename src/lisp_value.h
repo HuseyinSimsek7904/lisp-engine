@@ -110,6 +110,9 @@ LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
 LispValue *lisp_cons_find_term_nil(LispValue *lisp);
 size_t lisp_get_len(LispValue lisp);
+LispValue lisp_lappend(LispValue lisp, LispValue value);
+LispValue lisp_rappend(LispValue lisp, LispValue value);
+LispValue lisp_rappend_use_last(LispValue *last, LispValue value);
 
 LispValue parse(Token *tokens, size_t token_count);
 
