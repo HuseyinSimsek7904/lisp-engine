@@ -73,12 +73,6 @@ typedef struct {
   size_t capacity;
 } LispValues;
 
-typedef struct {
-  LispValues *array;
-  size_t size;
-  size_t capacity;
-} LispValuesArray;
-
 // Singleton values.
 extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;

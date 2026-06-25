@@ -275,13 +275,10 @@ LispValue lisp_rappend_use_last(LispValue *last, LispValue value) {
 }
 
 LispValue parse(Token *tokens, size_t token_count) {
-  LispValues nodes;
-  da_init(&nodes);
+  LispValue lisp = LISP_NIL;
+  LispValue *last = &lisp;
 
-  LispValuesArray stack;
-  da_init(&stack);
-
-  LispValue result;
+  size_t depth = 0;
 
   for (; token_count > 0; token_count--) {
     Token t = *tokens++;
@@ -289,22 +286,31 @@ LispValue parse(Token *tokens, size_t token_count) {
     _LispValue pn;
     switch (t.type) {
     case T_L_PAREN:
-      da_append(&stack, (LispValues){});
-      da_init(&stack.array[stack.size - 1]);
+      lisp_rappend_use_last(last, LISP_NIL);
+      last = &((*last)->cons.head);
+
+      depth++;
       continue;
 
     case T_R_PAREN:
-      if (!stack.size) {
-        result = ERROR_TO_LISP("too many closing parenthesis");
-        goto result;
+      if (depth <= 0) {
+        return ERROR_TO_LISP("too many closing parenthesis");
       }
 
-      LispValues *new_nodes = &stack.array[stack.size - 1];
-      pn = (_LispValue){
-          .type = LISP_LIST_T,
-          .items = {.array = new_nodes->array, .size = new_nodes->size}};
-      stack.size--;
-      break;
+      depth--;
+      last = &lisp;
+
+      for (size_t i = 0; i < depth; i++) {
+        while ((*last)->cons.tail->type == LISP_CONS_T) {
+          last = &((*last)->cons.tail);
+        }
+
+        assert((*last)->cons.tail->type == LISP_NIL_T);
+        last = &((*last)->cons.head);
+      }
+
+      last = lisp_cons_find_term_nil(last);
+      continue;
 
     case T_INT64:
       pn = (_LispValue){.type = LISP_INT64_T, .integer = t.integer};
@@ -320,29 +326,17 @@ LispValue parse(Token *tokens, size_t token_count) {
 
     default:
       TODO();
-      result = ERROR_TO_LISP("unknown token type");
-      goto result;
+      return ERROR_TO_LISP("unknown token type");
     }
 
-    LispValue node = _lisp_init(&pn);
-
-    if (stack.size) {
-      da_append(&stack.array[stack.size - 1], node);
-    } else {
-      da_append(&nodes, node);
-    }
+    lisp_rappend_use_last(last, _lisp_init(&pn));
+    last = &((*last)->cons.tail);
   }
 
-  if (stack.size)
-    result = ERROR_TO_LISP("too many opening parenthesis");
-  else
-    result = lisp_consify_array(nodes.array, nodes.size);
+  if (depth > 0)
+    return ERROR_TO_LISP("too many opening parenthesis");
 
-result:
-  da_free(&stack);
-  da_free(&nodes);
-
-  return result;
+  return lisp;
 }
 
 void env_free(Environment *env) {
