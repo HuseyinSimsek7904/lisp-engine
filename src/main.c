@@ -331,19 +331,16 @@ DEFINE_BUILTIN(unpack) {
   LispValue *last = &items;
 
   for (size_t i = 0; i < arg_count; i++) {
-    if (args[i]->type == LISP_CONS_T) {
-      *last = args[i];
-      last = lisp_cons_find_term_nil(last);
-      continue;
-    }
+    LispValue arg = args[i];
 
-    else if (args[i]->type != LISP_LIST_T)
+    if (arg->type == LISP_LIST_T) {
+      arg = lisp_consify(arg);
+    } else if (arg->type != LISP_CONS_T) {
       return ERROR_TO_LISP("`unpack` expects list-likes");
-
-    for (size_t j = 0; j < args[i]->items.size; j++) {
-      lisp_rappend_use_last(last, args[i]->items.array[i]);
-      last = &((*last)->cons.tail);
     }
+
+    *last = args[i];
+    last = lisp_cons_find_term_nil(last);
   }
 
   return _lisp_init(&(_LispValue){.type = LISP_UNPACKED_T, .item = items});
