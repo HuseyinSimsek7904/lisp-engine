@@ -69,44 +69,49 @@ DEFINE_BUILTIN(let) {
 
   LispValue defs_node = ARG0;
 
-  if (defs_node->type == LISP_CONS_T)
-    defs_node = lisp_listify(defs_node);
+  if (defs_node->type == LISP_LIST_T)
+    defs_node = lisp_consify(defs_node);
 
-  else if (defs_node->type != LISP_LIST_T)
+  else if (defs_node->type != LISP_CONS_T)
     return ERROR_TO_LISP("first argument to `let` must be a list-like");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
 
-  for (size_t i = 0; i < defs_node->items.size; i++) {
-    LispValue def_node = defs_node->items.array[i];
+  LispValue remaining_defs = defs_node;
 
-    if (def_node->type == LISP_CONS_T)
-      def_node = lisp_listify(def_node);
+  while (remaining_defs->type == LISP_CONS_T) {
+    LispValue def_node = remaining_defs->cons.head;
+    remaining_defs = remaining_defs->cons.tail;
 
-    else if (def_node->type != LISP_LIST_T)
+    if (def_node->type == LISP_LIST_T)
+      def_node = lisp_consify(def_node);
+
+    else if (def_node->type != LISP_CONS_T)
       return ERROR_TO_LISP(
           "first argument to `let` must be a list of list-likes");
 
-    if (def_node->items.size != 2)
+    if (lisp_get_len(def_node) != 2)
       return ERROR_TO_LISP(
           "first argument to `let` must be a list of lists with sizes 2");
 
-    if (def_node->items.array[0]->type != LISP_SYMBOL_T)
+    if (def_node->cons.head->type != LISP_SYMBOL_T)
       return ERROR_TO_LISP("first argument to `let` must be a list of lists "
                            "with first element being a symbol");
 
-    char *symbol = def_node->items.array[0]->symbol;
+    char *symbol = def_node->cons.head->symbol;
 
     if (env_find_shallow(&new_env, symbol))
       return ERROR_TO_LISP("redefined symbol");
 
     // TODO: Maybe the passed environment should be the new environment.
     // That way one variable defined can be used in the other one.
-    LispValue value = evaluate_lisp(def_node->items.array[1], env);
+    LispValue value = evaluate_lisp(def_node->cons.tail->cons.head, env);
 
     env_set(&new_env, symbol, value);
   }
+
+  assert(remaining_defs->type == LISP_NIL_T);
 
   LispValue return_value = LISP_NIL;
   for (size_t i = 1; i < arg_count; i++) {
