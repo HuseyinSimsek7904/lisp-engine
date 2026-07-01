@@ -253,13 +253,13 @@ size_t lisp_get_len(LispValue lisp) {
   if (lisp->type == LISP_LIST_T)
     return lisp->items.size;
 
-  assert(lisp->type == LISP_CONS_T);
-
   size_t count = 0;
-  for (; lisp->type != LISP_NIL_T; count++) {
+  for (; lisp->type == LISP_CONS_T; count++) {
     assert(lisp->type == LISP_CONS_T);
     lisp = lisp->cons.tail;
   }
+
+  assert(lisp->type == LISP_NIL_T);
 
   return count;
 }
