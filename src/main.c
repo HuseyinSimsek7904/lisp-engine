@@ -73,7 +73,7 @@ DEFINE_BUILTIN(let) {
     defs_node = lisp_listify(defs_node);
 
   else if (defs_node->type != LISP_LIST_T)
-    return ERROR_TO_LISP("first argument to `let` must be a tuple-like");
+    return ERROR_TO_LISP("first argument to `let` must be a list-like");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
@@ -86,14 +86,14 @@ DEFINE_BUILTIN(let) {
 
     else if (def_node->type != LISP_LIST_T)
       return ERROR_TO_LISP(
-          "first argument to `let` must be a tuple of tuple-likes");
+          "first argument to `let` must be a list of list-likes");
 
     if (def_node->items.size != 2)
       return ERROR_TO_LISP(
-          "first argument to `let` must be a tuple of tuples with sizes 2");
+          "first argument to `let` must be a list of lists with sizes 2");
 
     if (def_node->items.array[0]->type != LISP_SYMBOL_T)
-      return ERROR_TO_LISP("first argument to `let` must be a tuple of tuples "
+      return ERROR_TO_LISP("first argument to `let` must be a list of lists "
                            "with first element being a symbol");
 
     char *symbol = def_node->items.array[0]->symbol;
@@ -146,7 +146,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
     ARG0 = lisp_consify(ARG0);
 
   else if (ARG0->type != LISP_CONS_T)
-    return ERROR_TO_LISP("first argument to `fn` must be a tuple-like");
+    return ERROR_TO_LISP("first argument to `fn` must be a list-like");
 
   bool variadic = false;
 
@@ -164,7 +164,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
 
       if (arg->type != LISP_SYMBOL_T) {
         return ERROR_TO_LISP(
-            "first argument to `fn` must be a tuple of symbols");
+            "first argument to `fn` must be a list of symbols");
       }
 
       lisp_rappend_use_last(last, arg);
@@ -177,11 +177,11 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
     if (arg->type == LISP_CONS_T) {
       if (lisp_get_len(arg) != 2)
         return ERROR_TO_LISP(
-            "tuple inside `fn` arguments list must be of size 2");
+            "list inside `fn` arguments list must be of size 2");
 
       if (arg->cons.head->type != LISP_SYMBOL_T ||
           strcmp(arg->cons.head->string, "rest"))
-        return ERROR_TO_LISP("first item in the tuple in the `fn` arguments "
+        return ERROR_TO_LISP("first item in the list in the `fn` arguments "
                              "list must be a `rest` symbol");
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
@@ -197,7 +197,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
       last = &((*last)->cons.tail);
 
     } else {
-      return ERROR_TO_LISP("first argument to `fn` must be a tuple of symbols");
+      return ERROR_TO_LISP("first argument to `fn` must be a list of symbols");
     }
   }
 
@@ -338,7 +338,7 @@ DEFINE_BUILTIN(unpack) {
     }
 
     else if (args[i]->type != LISP_LIST_T)
-      return ERROR_TO_LISP("`unpack` expects tuple-likes");
+      return ERROR_TO_LISP("`unpack` expects list-likes");
 
     for (size_t j = 0; j < args[i]->items.size; j++) {
       lisp_rappend_use_last(last, args[i]->items.array[i]);
