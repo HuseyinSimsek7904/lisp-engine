@@ -34,10 +34,9 @@ typedef struct {
 
 typedef struct {
   bool is_macro;
-  char **args;
-  size_t arg_count;
+  LispValue args;
+  bool variadic;
   LispValue body;
-  char *variadic;
 } _LispCustomFunction;
 
 typedef struct {

@@ -56,17 +56,21 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
   case LISP_FUNC_T:
     fprintf(file, value->custom_function.is_macro ? "<macro(" : "<function(");
 
-    if (value->custom_function.arg_count > 0)
-      fprintf(file, "%s", value->custom_function.args[0]);
+    LispValue remaining_args = value->custom_function.args;
 
-    for (size_t i = 1; i < value->custom_function.arg_count; i++) {
-      fprintf(file, " %s", value->custom_function.args[i]);
-    }
+    if (remaining_args->type != LISP_NIL_T) {
+      assert(remaining_args->type == LISP_CONS_T);
 
-    if (value->custom_function.variadic) {
-      if (value->custom_function.arg_count > 0)
-        fprintf(file, " ");
-      fprintf(file, "(rest %s)", value->custom_function.variadic);
+      for (; remaining_args->cons.tail->type == LISP_CONS_T;) {
+        fprintf(file, "%s ", remaining_args->cons.head->symbol);
+        remaining_args = remaining_args->cons.tail;
+      }
+
+      if (value->custom_function.variadic) {
+        fprintf(file, "(rest %s)", remaining_args->cons.head->symbol);
+      } else {
+        fprintf(file, "%s", remaining_args->cons.head->symbol);
+      }
     }
 
     fprintf(file, ")>");

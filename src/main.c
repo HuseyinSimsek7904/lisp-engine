@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -141,65 +142,72 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
                              Environment *env, bool is_macro) {
   REQUIRES_MIN_ARGS(2);
 
-  if (ARG0->type == LISP_CONS_T)
-    ARG0 = lisp_listify(ARG0);
+  if (ARG0->type == LISP_LIST_T)
+    ARG0 = lisp_consify(ARG0);
 
-  else if (ARG0->type != LISP_LIST_T)
+  else if (ARG0->type != LISP_CONS_T)
     return ERROR_TO_LISP("first argument to `fn` must be a tuple-like");
 
-  char *variadic = NULL;
-  char **new_args = malloc(sizeof(char *) * arg_count);
-  for (size_t i = 0; i < ARG0->items.size; i++) {
-    LispValue arg = ARG0->items.array[i];
+  bool variadic = false;
 
-    if (arg->type == LISP_SYMBOL_T) {
-      if (ARG0->items.array[i]->type != LISP_SYMBOL_T)
-        return ERROR_TO_LISP("`fn` argument list must be a tuple of symbols");
+  LispValue arg_symbols = LISP_NIL;
 
-      for (size_t j = 0; j < i; j++) {
-        if (strcmp(new_args[j], arg->symbol) == 0)
-          return ERROR_TO_LISP("repeated argument");
-      }
+  {
+    LispValue *last = &arg_symbols;
 
-      new_args[i] = arg->symbol;
+    LispValue remaining_args = ARG0;
+    LispValue arg;
 
-    } else if (arg->type == LISP_LIST_T) {
-      if (i != ARG0->items.size - 1) {
-        TODO();
+    while (remaining_args->cons.tail->type == LISP_CONS_T) {
+      arg = remaining_args->cons.head;
+      remaining_args = remaining_args->cons.tail;
+
+      if (arg->type != LISP_SYMBOL_T) {
         return ERROR_TO_LISP(
-            "only the last item in `fn` arguments list can be a tuple");
+            "first argument to `fn` must be a tuple of symbols");
       }
 
-      if (arg->items.size != 2)
+      lisp_rappend_use_last(last, arg);
+      last = &((*last)->cons.tail);
+    }
+
+    assert(remaining_args->cons.tail->type == LISP_NIL_T);
+    arg = remaining_args->cons.head;
+
+    if (arg->type == LISP_CONS_T) {
+      if (lisp_get_len(arg) != 2)
         return ERROR_TO_LISP(
             "tuple inside `fn` arguments list must be of size 2");
 
-      if (arg->items.array[0]->type != LISP_SYMBOL_T ||
-          strcmp(arg->items.array[0]->string, "rest"))
+      if (arg->cons.head->type != LISP_SYMBOL_T ||
+          strcmp(arg->cons.head->string, "rest"))
         return ERROR_TO_LISP("first item in the tuple in the `fn` arguments "
                              "list must be a `rest` symbol");
 
-      if (arg->items.array[1]->type != LISP_SYMBOL_T)
+      if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
         return ERROR_TO_LISP("`rest` argument must be a symbol");
 
-      assert(!variadic);
+      variadic = true;
 
-      variadic = arg->items.array[1]->symbol;
-      for (size_t j = 0; j < i; j++)
-        if (strcmp(new_args[j], variadic) == 0)
-          return ERROR_TO_LISP("repeated `rest` argument");
+      lisp_rappend_use_last(last, arg->cons.tail->cons.head);
+      last = &((*last)->cons.tail);
+
+    } else if (arg->type == LISP_SYMBOL_T) {
+      lisp_rappend_use_last(last, arg);
+      last = &((*last)->cons.tail);
+
+    } else {
+      return ERROR_TO_LISP("first argument to `fn` must be a tuple of symbols");
     }
   }
 
   LispValue body = lisp_consify_array(args + 1, arg_count - 1);
 
-  return _lisp_init(&(_LispValue){
-      .type = LISP_FUNC_T,
-      .custom_function = {.is_macro = is_macro,
-                          .args = new_args,
-                          .arg_count = ARG0->items.size - (variadic ? 1 : 0),
-                          .body = body,
-                          .variadic = variadic}});
+  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
+                                  .custom_function = {.is_macro = is_macro,
+                                                      .args = arg_symbols,
+                                                      .variadic = variadic,
+                                                      .body = body}});
 }
 
 LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {

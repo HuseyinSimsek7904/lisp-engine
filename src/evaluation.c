@@ -101,12 +101,15 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       case LISP_FUNC_T: {
         LispValue args =
             generate_args(lisp, env, callable->builtin_function.is_macro);
+
         size_t arg_count = lisp_get_len(args);
+        size_t function_arg_count =
+            lisp_get_len(callable->custom_function.args);
 
         if ((callable->custom_function.variadic &&
-             arg_count < callable->custom_function.arg_count) ||
+             arg_count < function_arg_count - 1) ||
             (!callable->custom_function.variadic &&
-             arg_count != callable->custom_function.arg_count)) {
+             arg_count != function_arg_count)) {
 
           roll_env_back(env, original);
           return ERROR_TO_LISP("incorrect number of parameters");
@@ -117,16 +120,25 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         da_init(new_env);
 
         LispValue remaining_args = args;
-        for (size_t i = 0; i < callable->custom_function.arg_count; i++) {
-          assert(remaining_args->type == LISP_CONS_T);
+        LispValue remaining_func_args = callable->custom_function.args;
 
-          env_set(new_env, callable->custom_function.args[i],
+        while (remaining_args->type != LISP_NIL_T) {
+          assert(remaining_args->type == LISP_CONS_T);
+          assert(remaining_func_args->type == LISP_CONS_T);
+
+          env_set(new_env, remaining_func_args->cons.head->symbol,
                   remaining_args->cons.head);
+
           remaining_args = remaining_args->cons.tail;
+          remaining_func_args = remaining_func_args->cons.tail;
+
+          if (callable->custom_function.variadic &&
+              remaining_func_args->cons.tail->type != LISP_NIL_T)
+            break;
         }
 
         if (callable->custom_function.variadic) {
-          env_set(new_env, callable->custom_function.variadic, remaining_args);
+          env_set(new_env, remaining_args->cons.head->symbol, remaining_args);
         }
 
         assert(callable->custom_function.body->type == LISP_CONS_T);
