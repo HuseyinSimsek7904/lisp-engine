@@ -13,22 +13,22 @@
 #include "lisp_value.h"
 
 #define DEFINE_BUILTIN(n)                                                      \
-  LispValue builtin_##n(LispValue *args, size_t arg_count, Environment *env)
+  LispValue builtin_##n(LispValue args, Environment *env)
 
 #define REQUIRES_EQ_ARGS(c)                                                    \
-  if (arg_count != c)                                                          \
+  if (lisp_get_len(args) != c)                                                 \
   return ERROR_TO_LISP("expected exactly " #c " arguments")
 
 #define REQUIRES_MIN_ARGS(c)                                                   \
-  if (arg_count < c)                                                           \
+  if (lisp_get_len(args) < c)                                                  \
   return ERROR_TO_LISP("expected at least " #c " arguments")
 
 #define REQUIRES_MAX_ARGS(c)                                                   \
-  if (arg_count > c)                                                           \
+  if (lisp_get_len(args) > c)                                                  \
   return ERROR_TO_LISP("expected at most " #c " arguments")
 
-#define ARG0 args[0]
-#define ARG1 args[1]
+#define ARG0 args->cons.head
+#define ARG1 args->cons.tail->cons.head
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(2);
@@ -114,8 +114,12 @@ DEFINE_BUILTIN(let) {
   assert(remaining_defs->type == LISP_NIL_T);
 
   LispValue return_value = LISP_NIL;
-  for (size_t i = 1; i < arg_count; i++) {
-    return_value = evaluate_lisp(args[i], &new_env);
+  LispValue remaining_args = args->cons.tail;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    return_value = evaluate_lisp(arg, &new_env);
   }
 
   env_free(&new_env);
@@ -137,14 +141,18 @@ DEFINE_BUILTIN(if) {
   if (condition->boolean)
     return ARG1;
 
-  for (size_t i = 2; i < arg_count - 1; i++) {
-    evaluate_lisp(args[i], env);
+  LispValue remaining_args = args->cons.tail->cons.tail;
+  while (remaining_args->cons.tail->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    evaluate_lisp(arg, env);
   }
-  return args[arg_count - 1];
+
+  return remaining_args->cons.head;
 }
 
-LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
-                             Environment *env, bool is_macro) {
+LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
   REQUIRES_MIN_ARGS(2);
 
   if (ARG0->type == LISP_LIST_T)
@@ -206,7 +214,7 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
     }
   }
 
-  LispValue body = lisp_consify_array(args + 1, arg_count - 1);
+  LispValue body = args->cons.tail;
 
   return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
                                   .custom_function = {.is_macro = is_macro,
@@ -215,64 +223,85 @@ LispValue define_fn_or_macro(LispValue *args, size_t arg_count,
                                                       .body = body}});
 }
 
-LispValue builtin_fn(LispValue *args, size_t arg_count, Environment *env) {
-  return define_fn_or_macro(args, arg_count, env, false);
-}
+DEFINE_BUILTIN(fn) { return define_fn_or_macro(args, env, false); }
 
-LispValue builtin_macro(LispValue *args, size_t arg_count, Environment *env) {
-  return define_fn_or_macro(args, arg_count, env, true);
-}
+DEFINE_BUILTIN(macro) { return define_fn_or_macro(args, env, true); }
 
 // TODO: Inside `do`, if any of the items return error, the control flow should
 // be stopped and the error value should be returned.
 DEFINE_BUILTIN(do) {
   REQUIRES_MIN_ARGS(1);
 
-  for (size_t i = 0; i < arg_count - 1; i++) {
-    evaluate_lisp(args[i], env);
+  LispValue remaining_args = args;
+  while (remaining_args->cons.tail->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    evaluate_lisp(arg, env);
   }
 
-  return args[arg_count - 1];
+  assert(remaining_args->cons.tail->type == LISP_NIL_T);
+
+  return remaining_args->cons.head;
 }
 
 DEFINE_BUILTIN(print) {
-  for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_STRING_T)
-      return ERROR_TO_LISP("invalid type for argument to `print`");
+  LispValue remaining_args = args;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
 
-  for (size_t i = 0; i < arg_count; i++) {
-    printf("%s\n", args[i]->string);
+    if (arg->type != LISP_STRING_T)
+      return ERROR_TO_LISP("invalid type for argument to `print`");
   }
+
+  assert(remaining_args->type == LISP_NIL_T);
+
+  remaining_args = args;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    printf("%s\n", arg->string);
+  }
+
+  assert(remaining_args->type == LISP_NIL_T);
 
   return LISP_NIL;
 }
 
 DEFINE_BUILTIN(sum) {
-  for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_INT64_T)
+  int64_t sum = 0;
+
+  LispValue remaining_args = args;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    if (arg->type != LISP_INT64_T)
       return ERROR_TO_LISP("invalid type for argument to `+`");
 
-  int64_t sum = 0;
-  for (size_t i = 0; i < arg_count; i++) {
-    sum += args[i]->integer;
+    sum += arg->integer;
   }
 
   return INT64_TO_LISP(sum);
 }
 
 DEFINE_BUILTIN(neg_or_sub) {
+  size_t arg_count = lisp_get_len(args);
+
   REQUIRES_MIN_ARGS(1);
   REQUIRES_MAX_ARGS(2);
 
-  for (size_t i = 0; i < arg_count; i++)
-    if (args[i]->type != LISP_INT64_T)
-      return ERROR_TO_LISP("invalid type for argument to `-`");
+  if (ARG0->type != LISP_INT64_T ||
+      (arg_count == 2 && ARG1->type != LISP_INT64_T))
+    return ERROR_TO_LISP("`-` expects 1 or 2 integers");
 
   return INT64_TO_LISP(arg_count == 1 ? -ARG0->integer
                                       : ARG0->integer - ARG1->integer);
 }
 
-DEFINE_BUILTIN(list) { return lisp_consify_array(args, arg_count); }
+DEFINE_BUILTIN(list) { return args; }
 
 DEFINE_BUILTIN(equal) {
   // NOTE: Later, we can change this function to accept any number of arguments.
@@ -324,10 +353,18 @@ DEFINE_BUILTIN(parse_lisp) {
 }
 
 DEFINE_BUILTIN(eval) {
+  REQUIRES_MIN_ARGS(1);
+
   LispValue return_value = LISP_NIL;
-  for (size_t i = 0; i < arg_count; i++) {
-    return_value = evaluate_lisp(args[i], env);
+  LispValue remaining_args = args;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
+
+    return_value = evaluate_lisp(arg, env);
   }
+  assert(remaining_args->type == LISP_NIL_T);
+
   return return_value;
 }
 
@@ -335,8 +372,10 @@ DEFINE_BUILTIN(unpack) {
   LispValue items = LISP_NIL;
   LispValue *last = &items;
 
-  for (size_t i = 0; i < arg_count; i++) {
-    LispValue arg = args[i];
+  LispValue remaining_args = args;
+  while (remaining_args->type == LISP_CONS_T) {
+    LispValue arg = remaining_args->cons.head;
+    remaining_args = remaining_args->cons.tail;
 
     if (arg->type == LISP_LIST_T) {
       arg = lisp_consify(arg);
@@ -344,7 +383,7 @@ DEFINE_BUILTIN(unpack) {
       return ERROR_TO_LISP("`unpack` expects list-likes");
     }
 
-    *last = args[i];
+    *last = arg;
     last = lisp_cons_find_term_nil(last);
   }
 
@@ -379,15 +418,14 @@ DEFINE_BUILTIN(tail) {
 }
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
-  env_set(                                                                     \
-      &global_env, n,                                                          \
-      _lisp_init(&(_LispValue){                                                \
-          .type = LISP_BUILTIN_FUNC_T,                                         \
-          .builtin_function = {.callback = (LispValue (*)(LispValue *, size_t, \
-                                                          void *))builtin_##c, \
-                               .is_macro = m,                                  \
-                               .tail_call = t,                                 \
-                               .name = n}}));
+  env_set(&global_env, n,                                                      \
+          _lisp_init(&(_LispValue){                                            \
+              .type = LISP_BUILTIN_FUNC_T,                                     \
+              .builtin_function = {                                            \
+                  .callback = (LispValue (*)(LispValue, void *))builtin_##c,   \
+                  .is_macro = m,                                               \
+                  .tail_call = t,                                              \
+                  .name = n}}));
 
 LispValue LISP_NIL;
 LispValue LISP_TRUE;

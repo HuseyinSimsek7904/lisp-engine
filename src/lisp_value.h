@@ -28,7 +28,7 @@ typedef _LispValue *LispValue;
 typedef struct {
   bool is_macro;
   bool tail_call;
-  LispValue (*callback)(LispValue *, size_t, void *);
+  LispValue (*callback)(LispValue, void *);
   char *name;
 } _LispBuiltinFunction;
 

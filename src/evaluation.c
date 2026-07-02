@@ -87,10 +87,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       case LISP_BUILTIN_FUNC_T: {
         LispValue args =
             generate_args(lisp, env, callable->builtin_function.is_macro);
-        LispValue args_list = lisp_listify(args);
 
-        lisp = callable->builtin_function.callback(args_list->items.array,
-                                                   args_list->items.size, env);
+        lisp = callable->builtin_function.callback(args, env);
 
         if (!callable->builtin_function.tail_call) {
           roll_env_back(env, original);
