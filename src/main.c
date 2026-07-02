@@ -1,7 +1,9 @@
 #include <assert.h>
+#include <getopt.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <readline/chardefs.h>
 #include <readline/history.h>
@@ -431,11 +433,32 @@ LispValue LISP_NIL;
 LispValue LISP_TRUE;
 LispValue LISP_FALSE;
 
-int main(void) {
+int main(int argc, char **argv) {
+  bool interactive = true;
+  bool test_mode = false;
+
+  int opt;
+
+  while ((opt = getopt(argc, argv, "nt")) != -1) {
+    switch (opt) {
+    case 'n':
+      interactive = false;
+      break;
+
+    case 't':
+      test_mode = true;
+      interactive = false;
+      break;
+
+    default:
+      break;
+    }
+  }
+
   Environment global_env = {.other = NULL};
   da_init(&global_env);
 
-  // Singletons
+  // Singletons.
   LISP_NIL = _lisp_init(&(_LispValue){.type = LISP_NIL_T});
   LISP_FALSE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = false});
   LISP_TRUE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = true});
@@ -444,7 +467,7 @@ int main(void) {
   env_set(&global_env, "false", LISP_FALSE);
   env_set(&global_env, "true", LISP_TRUE);
 
-  // Builtin functions
+  // Builtin functions.
   DEFINE_BUILTIN_FUNCTION("print", print, false, false);
   DEFINE_BUILTIN_FUNCTION("+", sum, false, false);
   DEFINE_BUILTIN_FUNCTION("-", neg_or_sub, false, false);
@@ -458,33 +481,62 @@ int main(void) {
   DEFINE_BUILTIN_FUNCTION("head", head, false, false);
   DEFINE_BUILTIN_FUNCTION("tail", tail, false, false);
 
-  // Builtin macros
+  // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
   DEFINE_BUILTIN_FUNCTION("setg", setg, true, false);
   DEFINE_BUILTIN_FUNCTION("quote", quote, true, false);
   DEFINE_BUILTIN_FUNCTION("fn", fn, true, false);
   DEFINE_BUILTIN_FUNCTION("macro", macro, true, false);
 
-  // Builtin macros with tail call optimization
+  // Builtin macros with tail call optimization.
   DEFINE_BUILTIN_FUNCTION("let", let, true, false);
   DEFINE_BUILTIN_FUNCTION("if", if, true, true);
   DEFINE_BUILTIN_FUNCTION("do", do, true, true);
 
+  // Builtin startup files.
   char *startup[] = {"core.l"};
 
   for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
     char *buffer = read_file(startup[i]);
-    if (!buffer)
+
+    if (!buffer) {
       fprintf(stderr, "warning: could not read contents of %s\n", startup[i]);
+      continue;
+    }
 
     repl(buffer, &global_env);
+
+    free(buffer);
   }
 
-  while (true) {
+  // Custom passed startup files.
+  for (size_t i = optind; i < argc; i++) {
+    char *buffer = read_file(argv[i]);
+
+    if (!buffer) {
+      fprintf(stderr, "warning: could not read contents of %s\n", argv[i]);
+      continue;
+    }
+
+    LispValue return_value = repl(buffer, &global_env);
+
+    free(buffer);
+
+    // In test mode, every file must return nil.
+    // If they do not, that means that the test failed.
+    if (test_mode && return_value->type != LISP_NIL_T) {
+      fprintf(stderr, "fail: %s test failed\n", argv[i]);
+      lisp_fprint(stderr, return_value, true);
+      fprintf(stderr, "\n");
+    }
+  }
+
+  // Interactive mode.
+  while (interactive) {
     char *lisp = readline("> ");
 
     if (!lisp)
-      exit(0);
+      interactive = false;
 
     add_history(lisp);
 
