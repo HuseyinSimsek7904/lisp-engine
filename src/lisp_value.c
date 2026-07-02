@@ -84,7 +84,7 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     break;
 
   case LISP_LIST_T:
-    fprintf(file, "(");
+    fprintf(file, "<list(");
     if (value->items.size > 0)
       lisp_fprint(file, value->items.array[0], true);
 
@@ -92,11 +92,11 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
       fprintf(file, " ");
       lisp_fprint(file, value->items.array[i], true);
     }
-    fprintf(file, ")");
+    fprintf(file, ")>");
     break;
 
   case LISP_CONS_T:
-    fprintf(file, "<cons(");
+    fprintf(file, "(");
     lisp_fprint(file, value->cons.head, true);
 
     while (value->cons.tail->type != LISP_NIL_T) {
@@ -105,7 +105,7 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
       fprintf(file, " ");
       lisp_fprint(file, value->cons.head, true);
     }
-    fprintf(file, ")>");
+    fprintf(file, ")");
     break;
 
   default:
