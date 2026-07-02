@@ -494,7 +494,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("do", do, true, true);
 
   // Builtin startup files.
-  char *startup[] = {"core.l"};
+  char *startup[] = {"core/core.l"};
 
   for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
     char *buffer = read_file(startup[i]);
