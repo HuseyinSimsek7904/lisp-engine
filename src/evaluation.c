@@ -31,7 +31,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
     if (arg->type == LISP_UNPACKED_T) {
-      assert(arg->item->type == LISP_CONS_T);
+      assert(arg->item->type == LISP_CONS_T || arg->item->type == LISP_NIL_T);
       *last = arg->item;
       last = lisp_cons_find_term_nil(last);
 
