@@ -102,43 +102,58 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         LispValue args =
             generate_args(lisp, env, callable->builtin_function.is_macro);
 
-        size_t arg_count = lisp_get_len(args);
-        size_t function_arg_count =
-            lisp_get_len(callable->custom_function.args);
-
-        if ((callable->custom_function.variadic &&
-             arg_count < function_arg_count - 1) ||
-            (!callable->custom_function.variadic &&
-             arg_count != function_arg_count)) {
-
-          roll_env_back(env, original);
-          return ERROR_TO_LISP("incorrect number of parameters");
-        }
-
         Environment *new_env = malloc(sizeof(Environment));
         *new_env = (Environment){.other = env};
         da_init(new_env);
 
-        LispValue remaining_args = args;
-        LispValue remaining_func_args = callable->custom_function.args;
+        if (callable->custom_function.args->type == LISP_NIL_T) {
+          if (args->type != LISP_NIL_T) {
+            roll_env_back(env, original);
+            return ERROR_TO_LISP("function or macro expects no arguments, but "
+                                 "was called with arguments");
+          }
 
-        while (remaining_args->type != LISP_NIL_T) {
-          assert(remaining_args->type == LISP_LIST_T);
-          assert(remaining_func_args->type == LISP_LIST_T);
+        } else {
+          LispValue remaining_args = args;
+          LispValue remaining_func_args = callable->custom_function.args;
 
-          env_set(new_env, remaining_func_args->cons.head->symbol,
-                  remaining_args->cons.head);
+          while (remaining_func_args->cons.tail->type == LISP_LIST_T) {
+            if (remaining_args->type == LISP_NIL_T) {
+              roll_env_back(env, original);
+              return ERROR_TO_LISP(
+                  "insufficient arguments in function or macro call");
+            }
 
-          remaining_args = remaining_args->cons.tail;
-          remaining_func_args = remaining_func_args->cons.tail;
+            assert(remaining_func_args->type == LISP_LIST_T);
+            assert(remaining_func_args->cons.head->type == LISP_SYMBOL_T);
 
-          if (callable->custom_function.variadic &&
-              remaining_func_args->cons.tail->type != LISP_NIL_T)
-            break;
-        }
+            env_set(new_env, remaining_func_args->cons.head->symbol,
+                    remaining_args->cons.head);
 
-        if (callable->custom_function.variadic) {
-          env_set(new_env, remaining_args->cons.head->symbol, remaining_args);
+            remaining_args = remaining_args->cons.tail;
+            remaining_func_args = remaining_func_args->cons.tail;
+          }
+
+          LispValue last_func_arg = remaining_func_args->cons.head;
+          assert(last_func_arg->type == LISP_SYMBOL_T);
+
+          if (callable->custom_function.variadic) {
+            env_set(new_env, last_func_arg->symbol, remaining_args);
+          } else {
+            if (remaining_args->type == LISP_NIL_T) {
+              roll_env_back(env, original);
+              return ERROR_TO_LISP(
+                  "insufficient arguments in function or macro call");
+            }
+
+            if (remaining_args->cons.tail->type != LISP_NIL_T) {
+              roll_env_back(env, original);
+              return ERROR_TO_LISP(
+                  "too many arguments in function or macro call");
+            }
+
+            env_set(new_env, last_func_arg->symbol, remaining_args->cons.head);
+          }
         }
 
         assert(callable->custom_function.body->type == LISP_LIST_T);
