@@ -216,6 +216,16 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
 
   LispValue body = args->cons.tail;
 
+#ifdef _DEBUG_MAKE_FN
+  fprintf(stderr, "make_%s: variadic=%s ", is_macro ? "macro" : "fn",
+          variadic ? "true" : "false");
+  fprintf(stderr, " args=");
+  lisp_fprint(stderr, arg_symbols, true);
+  fprintf(stderr, " body=");
+  lisp_fprint(stderr, body, true);
+  fprintf(stderr, "\n");
+#endif
+
   return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
                                   .custom_function = {.is_macro = is_macro,
                                                       .args = arg_symbols,
