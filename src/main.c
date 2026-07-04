@@ -69,45 +69,43 @@ DEFINE_BUILTIN(setg) {
 DEFINE_BUILTIN(let) {
   REQUIRES_MIN_ARGS(2);
 
-  LispValue defs_node = ARG0;
-
-  if (defs_node->type != LISP_LIST_T)
-    return ERROR_TO_LISP("first argument to `let` must be a list");
-
   Environment new_env = {.other = env};
   da_init(&new_env);
 
-  LispValue remaining_defs = defs_node;
+  if (ARG0->type == LISP_LIST_T) {
+    LispValue remaining_defs = ARG0;
 
-  while (remaining_defs->type == LISP_LIST_T) {
-    LispValue def_node = remaining_defs->cons.head;
-    remaining_defs = remaining_defs->cons.tail;
+    while (remaining_defs->type == LISP_LIST_T) {
+      LispValue def_node = remaining_defs->cons.head;
+      remaining_defs = remaining_defs->cons.tail;
 
-    if (def_node->type != LISP_LIST_T)
-      return ERROR_TO_LISP(
-          "first argument to `let` must be a list of lists");
+      if (def_node->type != LISP_LIST_T)
+        return ERROR_TO_LISP("first argument to `let` must be a list of lists");
 
-    if (lisp_get_len(def_node) != 2)
-      return ERROR_TO_LISP(
-          "first argument to `let` must be a list of lists with sizes 2");
+      if (lisp_get_len(def_node) != 2)
+        return ERROR_TO_LISP(
+            "first argument to `let` must be a list of lists with sizes 2");
 
-    if (def_node->cons.head->type != LISP_SYMBOL_T)
-      return ERROR_TO_LISP("first argument to `let` must be a list of lists "
-                           "with first element being a symbol");
+      if (def_node->cons.head->type != LISP_SYMBOL_T)
+        return ERROR_TO_LISP("first argument to `let` must be a list of lists "
+                             "with first element being a symbol");
 
-    char *symbol = def_node->cons.head->symbol;
+      char *symbol = def_node->cons.head->symbol;
 
-    if (env_find_shallow(&new_env, symbol))
-      return ERROR_TO_LISP("redefined symbol");
+      if (env_find_shallow(&new_env, symbol))
+        return ERROR_TO_LISP("redefined symbol");
 
-    // TODO: Maybe the passed environment should be the new environment.
-    // That way one variable defined can be used in the other one.
-    LispValue value = evaluate_lisp(def_node->cons.tail->cons.head, env);
+      // TODO: Maybe the passed environment should be the new environment.
+      // That way one variable defined can be used in the other one.
+      LispValue value = evaluate_lisp(def_node->cons.tail->cons.head, env);
 
-    env_set(&new_env, symbol, value);
-  }
+      env_set(&new_env, symbol, value);
+    }
 
-  assert(remaining_defs->type == LISP_NIL_T);
+    assert(remaining_defs->type == LISP_NIL_T);
+
+  } else if (ARG0->type != LISP_NIL_T)
+    return ERROR_TO_LISP("first argument to `let` must be a list");
 
   LispValue return_value = LISP_NIL;
   LispValue remaining_args = args->cons.tail;
@@ -151,14 +149,10 @@ DEFINE_BUILTIN(if) {
 LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
   REQUIRES_MIN_ARGS(2);
 
-  if (ARG0->type != LISP_LIST_T)
-    return ERROR_TO_LISP("first argument to `fn` must be a list");
-
   bool variadic = false;
-
   LispValue arg_symbols = LISP_NIL;
 
-  {
+  if (ARG0->type == LISP_LIST_T) {
     LispValue *last = &arg_symbols;
 
     LispValue remaining_args = ARG0;
@@ -203,7 +197,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
     } else {
       return ERROR_TO_LISP("first argument to `fn` must be a list of symbols");
     }
-  }
+
+  } else if (ARG0->type != LISP_NIL_T)
+    return ERROR_TO_LISP("first argument to `fn` must be a list");
 
   LispValue body = args->cons.tail;
 
@@ -378,7 +374,7 @@ DEFINE_BUILTIN(unpack) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    if (arg->type != LISP_LIST_T)
+    if (arg->type != LISP_LIST_T && arg->type != LISP_NIL_T)
       return ERROR_TO_LISP("`unpack` expects list");
 
     *last = arg;
