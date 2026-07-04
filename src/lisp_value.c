@@ -13,6 +13,13 @@ LispValue _lisp_init(_LispValue *value) {
   LispValue ptr = malloc(sizeof(_LispValue));
   assert(ptr);
   *ptr = *value;
+
+#ifdef _DEBUG_LISP_ALLOC
+  fprintf(stderr, "init: ");
+  lisp_fprint(stderr, value, true);
+  fprintf(stderr, "\n");
+#endif
+
   return ptr;
 }
 
