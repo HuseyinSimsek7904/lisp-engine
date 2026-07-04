@@ -66,7 +66,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
-    default:
+    case '\'':
       TODO();
       return LEXER_UNKNOWN_CHAR;
     }

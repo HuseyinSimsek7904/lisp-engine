@@ -78,6 +78,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
+    case LISP_UNPACKED_T:
+      // I do not think calling an unpacked type is possible by regular means,
+      // but just in case adding this fall through to list.
+
+      lisp = lisp->item;
+
     case LISP_LIST_T: {
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
@@ -173,11 +179,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return ERROR_TO_LISP("tried to call non-callable");
       }
     } break;
-
-    default:
-      TODO();
-      roll_env_back(env, original);
-      return ERROR_TO_LISP("unknown node while trying to evaluate");
     }
   } while (true);
 }

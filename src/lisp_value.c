@@ -102,9 +102,6 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     }
     fprintf(file, ")");
     break;
-
-  default:
-    TODO();
   }
 }
 
@@ -147,10 +144,21 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
     return a->type == b->type;
 
-  default:
-    TODO();
-    return false;
+  case LISP_SYMBOL_T:
+    return strcmp(a->symbol, b->symbol);
+
+  case LISP_FUNC_T:
+    return a->custom_function.is_macro == b->custom_function.is_macro &&
+           a->custom_function.variadic == b->custom_function.variadic &&
+           lisp_is_ident(a->custom_function.args, b->custom_function.args) &&
+           lisp_is_ident(a->custom_function.body, b->custom_function.body);
+
+  case LISP_UNPACKED_T:
+    return lisp_is_ident(a->item, b->item);
   }
+
+  // dummy return
+  return false;
 }
 
 LispValue lisp_make_cons(LispValue head, LispValue tail) {
@@ -230,7 +238,7 @@ LispValue parse(Token *tokens, size_t token_count) {
   for (; token_count > 0; token_count--) {
     Token t = *tokens++;
 
-    LispValue pn;
+    LispValue pn = LISP_NIL;
     switch (t.type) {
     case T_L_PAREN:
       lisp_rappend_use_last(last, LISP_NIL);
@@ -270,10 +278,6 @@ LispValue parse(Token *tokens, size_t token_count) {
     case T_SYMBOL:
       pn = SYM_TO_LISP(t.symbol);
       break;
-
-    default:
-      TODO();
-      return ERROR_TO_LISP("unknown token type");
     }
 
     lisp_rappend_use_last(last, pn);
