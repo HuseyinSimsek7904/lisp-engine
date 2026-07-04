@@ -19,7 +19,6 @@ typedef enum {
   LISP_FUNC_T,
   LISP_LIST_T,
   LISP_UNPACKED_T,
-  LISP_CONS_T,
 } LispType;
 
 typedef struct _LispValue _LispValue;
@@ -47,7 +46,7 @@ typedef struct {
 typedef struct {
   LispValue head;
 
-  // tail must be either another LISP_CONS_T or LISP_NIL_T.
+  // tail must be either another LISP_LIST_T or LISP_NIL_T.
   LispValue tail;
 } _LispCons;
 
@@ -100,8 +99,6 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty);
 void lisp_print(LispValue value, bool pretty);
 
 LispValue lisp_make_cons(LispValue head, LispValue tail);
-LispValue lisp_listify(LispValue lisp);
-LispValue lisp_consify(LispValue lisp);
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);

@@ -66,9 +66,9 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     LispValue remaining_args = value->custom_function.args;
 
     if (remaining_args->type != LISP_NIL_T) {
-      assert(remaining_args->type == LISP_CONS_T);
+      assert(remaining_args->type == LISP_LIST_T);
 
-      for (; remaining_args->cons.tail->type == LISP_CONS_T;) {
+      for (; remaining_args->cons.tail->type == LISP_LIST_T;) {
         fprintf(file, "%s ", remaining_args->cons.head->symbol);
         remaining_args = remaining_args->cons.tail;
       }
@@ -84,25 +84,13 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     break;
 
   case LISP_UNPACKED_T:
-    assert(value->item->type == LISP_CONS_T || value->item->type == LISP_NIL_T);
+    assert(value->item->type == LISP_LIST_T || value->item->type == LISP_NIL_T);
     fprintf(file, "<unpacked");
     lisp_fprint(file, value->item, true);
     fprintf(file, ">");
     break;
 
   case LISP_LIST_T:
-    fprintf(file, "<list(");
-    if (value->items.size > 0)
-      lisp_fprint(file, value->items.array[0], true);
-
-    for (size_t i = 1; i < value->items.size; i++) {
-      fprintf(file, " ");
-      lisp_fprint(file, value->items.array[i], true);
-    }
-    fprintf(file, ")>");
-    break;
-
-  case LISP_CONS_T:
     fprintf(file, "(");
     lisp_fprint(file, value->cons.head, true);
 
@@ -149,23 +137,13 @@ bool lisp_is_ident(LispValue a, LispValue b) {
            a->builtin_function.callback == b->builtin_function.callback;
 
   case LISP_LIST_T:
-    if (a->items.size != b->items.size)
-      return false;
-
-    for (size_t i = 0; i < a->items.size; i++)
-      if (!lisp_is_ident(a->items.array[i], b->items.array[i]))
-        return false;
-
-    return true;
-
-  case LISP_CONS_T:
     do {
       if (lisp_is_ident(a->cons.head, b->cons.head))
         return false;
 
       a = a->cons.tail;
       b = b->cons.tail;
-    } while (a->type == LISP_CONS_T && b->type == LISP_CONS_T);
+    } while (a->type == LISP_LIST_T && b->type == LISP_LIST_T);
 
     return a->type == b->type;
 
@@ -177,37 +155,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
 LispValue lisp_make_cons(LispValue head, LispValue tail) {
   return _lisp_init(
-      &(_LispValue){.type = LISP_CONS_T, .cons = {.head = head, .tail = tail}});
-}
-
-LispValue lisp_listify(LispValue lisp) {
-  if (lisp->type == LISP_LIST_T)
-    return lisp;
-
-  assert(lisp->type == LISP_CONS_T);
-
-  LispValues items;
-  da_init(&items);
-
-  while (lisp->type == LISP_CONS_T) {
-    LispValue item = lisp->cons.head;
-    lisp = lisp->cons.tail;
-
-    da_append(&items, item);
-  }
-  assert(lisp->type == LISP_NIL_T);
-
-  return _lisp_init(
-      &(_LispValue){.type = LISP_LIST_T,
-                    .items = {.array = items.array, .size = items.size}});
-}
-
-LispValue lisp_consify(LispValue lisp) {
-  if (lisp->type == LISP_CONS_T)
-    return lisp;
-
-  assert(lisp->type == LISP_LIST_T);
-  return lisp_consify_array(lisp->items.array, lisp->items.size);
+      &(_LispValue){.type = LISP_LIST_T, .cons = {.head = head, .tail = tail}});
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {
@@ -221,37 +169,22 @@ LispValue lisp_consify_array(LispValue *array, size_t size) {
 }
 
 LispValue lisp_head(LispValue lisp) {
-  if (lisp->type == LISP_CONS_T)
+  if (lisp->type == LISP_LIST_T)
     return lisp->cons.head;
 
-  else if (lisp->type == LISP_LIST_T) {
-    if (!lisp->items.size)
-      return NULL;
-
-    return lisp->items.array[0];
-
-  } else
-    return NULL;
+  return NULL;
 }
 
 LispValue lisp_tail(LispValue lisp) {
-  if (lisp->type == LISP_CONS_T)
+  if (lisp->type == LISP_LIST_T)
     return lisp->cons.tail;
 
-  else if (lisp->type == LISP_LIST_T) {
-    if (!lisp->items.size)
-      return NULL;
-
-    LispValue cons = lisp_consify(lisp);
-    return cons->cons.tail;
-
-  } else
-    return NULL;
+  return NULL;
 }
 
 LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
   while ((*lisp)->type != LISP_NIL_T) {
-    assert((*lisp)->type == LISP_CONS_T);
+    assert((*lisp)->type == LISP_LIST_T);
     lisp = &((*lisp)->cons.tail);
   }
 
@@ -259,12 +192,9 @@ LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
 }
 
 size_t lisp_get_len(LispValue lisp) {
-  if (lisp->type == LISP_LIST_T)
-    return lisp->items.size;
-
   size_t count = 0;
-  for (; lisp->type == LISP_CONS_T; count++) {
-    assert(lisp->type == LISP_CONS_T);
+  for (; lisp->type == LISP_LIST_T; count++) {
+    assert(lisp->type == LISP_LIST_T);
     lisp = lisp->cons.tail;
   }
 
@@ -274,12 +204,12 @@ size_t lisp_get_len(LispValue lisp) {
 }
 
 LispValue lisp_lappend(LispValue lisp, LispValue value) {
-  assert(lisp->type == LISP_CONS_T || lisp->type == LISP_NIL_T);
+  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
   return lisp_make_cons(value, lisp);
 }
 
 LispValue lisp_rappend(LispValue lisp, LispValue value) {
-  assert(lisp->type == LISP_CONS_T || lisp->type == LISP_NIL_T);
+  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
   LispValue *last = lisp_cons_find_term_nil(&lisp);
   lisp_rappend_use_last(last, value);
   return lisp;
@@ -318,7 +248,7 @@ LispValue parse(Token *tokens, size_t token_count) {
       last = &lisp;
 
       for (size_t i = 0; i < depth; i++) {
-        while ((*last)->cons.tail->type == LISP_CONS_T) {
+        while ((*last)->cons.tail->type == LISP_LIST_T) {
           last = &((*last)->cons.tail);
         }
 

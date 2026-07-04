@@ -31,7 +31,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
     if (arg->type == LISP_UNPACKED_T) {
-      assert(arg->item->type == LISP_CONS_T || arg->item->type == LISP_NIL_T);
+      assert(arg->item->type == LISP_LIST_T || arg->item->type == LISP_NIL_T);
       *last = arg->item;
       last = lisp_cons_find_term_nil(last);
 
@@ -78,11 +78,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return ERROR_TO_LISP("undefined symbol");
     }
 
-    case LISP_LIST_T:
-      lisp = lisp_consify(lisp);
-      break;
-
-    case LISP_CONS_T: {
+    case LISP_LIST_T: {
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
       switch (callable->type) {
@@ -127,8 +123,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         LispValue remaining_func_args = callable->custom_function.args;
 
         while (remaining_args->type != LISP_NIL_T) {
-          assert(remaining_args->type == LISP_CONS_T);
-          assert(remaining_func_args->type == LISP_CONS_T);
+          assert(remaining_args->type == LISP_LIST_T);
+          assert(remaining_func_args->type == LISP_LIST_T);
 
           env_set(new_env, remaining_func_args->cons.head->symbol,
                   remaining_args->cons.head);
@@ -145,7 +141,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           env_set(new_env, remaining_args->cons.head->symbol, remaining_args);
         }
 
-        assert(callable->custom_function.body->type == LISP_CONS_T);
+        assert(callable->custom_function.body->type == LISP_LIST_T);
         LispValue remaining_body = callable->custom_function.body;
 
         while (remaining_body->cons.tail->type != LISP_NIL_T) {

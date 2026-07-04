@@ -71,27 +71,21 @@ DEFINE_BUILTIN(let) {
 
   LispValue defs_node = ARG0;
 
-  if (defs_node->type == LISP_LIST_T)
-    defs_node = lisp_consify(defs_node);
-
-  else if (defs_node->type != LISP_CONS_T)
-    return ERROR_TO_LISP("first argument to `let` must be a list-like");
+  if (defs_node->type != LISP_LIST_T)
+    return ERROR_TO_LISP("first argument to `let` must be a list");
 
   Environment new_env = {.other = env};
   da_init(&new_env);
 
   LispValue remaining_defs = defs_node;
 
-  while (remaining_defs->type == LISP_CONS_T) {
+  while (remaining_defs->type == LISP_LIST_T) {
     LispValue def_node = remaining_defs->cons.head;
     remaining_defs = remaining_defs->cons.tail;
 
-    if (def_node->type == LISP_LIST_T)
-      def_node = lisp_consify(def_node);
-
-    else if (def_node->type != LISP_CONS_T)
+    if (def_node->type != LISP_LIST_T)
       return ERROR_TO_LISP(
-          "first argument to `let` must be a list of list-likes");
+          "first argument to `let` must be a list of lists");
 
     if (lisp_get_len(def_node) != 2)
       return ERROR_TO_LISP(
@@ -117,7 +111,7 @@ DEFINE_BUILTIN(let) {
 
   LispValue return_value = LISP_NIL;
   LispValue remaining_args = args->cons.tail;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -144,7 +138,7 @@ DEFINE_BUILTIN(if) {
     return ARG1;
 
   LispValue remaining_args = args->cons.tail->cons.tail;
-  while (remaining_args->cons.tail->type == LISP_CONS_T) {
+  while (remaining_args->cons.tail->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -157,11 +151,8 @@ DEFINE_BUILTIN(if) {
 LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
   REQUIRES_MIN_ARGS(2);
 
-  if (ARG0->type == LISP_LIST_T)
-    ARG0 = lisp_consify(ARG0);
-
-  else if (ARG0->type != LISP_CONS_T)
-    return ERROR_TO_LISP("first argument to `fn` must be a list-like");
+  if (ARG0->type != LISP_LIST_T)
+    return ERROR_TO_LISP("first argument to `fn` must be a list");
 
   bool variadic = false;
 
@@ -173,7 +164,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
     LispValue remaining_args = ARG0;
     LispValue arg;
 
-    while (remaining_args->cons.tail->type == LISP_CONS_T) {
+    while (remaining_args->cons.tail->type == LISP_LIST_T) {
       arg = remaining_args->cons.head;
       remaining_args = remaining_args->cons.tail;
 
@@ -189,7 +180,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
     assert(remaining_args->cons.tail->type == LISP_NIL_T);
     arg = remaining_args->cons.head;
 
-    if (arg->type == LISP_CONS_T) {
+    if (arg->type == LISP_LIST_T) {
       if (lisp_get_len(arg) != 2)
         return ERROR_TO_LISP(
             "list inside `fn` arguments list must be of size 2");
@@ -243,7 +234,7 @@ DEFINE_BUILTIN(do) {
   REQUIRES_MIN_ARGS(1);
 
   LispValue remaining_args = args;
-  while (remaining_args->cons.tail->type == LISP_CONS_T) {
+  while (remaining_args->cons.tail->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -257,7 +248,7 @@ DEFINE_BUILTIN(do) {
 
 DEFINE_BUILTIN(print) {
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -268,7 +259,7 @@ DEFINE_BUILTIN(print) {
   assert(remaining_args->type == LISP_NIL_T);
 
   remaining_args = args;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -284,7 +275,7 @@ DEFINE_BUILTIN(sum) {
   int64_t sum = 0;
 
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -367,7 +358,7 @@ DEFINE_BUILTIN(eval) {
 
   LispValue return_value = LISP_NIL;
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -383,15 +374,12 @@ DEFINE_BUILTIN(unpack) {
   LispValue *last = &items;
 
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_CONS_T) {
+  while (remaining_args->type == LISP_LIST_T) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    if (arg->type == LISP_LIST_T) {
-      arg = lisp_consify(arg);
-    } else if (arg->type != LISP_CONS_T) {
-      return ERROR_TO_LISP("`unpack` expects list-likes");
-    }
+    if (arg->type != LISP_LIST_T)
+      return ERROR_TO_LISP("`unpack` expects list");
 
     *last = arg;
     last = lisp_cons_find_term_nil(last);
