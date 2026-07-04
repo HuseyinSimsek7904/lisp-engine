@@ -182,11 +182,13 @@ LispValue lisp_listify(LispValue lisp) {
   LispValues items;
   da_init(&items);
 
-  while (lisp->type != LISP_NIL_T) {
-    assert(lisp->type == LISP_CONS_T);
-    da_append(&items, lisp->cons.head);
+  while (lisp->type == LISP_CONS_T) {
+    LispValue item = lisp->cons.head;
     lisp = lisp->cons.tail;
+
+    da_append(&items, item);
   }
+  assert(lisp->type == LISP_NIL_T);
 
   return _lisp_init(
       &(_LispValue){.type = LISP_LIST_T,
@@ -291,7 +293,7 @@ LispValue parse(Token *tokens, size_t token_count) {
   for (; token_count > 0; token_count--) {
     Token t = *tokens++;
 
-    _LispValue pn;
+    LispValue pn;
     switch (t.type) {
     case T_L_PAREN:
       lisp_rappend_use_last(last, LISP_NIL);
@@ -321,15 +323,15 @@ LispValue parse(Token *tokens, size_t token_count) {
       continue;
 
     case T_INT64:
-      pn = (_LispValue){.type = LISP_INT64_T, .integer = t.integer};
+      pn = INT64_TO_LISP(t.integer);
       break;
 
     case T_STRING:
-      pn = (_LispValue){.type = LISP_STRING_T, .string = t.string};
+      pn = STR_TO_LISP(t.string);
       break;
 
     case T_SYMBOL:
-      pn = (_LispValue){.type = LISP_SYMBOL_T, .symbol = t.symbol};
+      pn = SYM_TO_LISP(t.symbol);
       break;
 
     default:
@@ -337,7 +339,7 @@ LispValue parse(Token *tokens, size_t token_count) {
       return ERROR_TO_LISP("unknown token type");
     }
 
-    lisp_rappend_use_last(last, _lisp_init(&pn));
+    lisp_rappend_use_last(last, pn);
     last = &((*last)->cons.tail);
   }
 

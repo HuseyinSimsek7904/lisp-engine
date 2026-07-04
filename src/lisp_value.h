@@ -86,6 +86,9 @@ extern LispValue LISP_FALSE;
 #define STR_TO_LISP(x)                                                         \
   _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = x})
 
+#define SYM_TO_LISP(x)                                                         \
+  _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})
+
 #define ERROR_TO_LISP(x)                                                       \
   _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
 

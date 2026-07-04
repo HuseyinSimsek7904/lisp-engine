@@ -205,11 +205,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
       variadic = true;
 
       lisp_rappend_use_last(last, arg->cons.tail->cons.head);
-      last = &((*last)->cons.tail);
 
     } else if (arg->type == LISP_SYMBOL_T) {
       lisp_rappend_use_last(last, arg);
-      last = &((*last)->cons.tail);
 
     } else {
       return ERROR_TO_LISP("first argument to `fn` must be a list of symbols");
