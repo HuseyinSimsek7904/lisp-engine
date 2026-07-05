@@ -1,5 +1,6 @@
 # Project directory layout
 SRCDIR		?= ./src
+TESTDIR		?= ./tests
 
 # Output directories
 OBJDIR		?= ./obj
@@ -50,6 +51,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(BINDIR)
+
+test:
+	$(EXECUTABLE) -t $(TESTDIR)/*
 
 gen-bear: clean
 	bear -- make debug
