@@ -186,8 +186,11 @@ LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
   assert(lisp->type == LISP_LIST_T);
 
   while (lisp->cons.tail->type == LISP_LIST_T) {
-    evaluate_lisp(lisp->cons.head, env);
+    LispValue return_value = evaluate_lisp(lisp->cons.head, env);
     lisp = lisp->cons.tail;
+
+    if (return_value->type == LISP_ERROR_T)
+      return return_value;
   }
   assert(lisp->cons.tail->type == LISP_NIL_T);
 

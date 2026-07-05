@@ -209,8 +209,6 @@ DEFINE_BUILTIN(fn) { return define_fn_or_macro(args, env, false); }
 
 DEFINE_BUILTIN(macro) { return define_fn_or_macro(args, env, true); }
 
-// TODO: Inside `do`, if any of the items return error, the control flow should
-// be stopped and the error value should be returned.
 DEFINE_BUILTIN(do) {
   REQUIRES_MIN_ARGS(1);
 
