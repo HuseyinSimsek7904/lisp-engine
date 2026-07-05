@@ -107,14 +107,7 @@ DEFINE_BUILTIN(let) {
   } else if (ARG0->type != LISP_NIL_T)
     return ERROR_TO_LISP("first argument to `let` must be a list");
 
-  LispValue return_value = LISP_NIL;
-  LispValue remaining_args = args->cons.tail;
-  while (remaining_args->type == LISP_LIST_T) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
-
-    return_value = evaluate_lisp(arg, &new_env);
-  }
+  LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
 
   env_free(&new_env);
 
@@ -135,15 +128,7 @@ DEFINE_BUILTIN(if) {
   if (condition->boolean)
     return ARG1;
 
-  LispValue remaining_args = args->cons.tail->cons.tail;
-  while (remaining_args->cons.tail->type == LISP_LIST_T) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
-
-    evaluate_lisp(arg, env);
-  }
-
-  return remaining_args->cons.head;
+  return evaluate_lisp_body(args->cons.tail->cons.tail, env, true);
 }
 
 LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
@@ -229,17 +214,7 @@ DEFINE_BUILTIN(macro) { return define_fn_or_macro(args, env, true); }
 DEFINE_BUILTIN(do) {
   REQUIRES_MIN_ARGS(1);
 
-  LispValue remaining_args = args;
-  while (remaining_args->cons.tail->type == LISP_LIST_T) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
-
-    evaluate_lisp(arg, env);
-  }
-
-  assert(remaining_args->cons.tail->type == LISP_NIL_T);
-
-  return remaining_args->cons.head;
+  return evaluate_lisp_body(args, env, true);
 }
 
 DEFINE_BUILTIN(print) {
@@ -352,17 +327,7 @@ DEFINE_BUILTIN(parse_lisp) {
 DEFINE_BUILTIN(eval) {
   REQUIRES_MIN_ARGS(1);
 
-  LispValue return_value = LISP_NIL;
-  LispValue remaining_args = args;
-  while (remaining_args->type == LISP_LIST_T) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
-
-    return_value = evaluate_lisp(arg, env);
-  }
-  assert(remaining_args->type == LISP_NIL_T);
-
-  return return_value;
+  return evaluate_lisp_body(args, env, false);
 }
 
 DEFINE_BUILTIN(unpack) {

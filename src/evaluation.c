@@ -163,15 +163,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           }
         }
 
-        assert(callable->custom_function.body->type == LISP_LIST_T);
-        LispValue remaining_body = callable->custom_function.body;
-
-        while (remaining_body->cons.tail->type != LISP_NIL_T) {
-          evaluate_lisp(remaining_body->cons.head, new_env);
-          remaining_body = remaining_body->cons.tail;
-        }
-
-        lisp = remaining_body->cons.head;
+        lisp =
+            evaluate_lisp_body(callable->custom_function.body, new_env, true);
         env = new_env;
       } break;
 
@@ -189,6 +182,21 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   } while (true);
 }
 
+LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
+  assert(lisp->type == LISP_LIST_T);
+
+  while (lisp->cons.tail->type == LISP_LIST_T) {
+    evaluate_lisp(lisp->cons.head, env);
+    lisp = lisp->cons.tail;
+  }
+  assert(lisp->cons.tail->type == LISP_NIL_T);
+
+  if (tail_call)
+    return lisp->cons.head;
+
+  return evaluate_lisp(lisp->cons.head, env);
+}
+
 LispValue repl(char *lisp, Environment *env) {
   Tokens tokens;
   da_init(&tokens);
@@ -203,12 +211,5 @@ LispValue repl(char *lisp, Environment *env) {
   if (parser_result->type == LISP_ERROR_T)
     return parser_result;
 
-  LispValue remaining_lisp = parser_result;
-  LispValue return_value = LISP_NIL;
-  while (remaining_lisp->type != LISP_NIL_T) {
-    return_value = evaluate_lisp(remaining_lisp->cons.head, env);
-    remaining_lisp = remaining_lisp->cons.tail;
-  }
-
-  return return_value;
+  return evaluate_lisp_body(parser_result, env, false);
 }
