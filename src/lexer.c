@@ -5,11 +5,6 @@
 #include "core.h"
 #include "lexer.h"
 
-bool is_symbol_char(char c) {
-  return c == '!' || (c >= '#' && c <= '&') || (c >= '*' && c <= '/') ||
-         (c >= ':' && c <= '~');
-}
-
 LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
   while (*lisp_str) {
     char c = *lisp_str++;
@@ -59,7 +54,8 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       StringBuilder sb;
       da_init(&sb);
       da_append(&sb, c);
-      while (is_symbol_char(*lisp_str)) {
+      while (*lisp_str == '!' || (*lisp_str >= '#' && *lisp_str <= '&') ||
+             (*lisp_str >= '*' && *lisp_str <= '~')) {
         da_append(&sb, *lisp_str++);
       }
       Token token = {.type = T_SYMBOL, .string = sb.array};
