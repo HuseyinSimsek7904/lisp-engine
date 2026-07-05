@@ -332,3 +332,11 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
   entry->value = value;
   return entry;
 }
+
+void env_debug_list(FILE *file, Environment *env) {
+  for (size_t i = 0; i < env->size; i++) {
+    fprintf(file, "%s: ", env->array[i].symbol);
+    lisp_fprint(file, env->array[i].value, true);
+    fprintf(file, "\n");
+  }
+}

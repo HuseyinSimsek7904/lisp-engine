@@ -127,4 +127,6 @@ EnvironmentEntry *env_find_shallow(Environment *env, char *symbol);
 EnvironmentEntry *env_find(Environment *env, char *symbol);
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
+void env_debug_list(FILE *file, Environment *env);
+
 #endif
