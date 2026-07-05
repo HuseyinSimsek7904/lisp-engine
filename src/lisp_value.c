@@ -189,6 +189,8 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 }
 
 LispValue lisp_make_cons(LispValue head, LispValue tail) {
+  assert(tail->type == LISP_LIST_T || tail->type == LISP_NIL_T);
+
   return _lisp_init(
       &(_LispValue){.type = LISP_LIST_T, .cons = {.head = head, .tail = tail}});
 }
