@@ -43,11 +43,6 @@ typedef struct {
 } _LispCustomFunction;
 
 typedef struct {
-  LispValue *array;
-  size_t size;
-} _LispView;
-
-typedef struct {
   LispValue head;
 
   // tail must be either another LISP_LIST_T or LISP_NIL_T.
@@ -65,7 +60,6 @@ struct _LispValue {
     bool boolean;
     _LispBuiltinFunction builtin_function;
     _LispCustomFunction custom_function;
-    _LispView items;
     _LispCons cons;
     LispValue item;
   };
