@@ -19,6 +19,7 @@ typedef enum {
   LISP_FUNC_T,
   LISP_LIST_T,
   LISP_UNPACKED_T,
+  LISP_TYPE_COUNT,
 } LispType;
 
 typedef struct _LispValue _LispValue;

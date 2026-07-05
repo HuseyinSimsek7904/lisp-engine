@@ -102,6 +102,11 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     }
     fprintf(file, ")");
     break;
+
+  case LISP_TYPE_COUNT:
+    fprintf(stderr, "reached unreachable\n");
+    assert(false);
+    break;
   }
 }
 
@@ -155,6 +160,11 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
   case LISP_UNPACKED_T:
     return lisp_is_ident(a->item, b->item);
+
+  case LISP_TYPE_COUNT:
+    fprintf(stderr, "reached unreachable\n");
+    assert(false);
+    break;
   }
 
   // dummy return

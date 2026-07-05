@@ -179,6 +179,11 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return ERROR_TO_LISP("tried to call non-callable");
       }
     } break;
+
+    case LISP_TYPE_COUNT:
+      fprintf(stderr, "reached unreachable\n");
+      assert(false);
+      break;
     }
   } while (true);
 }
