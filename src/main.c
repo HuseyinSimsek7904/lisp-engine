@@ -411,6 +411,12 @@ DEFINE_BUILTIN(tail) {
   return tail;
 }
 
+DEFINE_BUILTIN(typeof) {
+  REQUIRES_EQ_ARGS(1);
+
+  return _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = ARG0->type});
+}
+
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   env_set(&global_env, n,                                                      \
           _lisp_init(&(_LispValue){                                            \
@@ -420,6 +426,10 @@ DEFINE_BUILTIN(tail) {
                   .is_macro = m,                                               \
                   .tail_call = t,                                              \
                   .name = n}}));
+
+#define DEFINE_TYPE_REP(n, r)                                                  \
+  env_set(&global_env, n,                                                      \
+          _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = r}));
 
 LispValue LISP_NIL;
 LispValue LISP_TRUE;
@@ -459,6 +469,18 @@ int main(int argc, char **argv) {
   env_set(&global_env, "false", LISP_FALSE);
   env_set(&global_env, "true", LISP_TRUE);
 
+  // Type representative singletons.
+  DEFINE_TYPE_REP("nil-t", LISP_NIL_T);
+  DEFINE_TYPE_REP("type-t", LISP_TYPE_T);
+  DEFINE_TYPE_REP("error-t", LISP_ERROR_T);
+  DEFINE_TYPE_REP("str-t", LISP_STRING_T);
+  DEFINE_TYPE_REP("int64-t", LISP_INT64_T);
+  DEFINE_TYPE_REP("bool-t", LISP_BOOL_T);
+  DEFINE_TYPE_REP("sym-t", LISP_SYMBOL_T);
+  DEFINE_TYPE_REP("builtin-t", LISP_BUILTIN_FUNC_T);
+  DEFINE_TYPE_REP("fn-t", LISP_FUNC_T);
+  DEFINE_TYPE_REP("list-t", LISP_LIST_T);
+
   // Builtin functions.
   DEFINE_BUILTIN_FUNCTION("print", print, false, false);
   DEFINE_BUILTIN_FUNCTION("+", sum, false, false);
@@ -472,6 +494,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("unpack", unpack, false, false);
   DEFINE_BUILTIN_FUNCTION("head", head, false, false);
   DEFINE_BUILTIN_FUNCTION("tail", tail, false, false);
+  DEFINE_BUILTIN_FUNCTION("typeof", typeof, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);

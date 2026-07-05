@@ -9,6 +9,11 @@
 #include "lexer.h"
 #include "lisp_value.h"
 
+char *lisp_type_names[] = {
+    "nil-t", "type-t",    "error-t", "str-t",  "int64-t",    "bool-t",
+    "sym-t", "builtin-t", "fn-t",    "list-t", "unpacked-t",
+};
+
 LispValue _lisp_init(_LispValue *value) {
   LispValue ptr = malloc(sizeof(_LispValue));
   assert(ptr);
@@ -25,12 +30,17 @@ LispValue _lisp_init(_LispValue *value) {
 
 void lisp_fprint(FILE *file, LispValue value, bool pretty) {
   switch (value->type) {
-    // TODO: nil and bools are singletons, and because of this, their
+    // TODO: nil, types and bools are singletons, and because of this, their
     // representation is their symbol itself. Singleton symbols could be
     // printed better.
 
   case LISP_NIL_T:
     fprintf(file, "nil");
+    break;
+
+  case LISP_TYPE_T:
+    assert(lisp_is_valid_type(value->ref_type));
+    fprintf(file, "%s", lisp_type_names[value->ref_type]);
     break;
 
   case LISP_BOOL_T:
@@ -114,6 +124,10 @@ inline void lisp_print(LispValue value, bool pretty) {
   lisp_fprint(stdout, value, pretty);
 }
 
+bool lisp_is_valid_type(LispType type) {
+  return type >= 0 && type < LISP_TYPE_COUNT;
+}
+
 bool lisp_is_ident(LispValue a, LispValue b) {
   if (a->type != b->type)
     return false;
@@ -121,6 +135,9 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   switch (a->type) {
   case LISP_NIL_T:
     return true;
+
+  case LISP_TYPE_T:
+    return a->ref_type == b->ref_type;
 
   case LISP_BOOL_T:
     return a->boolean == b->boolean;

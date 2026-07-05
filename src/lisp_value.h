@@ -10,6 +10,7 @@
 
 typedef enum {
   LISP_NIL_T = 0,
+  LISP_TYPE_T,
   LISP_ERROR_T,
   LISP_STRING_T,
   LISP_INT64_T,
@@ -21,6 +22,8 @@ typedef enum {
   LISP_UNPACKED_T,
   LISP_TYPE_COUNT,
 } LispType;
+
+extern char *lisp_type_names[];
 
 typedef struct _LispValue _LispValue;
 typedef _LispValue *LispValue;
@@ -58,6 +61,7 @@ struct _LispValue {
     char *error_message;
     char *symbol;
     int64_t integer;
+    LispType ref_type;
     bool boolean;
     _LispBuiltinFunction builtin_function;
     _LispCustomFunction custom_function;
@@ -91,6 +95,8 @@ extern LispValue LISP_FALSE;
 
 #define ERROR_TO_LISP(x)                                                       \
   _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
+
+bool lisp_is_valid_type(LispType value);
 
 LispValue _lisp_init(_LispValue *value);
 

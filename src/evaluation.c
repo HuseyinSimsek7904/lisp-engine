@@ -58,6 +58,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     case LISP_STRING_T:
     case LISP_INT64_T:
     case LISP_NIL_T:
+    case LISP_TYPE_T:
     case LISP_BOOL_T:
     case LISP_BUILTIN_FUNC_T:
     case LISP_FUNC_T:
