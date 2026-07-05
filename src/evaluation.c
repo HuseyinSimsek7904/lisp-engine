@@ -48,12 +48,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   Environment *original = env;
 
   do {
-#ifdef _DEBUG_LISP_EVAL
-    fprintf(stderr, "eval: ");
-    lisp_fprint(stderr, lisp, true);
-    fprintf(stderr, "\n");
-#endif
-
     switch (lisp->type) {
     case LISP_STRING_T:
     case LISP_INT64_T:
@@ -86,6 +80,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       lisp = lisp->item;
 
     case LISP_LIST_T: {
+#ifdef _DEBUG_LISP_EVAL
+      fprintf(stderr, "eval: ");
+      lisp_fprint(stderr, lisp, true);
+      fprintf(stderr, "\n");
+#endif
+
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
       switch (callable->type) {
