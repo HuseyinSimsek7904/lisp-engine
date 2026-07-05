@@ -550,8 +550,10 @@ int main(int argc, char **argv) {
   while (interactive) {
     char *lisp = readline("> ");
 
-    if (!lisp)
+    if (!lisp) {
       interactive = false;
+      continue;
+    }
 
     add_history(lisp);
 
