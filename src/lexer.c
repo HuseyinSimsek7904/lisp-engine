@@ -30,7 +30,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
 
       if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t')
+          *lisp_str != '\t' && *lisp_str != '\0')
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_INT64, .integer = number};
@@ -50,7 +50,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       lisp_str++;
 
       if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t')
+          *lisp_str != '\t' && *lisp_str != '\0')
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_STRING, .string = sb.array};
@@ -70,7 +70,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
 
       if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t')
+          *lisp_str != '\t' && *lisp_str != '\0')
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_SYMBOL, .string = sb.array};
