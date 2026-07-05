@@ -28,6 +28,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       while (*lisp_str >= '0' && *lisp_str <= '9') {
         number = 10 * number + *lisp_str++ - '0';
       }
+
+      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
+          *lisp_str != '\t')
+        return LEXER_EXPECTED_SEPARATOR;
+
       Token token = {.type = T_INT64, .integer = number};
       da_append(tokens, token);
     } break;
@@ -43,6 +48,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
         da_append(&sb, *lisp_str++);
       }
       lisp_str++;
+
+      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
+          *lisp_str != '\t')
+        return LEXER_EXPECTED_SEPARATOR;
+
       Token token = {.type = T_STRING, .string = sb.array};
       da_append(tokens, token);
     } break;
@@ -58,6 +68,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
              (*lisp_str >= '*' && *lisp_str <= '~')) {
         da_append(&sb, *lisp_str++);
       }
+
+      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
+          *lisp_str != '\t')
+        return LEXER_EXPECTED_SEPARATOR;
+
       Token token = {.type = T_SYMBOL, .string = sb.array};
       da_append(tokens, token);
     } break;
