@@ -49,7 +49,9 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
     break;
 
   case LISP_ERROR_T:
-    fprintf(file, pretty ? "<error(%s)>" : "error: %s", value->error_message);
+    fprintf(file, pretty ? "<error " : "error: ");
+    lisp_fprint(file, value->item, true);
+    fprintf(file, pretty ? ">" : "\n");
     break;
 
   case LISP_STRING_T:
@@ -144,7 +146,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->boolean == b->boolean;
 
   case LISP_ERROR_T:
-    return a->error_message == b->error_message;
+    return lisp_is_ident(a->item, b->item);
 
   case LISP_INT64_T:
     return a->integer == b->integer;

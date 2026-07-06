@@ -53,7 +53,6 @@ struct _LispValue {
   LispType type;
   union {
     char *string;
-    char *error_message;
     char *symbol;
     int64_t integer;
     LispType ref_type;
@@ -88,7 +87,7 @@ extern LispValue LISP_FALSE;
   _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})
 
 #define ERROR_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .error_message = x})
+  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .item = STR_TO_LISP(x)})
 
 bool lisp_is_valid_type(LispType value);
 
