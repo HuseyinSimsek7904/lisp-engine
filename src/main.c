@@ -514,6 +514,7 @@ int main(int argc, char **argv) {
   }
 
   // Custom passed startup files.
+  bool test_failed = false;
   for (size_t i = optind; i < argc; i++) {
     char *buffer = read_file(argv[i]);
 
@@ -532,8 +533,14 @@ int main(int argc, char **argv) {
       fprintf(stderr, "fail: %s test failed\n", argv[i]);
       lisp_fprint(stderr, return_value, true);
       fprintf(stderr, "\n");
+      test_failed = true;
     }
   }
+
+  if (test_failed)
+    exit(1);
+  else if (test_mode)
+    fprintf(stderr, "test: passed all tests\n");
 
   // Interactive mode.
   while (interactive) {
