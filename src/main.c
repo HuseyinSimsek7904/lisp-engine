@@ -18,28 +18,45 @@
 #define DEFINE_BUILTIN(n)                                                      \
   LispValue builtin_##n(LispValue args, Environment *env)
 
+#define WRONG_NUMBER_ARGS_SYM "wrong-number-of-args-to-builtin"
+#define TOO_FEW_ARGS_SYM "too-few-args-to-builtin"
+#define TOO_MANY_ARGS_SYM "too-many-args-to-builtin"
+#define WRONG_TYPE_ARG_SYM "wrong-type-arg-to-builtin"
+#define SYMBOL_REDEFINITION_SYM "symbol-redefinition"
+#define COULD_NOT_READ_FILE_SYM "could-not-read-file"
+#define COULD_NOT_GEN_TOKENS_SYM "could-not-gen-tokens"
+
+#define RETURN_WRONG_NUMBER_ARGS(m, n, g, c)                                   \
+  return ERROR(m, 3, SYM_TO_LISP(n), INT64_TO_LISP(argc), INT64_TO_LISP(c));
+
+#define RETURN_INVALID_ARG(n, v, m)                                            \
+  return ERROR(WRONG_TYPE_ARG_SYM, 3, SYM_TO_LISP(n), v, m);
+
 #define REQUIRES_EQ_ARGS(n, c)                                                 \
   do {                                                                         \
     size_t argc = lisp_get_len(args);                                          \
     if (argc != c)                                                             \
-      return ERROR("wrong-number-of-args-to-builtin", 3, SYM_TO_LISP(n),       \
-                   INT64_TO_LISP(argc), INT64_TO_LISP(c));                     \
+      RETURN_WRONG_NUMBER_ARGS(WRONG_NUMBER_ARGS_SYM, n, argc, c);             \
   } while (false)
 
 #define REQUIRES_MIN_ARGS(n, c)                                                \
   do {                                                                         \
     size_t argc = lisp_get_len(args);                                          \
     if (argc < c)                                                              \
-      return ERROR("too-few-args-to-builtin", 3, SYM_TO_LISP(n),               \
-                   INT64_TO_LISP(argc), INT64_TO_LISP(c));                     \
+      RETURN_WRONG_NUMBER_ARGS(TOO_FEW_ARGS_SYM, n, argc, c);                  \
   } while (false)
 
 #define REQUIRES_MAX_ARGS(n, c)                                                \
   do {                                                                         \
     size_t argc = lisp_get_len(args);                                          \
     if (argc > c)                                                              \
-      return ERROR("too-many-args-to-builtin", 3, SYM_TO_LISP(n),              \
-                   INT64_TO_LISP(argc), INT64_TO_LISP(c));                     \
+      RETURN_WRONG_NUMBER_ARGS(TOO_MANY_ARGS_SYM, n, argc, c);                 \
+  } while (false)
+
+#define CHECK_ARG_TYPE(n, v, t)                                                \
+  do {                                                                         \
+    if (v->type != t)                                                          \
+      RETURN_INVALID_ARG(n, v, TYPE_TO_LISP(t));                               \
   } while (false)
 
 #define ARG0 args->cons.head
@@ -47,9 +64,7 @@
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS("set", 2);
-
-  if (ARG0->type != LISP_SYMBOL_T)
-    return ERROR_TO_LISP("first argument to `set` must be a symbol");
+  CHECK_ARG_TYPE("set", ARG0, LISP_SYMBOL_T);
 
   char *symbol = ARG0->symbol;
   LispValue value = evaluate_lisp(ARG1, env);
@@ -61,9 +76,7 @@ DEFINE_BUILTIN(set) {
 
 DEFINE_BUILTIN(setg) {
   REQUIRES_EQ_ARGS("setg", 2);
-
-  if (ARG0->type != LISP_SYMBOL_T)
-    return ERROR_TO_LISP("first argument to `setg` must be a symbol");
+  CHECK_ARG_TYPE("setg", ARG0, LISP_SYMBOL_T);
 
   char *symbol = ARG0->symbol;
   LispValue value = evaluate_lisp(ARG1, env);
@@ -92,21 +105,20 @@ DEFINE_BUILTIN(let) {
       LispValue def_node = remaining_defs->cons.head;
       remaining_defs = remaining_defs->cons.tail;
 
-      if (def_node->type != LISP_LIST_T)
-        return ERROR_TO_LISP("first argument to `let` must be a list of lists");
+      CHECK_ARG_TYPE("let", def_node, LISP_LIST_T);
 
       if (lisp_get_len(def_node) != 2)
-        return ERROR_TO_LISP(
-            "first argument to `let` must be a list of lists with sizes 2");
+        return ERROR(
+            WRONG_TYPE_ARG_SYM, 3, SYM_TO_LISP("let"), def_node,
+            STR_TO_LISP(
+                "`let` binding list must be a list of key-value pairs"));
 
-      if (def_node->cons.head->type != LISP_SYMBOL_T)
-        return ERROR_TO_LISP("first argument to `let` must be a list of lists "
-                             "with first element being a symbol");
+      CHECK_ARG_TYPE("let", def_node->cons.head, LISP_SYMBOL_T);
 
       char *symbol = def_node->cons.head->symbol;
 
       if (env_find_shallow(&new_env, symbol))
-        return ERROR_TO_LISP("redefined symbol");
+        return ERROR("let", 1, SYM_TO_LISP(symbol));
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
@@ -118,7 +130,7 @@ DEFINE_BUILTIN(let) {
     assert(remaining_defs->type == LISP_NIL_T);
 
   } else if (ARG0->type != LISP_NIL_T)
-    return ERROR_TO_LISP("first argument to `let` must be a list");
+    RETURN_INVALID_ARG("let", ARG0, TYPE_TO_LISP(LISP_LIST_T));
 
   LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
 
@@ -135,8 +147,7 @@ DEFINE_BUILTIN(if) {
   if (condition->type == LISP_ERROR_T)
     return condition;
 
-  if (condition->type != LISP_BOOL_T)
-    return ERROR_TO_LISP("`if` requires a boolean");
+  CHECK_ARG_TYPE("if", condition, LISP_BOOL_T);
 
   if (condition->boolean)
     return ARG1;
@@ -144,7 +155,10 @@ DEFINE_BUILTIN(if) {
   return evaluate_lisp_body(args->cons.tail->cons.tail, env, true);
 }
 
-LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
+LispValue define_fn_or_macro(LispValue args, Environment *env,
+                             char *builtin_name, bool is_macro) {
+  REQUIRES_MIN_ARGS(builtin_name, 2);
+
   bool variadic = false;
   LispValue arg_symbols = LISP_NIL;
 
@@ -158,10 +172,10 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
       arg = remaining_args->cons.head;
       remaining_args = remaining_args->cons.tail;
 
-      if (arg->type != LISP_SYMBOL_T) {
-        return ERROR_TO_LISP(
-            "first argument to `fn` must be a list of symbols");
-      }
+      if (arg->type != LISP_SYMBOL_T)
+        RETURN_INVALID_ARG(
+            builtin_name, ARG0,
+            "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
       lisp_rappend_use_last(last, arg);
       last = &((*last)->cons.tail);
@@ -172,16 +186,20 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
 
     if (arg->type == LISP_LIST_T) {
       if (lisp_get_len(arg) != 2)
-        return ERROR_TO_LISP(
-            "list inside `fn` arguments list must be of size 2");
+        RETURN_INVALID_ARG(
+            builtin_name, ARG0,
+            "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
       if (arg->cons.head->type != LISP_SYMBOL_T ||
           strcmp(arg->cons.head->string, "rest"))
-        return ERROR_TO_LISP("first item in the list in the `fn` arguments "
-                             "list must be a `rest` symbol");
+        RETURN_INVALID_ARG(
+            builtin_name, ARG0,
+            "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
-        return ERROR_TO_LISP("`rest` argument must be a symbol");
+        RETURN_INVALID_ARG(
+            builtin_name, ARG0,
+            "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
       variadic = true;
 
@@ -190,12 +208,15 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
     } else if (arg->type == LISP_SYMBOL_T) {
       lisp_rappend_use_last(last, arg);
 
-    } else {
-      return ERROR_TO_LISP("first argument to `fn` must be a list of symbols");
-    }
+    } else
+      RETURN_INVALID_ARG(
+          builtin_name, ARG0,
+          "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
   } else if (ARG0->type != LISP_NIL_T)
-    return ERROR_TO_LISP("first argument to `fn` must be a list");
+    RETURN_INVALID_ARG(
+        builtin_name, ARG0,
+        "argument list must be in the form (SYMBOL... [(rest SYMBOL)])");
 
   LispValue body = args->cons.tail;
 
@@ -216,17 +237,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env, bool is_macro) {
                                                       .body = body}});
 }
 
-DEFINE_BUILTIN(fn) {
-  REQUIRES_MIN_ARGS("fn", 2);
+DEFINE_BUILTIN(fn) { return define_fn_or_macro(args, env, "fn", false); }
 
-  return define_fn_or_macro(args, env, false);
-}
-
-DEFINE_BUILTIN(macro) {
-  REQUIRES_MIN_ARGS("macro", 2);
-
-  return define_fn_or_macro(args, env, true);
-}
+DEFINE_BUILTIN(macro) { return define_fn_or_macro(args, env, "macro", true); }
 
 DEFINE_BUILTIN(do) {
   REQUIRES_MIN_ARGS("do", 1);
@@ -240,8 +253,7 @@ DEFINE_BUILTIN(print) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    if (arg->type != LISP_STRING_T)
-      return ERROR_TO_LISP("invalid type for argument to `print`");
+    CHECK_ARG_TYPE("print", arg, LISP_STRING_T);
   }
 
   assert(remaining_args->type == LISP_NIL_T);
@@ -267,8 +279,7 @@ DEFINE_BUILTIN(sum) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    if (arg->type != LISP_INT64_T)
-      return ERROR_TO_LISP("invalid type for argument to `+`");
+    CHECK_ARG_TYPE("+", arg, LISP_INT64_T);
 
     sum += arg->integer;
   }
@@ -276,15 +287,19 @@ DEFINE_BUILTIN(sum) {
   return INT64_TO_LISP(sum);
 }
 
+// TODO: This builtin should allow any number of arguments except zero.
+// (- a) should negate.
+// (- x a b c) should return x - a - b - c.
 DEFINE_BUILTIN(neg_or_sub) {
   size_t arg_count = lisp_get_len(args);
 
   REQUIRES_MIN_ARGS("-", 1);
   REQUIRES_MAX_ARGS("-", 2);
 
-  if (ARG0->type != LISP_INT64_T ||
-      (arg_count == 2 && ARG1->type != LISP_INT64_T))
-    return ERROR_TO_LISP("`-` expects 1 or 2 integers");
+  CHECK_ARG_TYPE("-", ARG0, LISP_INT64_T);
+
+  if (arg_count > 1)
+    CHECK_ARG_TYPE("-", ARG1, LISP_INT64_T);
 
   return INT64_TO_LISP(arg_count == 1 ? -ARG0->integer
                                       : ARG0->integer - ARG1->integer);
@@ -292,49 +307,48 @@ DEFINE_BUILTIN(neg_or_sub) {
 
 DEFINE_BUILTIN(list) { return args; }
 
+// TODO: This builtin should allow for any number of arguments except zero and
+// one.
+// (= a b c) should check the equality between every item pair.
 DEFINE_BUILTIN(equal) {
-  // NOTE: Later, we can change this function to accept any number of arguments.
   REQUIRES_EQ_ARGS("=", 2);
 
   return BOOL_TO_LISP(lisp_is_ident(ARG0, ARG1));
 }
 
+// TODO: This builtin should allow for any number of arguments except zero and
+// one.
+// (< a b c) should compare a < b < c.
 DEFINE_BUILTIN(less_than) {
-  // NOTE: Later, we can change this function to accept any number of arguments.
   REQUIRES_EQ_ARGS("<", 2);
-
-  if (ARG0->type != LISP_INT64_T || ARG1->type != LISP_INT64_T)
-    return ERROR_TO_LISP("`<` expects 2 integers");
+  CHECK_ARG_TYPE("<", ARG0, LISP_INT64_T);
+  CHECK_ARG_TYPE("<", ARG1, LISP_INT64_T);
 
   return BOOL_TO_LISP(ARG0->integer < ARG1->integer);
 }
 
 DEFINE_BUILTIN(read_file) {
   REQUIRES_EQ_ARGS("read-file", 1);
-
-  if (ARG0->type != LISP_STRING_T)
-    return ERROR_TO_LISP("`read-file` expects a string");
+  CHECK_ARG_TYPE("read-file", ARG0, LISP_STRING_T);
 
   char *buffer = read_file(ARG0->string);
 
   if (!buffer)
-    return ERROR_TO_LISP("could not read file contents");
+    return ERROR(COULD_NOT_READ_FILE_SYM, 1, ARG0);
 
   return STR_TO_LISP(buffer);
 }
 
 DEFINE_BUILTIN(parse_lisp) {
   REQUIRES_EQ_ARGS("parse-lisp", 1);
-
-  if (ARG0->type != LISP_STRING_T)
-    return ERROR_TO_LISP("`parse-lisp` expects a string");
+  CHECK_ARG_TYPE("parse-lisp", ARG0, LISP_STRING_T);
 
   Tokens tokens;
   da_init(&tokens);
   LexerResult lexer_result = generate_tokens(ARG0->string, &tokens);
 
   if (lexer_result)
-    return ERROR_TO_LISP("could not generate tokens for lisp");
+    return ERROR(COULD_NOT_GEN_TOKENS_SYM, 1, ARG0);
 
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);
@@ -358,7 +372,7 @@ DEFINE_BUILTIN(unpack) {
     remaining_args = remaining_args->cons.tail;
 
     if (arg->type != LISP_LIST_T && arg->type != LISP_NIL_T)
-      return ERROR_TO_LISP("`unpack` expects list");
+      RETURN_INVALID_ARG("unpack", arg, TYPE_TO_LISP(LISP_LIST_T));
 
     *last = arg;
     last = lisp_cons_find_term_nil(last);
@@ -369,29 +383,22 @@ DEFINE_BUILTIN(unpack) {
 
 DEFINE_BUILTIN(quote) {
   REQUIRES_EQ_ARGS("quote", 1);
+
   return ARG0;
 }
 
 DEFINE_BUILTIN(head) {
   REQUIRES_EQ_ARGS("head", 1);
+  CHECK_ARG_TYPE("head", ARG0, LISP_LIST_T);
 
-  LispValue head = lisp_head(ARG0);
-
-  if (!head)
-    return ERROR_TO_LISP("cannot `head` on value");
-
-  return head;
+  return ARG0->cons.head;
 }
 
 DEFINE_BUILTIN(tail) {
   REQUIRES_EQ_ARGS("tail", 1);
+  CHECK_ARG_TYPE("tail", ARG0, LISP_LIST_T);
 
-  LispValue tail = lisp_tail(ARG0);
-
-  if (!tail)
-    return ERROR_TO_LISP("cannot `tail` on value");
-
-  return tail;
+  return ARG0->cons.tail;
 }
 
 DEFINE_BUILTIN(typeof) {
