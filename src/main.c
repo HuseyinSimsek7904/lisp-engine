@@ -307,7 +307,7 @@ DEFINE_BUILTIN(parse_lisp) {
   REQUIRES_EQ_ARGS(1);
 
   if (ARG0->type != LISP_STRING_T)
-    return ERROR_TO_LISP("`read-file` expects a string");
+    return ERROR_TO_LISP("`parse-lisp` expects a string");
 
   Tokens tokens;
   da_init(&tokens);
