@@ -191,6 +191,10 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   return false;
 }
 
+LispValue lisp_make_error(LispValue item) {
+  return _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .item = item});
+}
+
 LispValue lisp_make_cons(LispValue head, LispValue tail) {
   assert(tail->type == LISP_LIST_T || tail->type == LISP_NIL_T);
 

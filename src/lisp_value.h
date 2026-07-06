@@ -98,6 +98,7 @@ bool lisp_is_ident(LispValue a, LispValue b);
 void lisp_fprint(FILE *file, LispValue value, bool pretty);
 void lisp_print(LispValue value, bool pretty);
 
+LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(LispValue head, LispValue tail);
 LispValue lisp_make_list(size_t count, ...);
 
@@ -130,5 +131,8 @@ EnvironmentEntry *env_find(Environment *env, char *symbol);
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 void env_debug_list(FILE *file, Environment *env);
+
+#define ERROR(s, n, ...)                                                       \
+  lisp_make_error(lisp_make_list(n + 1, SYM_TO_LISP(s), __VA_ARGS__))
 
 #endif
