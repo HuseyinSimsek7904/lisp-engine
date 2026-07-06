@@ -15,6 +15,13 @@ char *lisp_type_names[] = {
     "sym-t", "builtin-t", "fn-t",    "list-t", "unpacked-t",
 };
 
+char *lexer_result_syms[] = {
+    [LEXER_SUCCESS] = "lexer:success",
+    [LEXER_UNKNOWN_CHAR] = "lexer:unknown-char",
+    [LEXER_EXPECTED_SEPARATOR] = "lexer:expected-separator",
+    [LEXER_UNTERMINATED_STRING] = "lexer:unterminated-string",
+};
+
 LispValue _lisp_init(_LispValue *value) {
   LispValue ptr = malloc(sizeof(_LispValue));
   assert(ptr);
@@ -302,7 +309,8 @@ LispValue parse(Token *tokens, size_t token_count) {
 
     case T_R_PAREN:
       if (depth <= 0)
-        return ERROR(PARSER_TOO_MANY_R_PAREN, 1, lisp);
+        return lisp_make_error(
+            lisp_make_cons(SYM_TO_LISP(PARSER_TOO_MANY_R_PAREN), LISP_NIL));
 
       depth--;
       last = &lisp;
@@ -337,7 +345,8 @@ LispValue parse(Token *tokens, size_t token_count) {
   }
 
   if (depth > 0)
-    return ERROR(PARSER_TOO_FEW_R_PAREN, 1, lisp);
+    return lisp_make_error(
+        lisp_make_cons(SYM_TO_LISP(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
 
   return lisp;
 }

@@ -179,6 +179,9 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 }
 
 LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
+  if (lisp->type == LISP_NIL_T)
+    return LISP_NIL;
+
   assert(lisp->type == LISP_LIST_T);
 
   while (lisp->cons.tail->type == LISP_LIST_T) {
@@ -202,7 +205,7 @@ LispValue repl(char *lisp, Environment *env) {
   LexerResult lexer_result = generate_tokens(lisp, &tokens);
 
   if (lexer_result)
-    RETURN_COULD_NOT_GEN_TOKENS(lisp);
+    RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
 
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);

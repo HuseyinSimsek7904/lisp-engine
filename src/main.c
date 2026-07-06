@@ -340,7 +340,7 @@ DEFINE_BUILTIN(parse_lisp) {
   LexerResult lexer_result = generate_tokens(ARG0->string, &tokens);
 
   if (lexer_result)
-    RETURN_COULD_NOT_GEN_TOKENS(ARG0)
+    RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
 
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);

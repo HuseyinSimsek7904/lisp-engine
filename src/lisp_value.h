@@ -155,10 +155,13 @@ void env_debug_list(FILE *file, Environment *env);
 #define PARSER_TOO_FEW_R_PAREN "parser:too-few-r-paren"
 #define PARSER_TOO_MANY_R_PAREN "parser:too-many-r-paren"
 
+extern char *lexer_result_syms[];
 
 #define RETURN_COULD_NOT_READ_FILE(f)                                          \
   return ERROR(COULD_NOT_READ_FILE_SYM, 1, f)
-#define RETURN_COULD_NOT_GEN_TOKENS(s) \
-    return ERROR(COULD_NOT_GEN_TOKENS_SYM, 1, s);
+
+#define RETURN_COULD_NOT_GEN_TOKENS(r)                                         \
+  return lisp_make_error(                                                      \
+      lisp_make_cons(SYM_TO_LISP(lexer_result_syms[r]), LISP_NIL))
 
 #endif
