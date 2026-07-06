@@ -399,6 +399,12 @@ DEFINE_BUILTIN(typeof) {
   return _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = ARG0->type});
 }
 
+DEFINE_BUILTIN(error) {
+  REQUIRES_EQ_ARGS("error", 1);
+
+  return lisp_make_error(ARG0);
+}
+
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   env_set(&global_env, n,                                                      \
           _lisp_init(&(_LispValue){                                            \
@@ -477,6 +483,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("head", head, false, false);
   DEFINE_BUILTIN_FUNCTION("tail", tail, false, false);
   DEFINE_BUILTIN_FUNCTION("typeof", typeof, false, false);
+  DEFINE_BUILTIN_FUNCTION("error", error, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
