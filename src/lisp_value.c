@@ -301,9 +301,8 @@ LispValue parse(Token *tokens, size_t token_count) {
       continue;
 
     case T_R_PAREN:
-      if (depth <= 0) {
-        return ERROR_TO_LISP("too many closing parenthesis");
-      }
+      if (depth <= 0)
+        return ERROR(PARSER_TOO_MANY_R_PAREN, 1, lisp);
 
       depth--;
       last = &lisp;
@@ -338,7 +337,7 @@ LispValue parse(Token *tokens, size_t token_count) {
   }
 
   if (depth > 0)
-    return ERROR_TO_LISP("too many opening parenthesis");
+    return ERROR(PARSER_TOO_FEW_R_PAREN, 1, lisp);
 
   return lisp;
 }

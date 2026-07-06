@@ -18,14 +18,6 @@
 #define DEFINE_BUILTIN(n)                                                      \
   LispValue builtin_##n(LispValue args, Environment *env)
 
-#define WRONG_NUMBER_ARGS_SYM "wrong-number-of-args-to-builtin"
-#define TOO_FEW_ARGS_SYM "too-few-args-to-builtin"
-#define TOO_MANY_ARGS_SYM "too-many-args-to-builtin"
-#define WRONG_TYPE_ARG_SYM "wrong-type-arg-to-builtin"
-#define SYMBOL_REDEFINITION_SYM "symbol-redefinition"
-#define COULD_NOT_READ_FILE_SYM "could-not-read-file"
-#define COULD_NOT_GEN_TOKENS_SYM "could-not-gen-tokens"
-
 #define RETURN_WRONG_NUMBER_ARGS(m, n, g, c)                                   \
   return ERROR(m, 3, SYM_TO_LISP(n), INT64_TO_LISP(argc), INT64_TO_LISP(c));
 
@@ -334,7 +326,7 @@ DEFINE_BUILTIN(read_file) {
   char *buffer = read_file(ARG0->string);
 
   if (!buffer)
-    return ERROR(COULD_NOT_READ_FILE_SYM, 1, ARG0);
+    RETURN_COULD_NOT_READ_FILE(ARG0);
 
   return STR_TO_LISP(buffer);
 }
@@ -348,7 +340,7 @@ DEFINE_BUILTIN(parse_lisp) {
   LexerResult lexer_result = generate_tokens(ARG0->string, &tokens);
 
   if (lexer_result)
-    return ERROR(COULD_NOT_GEN_TOKENS_SYM, 1, ARG0);
+    RETURN_COULD_NOT_GEN_TOKENS(ARG0)
 
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);

@@ -70,7 +70,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       }
 
       roll_env_back(env, original);
-      return ERROR_TO_LISP("undefined symbol");
+      return ERROR(UNDEF_SYMBOL_SYM, 1, lisp);
     }
 
     case LISP_UNPACKED_T:
@@ -116,8 +116,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         if (callable->custom_function.args->type == LISP_NIL_T) {
           if (args->type != LISP_NIL_T) {
             roll_env_back(env, original);
-            return ERROR_TO_LISP("function or macro expects no arguments, but "
-                                 "was called with arguments");
+            return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 3, callable);
           }
 
         } else {
@@ -127,8 +126,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           while (remaining_func_args->cons.tail->type == LISP_LIST_T) {
             if (remaining_args->type == LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR_TO_LISP(
-                  "insufficient arguments in function or macro call");
+              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 3, callable);
             }
 
             assert(remaining_func_args->type == LISP_LIST_T);
@@ -149,14 +147,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           } else {
             if (remaining_args->type == LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR_TO_LISP(
-                  "insufficient arguments in function or macro call");
+              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 3, callable);
             }
 
             if (remaining_args->cons.tail->type != LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR_TO_LISP(
-                  "too many arguments in function or macro call");
+              return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 3, callable);
             }
 
             env_set(new_env, last_func_arg->symbol, remaining_args->cons.head);
@@ -170,7 +166,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       default:
         roll_env_back(env, original);
-        return ERROR_TO_LISP("tried to call non-callable");
+        return ERROR("not-callable", 1, callable);
       }
     } break;
 
@@ -206,7 +202,7 @@ LispValue repl(char *lisp, Environment *env) {
   LexerResult lexer_result = generate_tokens(lisp, &tokens);
 
   if (lexer_result)
-    return ERROR_TO_LISP("could not generate tokens for lisp");
+    RETURN_COULD_NOT_GEN_TOKENS(lisp);
 
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);

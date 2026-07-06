@@ -89,9 +89,6 @@ extern LispValue LISP_FALSE;
 #define SYM_TO_LISP(x)                                                         \
   _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})
 
-#define ERROR_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .item = STR_TO_LISP(x)})
-
 bool lisp_is_valid_type(LispType value);
 
 LispValue _lisp_init(_LispValue *value);
@@ -137,5 +134,31 @@ void env_debug_list(FILE *file, Environment *env);
 
 #define ERROR(s, n, ...)                                                       \
   lisp_make_error(lisp_make_list(n + 1, SYM_TO_LISP(s), __VA_ARGS__))
+
+#define WRONG_NUMBER_ARGS_SYM "wrong-number-of-args-to-builtin"
+#define TOO_FEW_ARGS_SYM "too-few-args-to-builtin"
+#define TOO_MANY_ARGS_SYM "too-many-args-to-builtin"
+
+#define WRONG_NUMBER_ARGS_CUSTOM_SYM "wrong-number-of-args"
+#define TOO_FEW_ARGS_CUSTOM_SYM "too-few-args"
+#define TOO_MANY_ARGS_CUSTOM_SYM "too-many-args"
+
+#define WRONG_TYPE_ARG_SYM "wrong-type-arg-to-builtin"
+
+#define SYMBOL_REDEFINITION_SYM "symbol-redefinition"
+#define COULD_NOT_READ_FILE_SYM "could-not-read-file"
+#define COULD_NOT_GEN_TOKENS_SYM "could-not-gen-tokens"
+#define UNDEF_SYMBOL_SYM "undefined-symbol"
+
+#define NOT_CALLABLE_SYM "not-callable"
+
+#define PARSER_TOO_FEW_R_PAREN "parser:too-few-r-paren"
+#define PARSER_TOO_MANY_R_PAREN "parser:too-many-r-paren"
+
+
+#define RETURN_COULD_NOT_READ_FILE(f)                                          \
+  return ERROR(COULD_NOT_READ_FILE_SYM, 1, f)
+#define RETURN_COULD_NOT_GEN_TOKENS(s) \
+    return ERROR(COULD_NOT_GEN_TOKENS_SYM, 1, s);
 
 #endif
