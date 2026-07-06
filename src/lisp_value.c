@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -193,6 +194,23 @@ LispValue lisp_make_cons(LispValue head, LispValue tail) {
 
   return _lisp_init(
       &(_LispValue){.type = LISP_LIST_T, .cons = {.head = head, .tail = tail}});
+}
+
+LispValue lisp_make_list(size_t count, ...) {
+  LispValue list = LISP_NIL;
+  LispValue *last = &list;
+
+  va_list va;
+  va_start(va, count);
+  for (int j = 0; j < count; ++j) {
+    LispValue arg = va_arg(va, LispValue);
+
+    lisp_rappend_use_last(last, arg);
+    last = &((*last)->cons.tail);
+  }
+  va_end(va);
+
+  return list;
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {

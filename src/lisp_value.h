@@ -100,6 +100,8 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty);
 void lisp_print(LispValue value, bool pretty);
 
 LispValue lisp_make_cons(LispValue head, LispValue tail);
+LispValue lisp_make_list(size_t count, ...);
+
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
