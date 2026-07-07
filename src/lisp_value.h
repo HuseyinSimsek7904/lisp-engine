@@ -77,6 +77,7 @@ extern LispValue LISP_FALSE;
 
 #define BOOL_TO_LISP(x) x ? LISP_TRUE : LISP_FALSE
 
+// TODO: Types should be singletons.
 #define TYPE_TO_LISP(x)                                                        \
   _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = x})
 
