@@ -132,7 +132,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
             assert(remaining_func_args->type == LISP_LIST_T);
             assert(remaining_func_args->cons.head->type == LISP_SYMBOL_T);
 
-            env_set(new_env, remaining_func_args->cons.head->symbol,
+            env_set_shallow(new_env, remaining_func_args->cons.head->symbol,
                     remaining_args->cons.head);
 
             remaining_args = remaining_args->cons.tail;
@@ -143,7 +143,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           assert(last_func_arg->type == LISP_SYMBOL_T);
 
           if (callable->custom_function.variadic) {
-            env_set(new_env, last_func_arg->symbol, remaining_args);
+            env_set_shallow(new_env, last_func_arg->symbol, remaining_args);
           } else {
             if (remaining_args->type == LISP_NIL_T) {
               roll_env_back(env, original);
@@ -155,7 +155,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
               return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            env_set(new_env, last_func_arg->symbol, remaining_args->cons.head);
+            env_set_shallow(new_env, last_func_arg->symbol, remaining_args->cons.head);
           }
         }
 

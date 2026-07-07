@@ -128,6 +128,8 @@ typedef struct Environment {
 void env_free(Environment *env);
 EnvironmentEntry *env_find_shallow(Environment *env, char *symbol);
 EnvironmentEntry *env_find(Environment *env, char *symbol);
+EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
+                                  LispValue value);
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 void env_debug_list(FILE *file, Environment *env);

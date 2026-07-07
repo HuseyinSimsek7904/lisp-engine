@@ -86,7 +86,7 @@ LispValue lisp_builtin_do;
                            .tail_call = t,                                     \
                            .name = n}});                                       \
   ;                                                                            \
-  env_set(&global_env, n, lisp_builtin_##c);
+  env_set_shallow(&global_env, n, lisp_builtin_##c);
 
 #define DEFINE_TYPE_REP(n, r)                                                  \
   env_set(&global_env, n,                                                      \
@@ -115,7 +115,7 @@ DEFINE_BUILTIN(setg) {
   while (global->other)
     global = global->other;
 
-  env_set(global, symbol, value);
+  env_set_shallow(global, symbol, value);
 
   return value;
 }
@@ -154,7 +154,7 @@ DEFINE_BUILTIN(let) {
       // That way one variable defined can be used in the other one.
       LispValue value = evaluate_lisp(def_node->cons.tail->cons.head, env);
 
-      env_set(&new_env, symbol, value);
+      env_set_shallow(&new_env, symbol, value);
     }
 
     assert(remaining_defs->type == LISP_NIL_T);
@@ -518,9 +518,9 @@ int main(int argc, char **argv) {
   LISP_FALSE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = false});
   LISP_TRUE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = true});
 
-  env_set(&global_env, "nil", LISP_NIL);
-  env_set(&global_env, "false", LISP_FALSE);
-  env_set(&global_env, "true", LISP_TRUE);
+  env_set_shallow(&global_env, "nil", LISP_NIL);
+  env_set_shallow(&global_env, "false", LISP_FALSE);
+  env_set_shallow(&global_env, "true", LISP_TRUE);
 
   // Type representative singletons.
   DEFINE_TYPE_REP("nil-t", LISP_NIL_T);
