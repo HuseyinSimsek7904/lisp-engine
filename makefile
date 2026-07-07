@@ -1,6 +1,7 @@
 # Project directory layout
 SRCDIR		?= ./src
 TESTDIR		?= ./tests
+STRESSTESTDIR	?= ./stress_tests
 
 # Output directories
 OBJDIR		?= ./obj
@@ -54,6 +55,9 @@ clean:
 
 test:
 	$(EXECUTABLE) -t $(TESTDIR)/*
+
+stress-test:
+	$(EXECUTABLE) -t $(STRESSTESTDIR)/*
 
 gen-bear: clean
 	bear -- make debug
