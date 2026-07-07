@@ -10,7 +10,7 @@
 #include "lexer.h"
 #include "lisp_value.h"
 
-char *lisp_type_names[] = {
+char *lisp_type_syms[] = {
     "nil-t", "type-t",    "error-t", "str-t",  "int64-t",    "bool-t",
     "sym-t", "builtin-t", "fn-t",    "list-t", "unpacked-t",
 };
@@ -48,7 +48,9 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
 
   case LISP_TYPE_T:
     assert(lisp_is_valid_type(value->ref_type));
-    fprintf(file, "%s", lisp_type_names[value->ref_type]);
+    fprintf(file, "<type `");
+    fprintf(file, "%s", lisp_type_syms[value->ref_type]);
+    fprintf(file, "`>");
     break;
 
   case LISP_BOOL_T:

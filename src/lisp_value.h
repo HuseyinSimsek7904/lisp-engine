@@ -23,7 +23,7 @@ typedef enum {
   LISP_TYPE_COUNT,
 } LispType;
 
-extern char *lisp_type_names[];
+extern char *lisp_type_syms[];
 
 typedef struct _LispValue _LispValue;
 typedef _LispValue *LispValue;
