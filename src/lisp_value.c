@@ -159,7 +159,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->integer == b->integer;
 
   case LISP_STRING_T:
-    return strcmp(a->string, b->string);
+    return !strcmp(a->string, b->string);
 
   case LISP_BUILTIN_FUNC_T:
     return a->builtin_function.is_macro == b->builtin_function.is_macro &&
@@ -167,7 +167,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
   case LISP_LIST_T:
     do {
-      if (lisp_is_ident(a->cons.head, b->cons.head))
+      if (!lisp_is_ident(a->cons.head, b->cons.head))
         return false;
 
       a = a->cons.tail;
@@ -177,7 +177,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->type == b->type;
 
   case LISP_SYMBOL_T:
-    return strcmp(a->symbol, b->symbol);
+    return !strcmp(a->symbol, b->symbol);
 
   case LISP_FUNC_T:
     return a->custom_function.is_macro == b->custom_function.is_macro &&
