@@ -60,7 +60,8 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
     case '!':
     case '#' ... '&':
     case '*' ... '/':
-    case ':' ... '~': {
+    case ':':
+    case '<' ... '~': {
       StringBuilder sb;
       da_init(&sb);
       da_append(&sb, c);
@@ -76,6 +77,12 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       Token token = {.type = T_SYMBOL, .string = sb.array};
       da_append(tokens, token);
     } break;
+
+    case ';':
+      while (*lisp_str != '\0' && *lisp_str != '\n') {
+        lisp_str++;
+      }
+      break;
 
     case '\'':
       TODO();
