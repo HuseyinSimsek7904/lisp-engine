@@ -20,6 +20,7 @@ char *lexer_result_syms[] = {
     [LEXER_UNKNOWN_CHAR] = "lexer:unknown-char",
     [LEXER_EXPECTED_SEPARATOR] = "lexer:expected-separator",
     [LEXER_UNTERMINATED_STRING] = "lexer:unterminated-string",
+    [LEXER_INVALID_ESCAPE] = "lexer:invalid-escape",
 };
 
 LispValue _lisp_init(_LispValue *value) {

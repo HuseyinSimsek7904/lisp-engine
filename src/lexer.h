@@ -32,6 +32,7 @@ typedef enum {
   LEXER_UNTERMINATED_STRING,
   LEXER_UNKNOWN_CHAR,
   LEXER_EXPECTED_SEPARATOR,
+  LEXER_INVALID_ESCAPE,
 } LexerResult;
 
 LexerResult generate_tokens(char *lisp_str, Tokens *tokens);
