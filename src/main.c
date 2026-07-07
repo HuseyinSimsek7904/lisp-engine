@@ -11,6 +11,7 @@
 #include <readline/readline.h>
 
 #include "core.h"
+#include "debug.h"
 #include "evaluation.h"
 #include "lexer.h"
 #include "lisp_value.h"
@@ -37,6 +38,7 @@ LispValue lisp_builtin_macro;
 LispValue lisp_builtin_let;
 LispValue lisp_builtin_if;
 LispValue lisp_builtin_do;
+LispValue lisp_builtin_debug_set_flags;
 
 #define DEFINE_BUILTIN(n)                                                      \
   LispValue builtin_##n(LispValue args, Environment *env)
@@ -264,16 +266,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
   LispValue body = args->cons.tail;
 
-#ifdef _DEBUG_MAKE_FN
-  fprintf(stderr, "make_%s: variadic=%s ", is_macro ? "macro" : "fn",
-          variadic ? "true" : "false");
-  fprintf(stderr, " args=");
-  lisp_fprint(stderr, arg_symbols, true);
-  fprintf(stderr, " body=");
-  lisp_fprint(stderr, body, true);
-  fprintf(stderr, "\n");
-#endif
-
   return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
                                   .custom_function = {.is_macro = is_macro,
                                                       .args = arg_symbols,
@@ -461,6 +453,17 @@ DEFINE_BUILTIN(error) {
   return lisp_make_error(ARG0);
 }
 
+// TODO: This should expect a list of symbols, where each symbol is a flag.
+// For now, this is satisfactory.
+DEFINE_BUILTIN(debug_set_flags) {
+  REQUIRES_EQ_ARGS(debug_set_flags, 1);
+  CHECK_ARG_TYPE(debug_set_flags, ARG0, LISP_INT64_T);
+
+  debug_flags = ARG0->integer;
+
+  return LISP_NIL;
+}
+
 LispValue LISP_NIL;
 LispValue LISP_TRUE;
 LispValue LISP_FALSE;
@@ -471,7 +474,7 @@ int main(int argc, char **argv) {
 
   int opt;
 
-  while ((opt = getopt(argc, argv, "nt")) != -1) {
+  while ((opt = getopt(argc, argv, "ntd:")) != -1) {
     switch (opt) {
     case 'n':
       interactive = false;
@@ -480,6 +483,10 @@ int main(int argc, char **argv) {
     case 't':
       test_mode = true;
       interactive = false;
+      break;
+
+    case 'd':
+      debug_flags = atoi(optarg);
       break;
 
     default:
@@ -538,6 +545,8 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("let", let, true, false);
   DEFINE_BUILTIN_FUNCTION("if", if, true, true);
   DEFINE_BUILTIN_FUNCTION("do", do, true, true);
+
+  DEFINE_BUILTIN_FUNCTION("debug:set-flags", debug_set_flags, true, true);
 
   // Builtin startup files.
   char *startup[] = {"core/core.l"};

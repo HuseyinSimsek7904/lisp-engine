@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "core.h"
+#include "debug.h"
 #include "evaluation.h"
 #include "lisp_value.h"
 
@@ -80,11 +81,11 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       lisp = lisp->item;
 
     case LISP_LIST_T: {
-#ifdef _DEBUG_LISP_EVAL
-      fprintf(stderr, "eval: ");
-      lisp_fprint(stderr, lisp, true);
-      fprintf(stderr, "\n");
-#endif
+      if (debug_flags & DEBUG_PRINT_EVAL) {
+        fprintf(stderr, "eval: ");
+        lisp_fprint(stderr, lisp, true);
+        fprintf(stderr, "\n");
+      }
 
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
@@ -133,7 +134,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
             assert(remaining_func_args->cons.head->type == LISP_SYMBOL_T);
 
             env_set_shallow(new_env, remaining_func_args->cons.head->symbol,
-                    remaining_args->cons.head);
+                            remaining_args->cons.head);
 
             remaining_args = remaining_args->cons.tail;
             remaining_func_args = remaining_func_args->cons.tail;
@@ -155,7 +156,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
               return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            env_set_shallow(new_env, last_func_arg->symbol, remaining_args->cons.head);
+            env_set_shallow(new_env, last_func_arg->symbol,
+                            remaining_args->cons.head);
           }
         }
 

@@ -25,7 +25,7 @@ EXTCFLAGS	:= $(shell pkg-config --cflags --libs $(EXTDEPS))
 
 all: debug
 
-debug: CFLAGS += -ggdb -D_DEBUG_LISP_ALLOC -D_DEBUG_LISP_EVAL -D_DEBUG_MAKE_FN
+debug: CFLAGS += -ggdb
 debug: $(OBJDIRS) $(EXECUTABLE)
 
 build: CFLAGS += -O3

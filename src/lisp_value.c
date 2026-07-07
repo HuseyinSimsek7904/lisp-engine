@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "core.h"
+#include "debug.h"
 #include "lexer.h"
 #include "lisp_value.h"
 
@@ -28,11 +29,11 @@ LispValue _lisp_init(_LispValue *value) {
   assert(ptr);
   *ptr = *value;
 
-#ifdef _DEBUG_LISP_ALLOC
-  fprintf(stderr, "init: ");
-  lisp_fprint(stderr, value, true);
-  fprintf(stderr, "\n");
-#endif
+  if (debug_flags & DEBUG_PRINT_INIT) {
+    fprintf(stderr, "init: ");
+    lisp_fprint(stderr, value, true);
+    fprintf(stderr, "\n");
+  }
 
   return ptr;
 }
