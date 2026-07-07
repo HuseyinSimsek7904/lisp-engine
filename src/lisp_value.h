@@ -149,6 +149,7 @@ void env_debug_list(FILE *file, Environment *env);
 #define COULD_NOT_READ_FILE_SYM "could-not-read-file"
 #define COULD_NOT_GEN_TOKENS_SYM "could-not-gen-tokens"
 #define UNDEF_SYMBOL_SYM "undefined-symbol"
+#define REDEF_SYMBOL_SYM "redefined-symbol"
 
 #define NOT_CALLABLE_SYM "not-callable"
 

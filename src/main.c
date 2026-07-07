@@ -110,7 +110,7 @@ DEFINE_BUILTIN(let) {
       char *symbol = def_node->cons.head->symbol;
 
       if (env_find_shallow(&new_env, symbol))
-        return ERROR("let", 1, SYM_TO_LISP(symbol));
+        return ERROR(REDEF_SYMBOL_SYM, 1, def_node->cons.head);
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
