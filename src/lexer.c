@@ -57,9 +57,26 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
+    case '-':
+      if (*lisp_str >= '0' && *lisp_str <= '9') {
+        uint64_t number = 0;
+        while (*lisp_str >= '0' && *lisp_str <= '9') {
+          number = 10 * number + *lisp_str++ - '0';
+        }
+
+        if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
+            *lisp_str != '\t' && *lisp_str != '\0')
+          return LEXER_EXPECTED_SEPARATOR;
+
+        Token token = {.type = T_INT64, .integer = -number};
+        da_append(tokens, token);
+        break;
+      }
+
     case '!':
     case '#' ... '&':
-    case '*' ... '/':
+    case '*' ... ',':
+    case '.' ... '/':
     case ':':
     case '<' ... '~': {
       StringBuilder sb;
