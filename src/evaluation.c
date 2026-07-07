@@ -107,7 +107,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       case LISP_FUNC_T: {
         LispValue args =
-            generate_args(lisp, env, callable->builtin_function.is_macro);
+            generate_args(lisp, env, callable->custom_function.is_macro);
 
         Environment *new_env = malloc(sizeof(Environment));
         *new_env = (Environment){.other = env};
