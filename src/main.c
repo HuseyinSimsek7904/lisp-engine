@@ -443,7 +443,7 @@ DEFINE_BUILTIN(unpack) {
     remaining_args = remaining_args->cons.tail;
 
     if (arg->type != LISP_LIST_T && arg->type != LISP_NIL_T)
-      RETURN_INVALID_ARG("unpack", arg, TYPE_TO_LISP(LISP_LIST_T));
+      RETURN_INVALID_ARG(lisp_builtin_unpack, arg, TYPE_TO_LISP(LISP_LIST_T));
 
     *last = arg;
     last = lisp_cons_find_term_nil(last);
