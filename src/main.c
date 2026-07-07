@@ -160,7 +160,7 @@ DEFINE_BUILTIN(let) {
     assert(remaining_defs->type == LISP_NIL_T);
 
   } else if (ARG0->type != LISP_NIL_T)
-    RETURN_INVALID_ARG("let", ARG0, TYPE_TO_LISP(LISP_LIST_T));
+    RETURN_INVALID_ARG(lisp_builtin_let, ARG0, TYPE_TO_LISP(LISP_LIST_T));
 
   LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
 
