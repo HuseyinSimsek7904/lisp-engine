@@ -189,14 +189,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                              LispValue builtin, bool is_macro) {
   size_t argc = lisp_get_len(args);
   if (argc < 2)
-    return lisp_make_error(lisp_make_list(
-        4,
-        _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                 .symbol = "too-few-args-to-builtin"}),
-        builtin,
-        _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = argc}),
-        _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = 2})));
-  ;
+    return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(TOO_FEW_ARGS_SYM),
+                                          builtin, INT64_TO_LISP(argc),
+                                          INT64_TO_LISP(2)));
 
   bool variadic = false;
   LispValue arg_symbols = LISP_NIL;
@@ -213,11 +208,8 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       if (arg->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
-            4,
-            _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                     .symbol = "wrong-type-arg-to-builtin"}),
-            builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form (SYMBOL... [(rest "
+            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
                         "SYMBOL)])")));
       ;
 
@@ -231,32 +223,23 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
     if (arg->type == LISP_LIST_T) {
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list(
-            4,
-            _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                     .symbol = "wrong-type-arg-to-builtin"}),
-            builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form (SYMBOL... [(rest "
+            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
                         "SYMBOL)])")));
       ;
 
       if (arg->cons.head->type != LISP_SYMBOL_T ||
           strcmp(arg->cons.head->string, "rest"))
         return lisp_make_error(lisp_make_list(
-            4,
-            _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                     .symbol = "wrong-type-arg-to-builtin"}),
-            builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form (SYMBOL... [(rest "
+            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
                         "SYMBOL)])")));
       ;
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
-            4,
-            _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                     .symbol = "wrong-type-arg-to-builtin"}),
-            builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form (SYMBOL... [(rest "
+            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
                         "SYMBOL)])")));
       ;
 
@@ -269,21 +252,15 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
     } else
       return lisp_make_error(lisp_make_list(
-          4,
-          _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                   .symbol = "wrong-type-arg-to-builtin"}),
-          builtin, ARG0,
-          STR_TO_LISP("argument list must be in the form (SYMBOL... [(rest "
+          4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+          STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
                       "SYMBOL)])")));
     ;
 
   } else if (ARG0->type != LISP_NIL_T)
-    return lisp_make_error(lisp_make_list(
-        4,
-        _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T,
-                                 .symbol = "wrong-type-arg-to-builtin"}),
-        builtin, ARG0, TYPE_TO_LISP(LISP_LIST_T)));
-  ;
+    return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM),
+                                          builtin, ARG0,
+                                          TYPE_TO_LISP(LISP_LIST_T)));
 
   LispValue body = args->cons.tail;
 
