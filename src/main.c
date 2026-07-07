@@ -265,13 +265,8 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                                           builtin, ARG0,
                                           TYPE_TO_LISP(LISP_LIST_T)));
 
-  LispValue body = args->cons.tail;
-
-  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
-                                  .custom_function = {.is_macro = is_macro,
-                                                      .args = arg_symbols,
-                                                      .variadic = variadic,
-                                                      .body = body}});
+  return lisp_make_fn_or_macro(arg_symbols, args->cons.tail, variadic,
+                               is_macro);
 }
 
 DEFINE_BUILTIN(fn) {
@@ -419,7 +414,7 @@ DEFINE_BUILTIN(unpack) {
     last = lisp_cons_find_term_nil(last);
   }
 
-  return _lisp_init(&(_LispValue){.type = LISP_UNPACKED_T, .item = items});
+  return lisp_make_unpacked(items);
 }
 
 DEFINE_BUILTIN(quote) {

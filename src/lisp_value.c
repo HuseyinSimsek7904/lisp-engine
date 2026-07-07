@@ -230,6 +230,19 @@ LispValue lisp_make_list(size_t count, ...) {
   return list;
 }
 
+LispValue lisp_make_unpacked(LispValue item) {
+  return _lisp_init(&(_LispValue){.type = LISP_UNPACKED_T, .item = item});
+}
+
+LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
+                                bool is_macro) {
+  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
+                                  .custom_function = {.is_macro = is_macro,
+                                                      .args = args,
+                                                      .variadic = variadic,
+                                                      .body = body}});
+}
+
 LispValue lisp_consify_array(LispValue *array, size_t size) {
   LispValue cons = LISP_NIL;
 

@@ -102,6 +102,9 @@ void lisp_print(LispValue value, bool pretty);
 LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(LispValue head, LispValue tail);
 LispValue lisp_make_list(size_t count, ...);
+LispValue lisp_make_unpacked(LispValue item);
+LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
+                                bool is_macro);
 
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
