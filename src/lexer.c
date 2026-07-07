@@ -158,7 +158,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
 
     case '!':
-    case '#' ... '&':
+    case '#' ... '\'':
     case '*' ... ',':
     case '.' ... '/':
     case ':':
@@ -185,8 +185,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
       break;
 
-    case '\'':
-      TODO();
+    default:
       return LEXER_UNKNOWN_CHAR;
     }
   }
