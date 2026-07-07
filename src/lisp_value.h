@@ -133,8 +133,6 @@ EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
                                   LispValue value);
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
-void env_debug_list(FILE *file, Environment *env);
-
 #define ERROR(s, n, ...)                                                       \
   lisp_make_error(lisp_make_list(n + 1, SYM_TO_LISP(s), __VA_ARGS__))
 

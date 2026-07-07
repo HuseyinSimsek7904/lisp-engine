@@ -39,6 +39,7 @@ LispValue lisp_builtin_let;
 LispValue lisp_builtin_if;
 LispValue lisp_builtin_do;
 LispValue lisp_builtin_debug_set_flags;
+LispValue lisp_builtin_debug_list_env;
 
 #define DEFINE_BUILTIN(n)                                                      \
   LispValue builtin_##n(LispValue args, Environment *env)
@@ -464,6 +465,14 @@ DEFINE_BUILTIN(debug_set_flags) {
   return LISP_NIL;
 }
 
+DEFINE_BUILTIN(debug_list_env) {
+  REQUIRES_EQ_ARGS(debug_list_env, 0);
+
+  debug_list_env(stderr, env);
+
+  return LISP_NIL;
+}
+
 LispValue LISP_NIL;
 LispValue LISP_TRUE;
 LispValue LISP_FALSE;
@@ -546,7 +555,9 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("if", if, true, true);
   DEFINE_BUILTIN_FUNCTION("do", do, true, true);
 
+  // Debug builtins.
   DEFINE_BUILTIN_FUNCTION("debug:set-flags", debug_set_flags, true, true);
+  DEFINE_BUILTIN_FUNCTION("debug:list-env", debug_list_env, true, false);
 
   // Builtin startup files.
   char *startup[] = {"core/core.l"};
