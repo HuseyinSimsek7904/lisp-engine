@@ -1,7 +1,9 @@
 (include "core/assert.l")
 
+;; nil-t
 (assert-type nil nil-t)
 
+;; type-t
 (assert-type nil-t type-t)
 (assert-type type-t type-t)
 (assert-type error-t type-t)
@@ -13,18 +15,23 @@
 (assert-type fn-t type-t)
 (assert-type list-t type-t)
 
+;; error-t
 (assert-type undefinedsymbol error-t)
 
+;; str-t
 (assert-type "hello" str-t)
 
+;; int64-t
 (assert-type 0 int64-t)
 (assert-type 1 int64-t)
 (assert-type 1234 int64-t)
 (assert-type 18446744073709551615 int64-t)
 
+;; bool-t
 (assert-type false bool-t)
 (assert-type true bool-t)
 
+;; sym-t
 (assert-type (quote a) sym-t)
 (assert-type (quote a12) sym-t)
 (assert-type (quote a12b) sym-t)
@@ -32,13 +39,16 @@
 (assert-type (quote fn-t) sym-t)
 (assert-type (quote str?) sym-t)
 
+;; builtin-t
 (assert-type print builtin-t)
 (assert-type if builtin-t)
 (assert-type fn builtin-t)
 
+;; fn-t
 (assert-type assert-type fn-t)
 (assert-type include fn-t)
 (assert-type nil? fn-t)
 
+;; list-t
 (assert-type (list 1 2 3) list-t)
 (assert-type (tail (list 1 2 3)) list-t)
