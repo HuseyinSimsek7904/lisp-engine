@@ -1,4 +1,4 @@
-(setg assert-eq (fn (a b) (if (= a b) nil (error (list "expected equal" a b)))))
+(include "core/assert.l")
 
 (assert-eq (if) (error (list (quote too-few-args-to-builtin) if 0 2)))
 (assert-eq (if 1) (error (list (quote too-few-args-to-builtin) if 1 2)))

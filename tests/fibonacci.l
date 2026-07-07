@@ -1,5 +1,4 @@
 (include "examples/fibonacci.l")
-
-(setg assert-eq (fn (a b) (if (= a b) nil (error (list "expected equal" a b)))))
+(include "core/assert.l")
 
 (assert-eq (fib 25) 75025)

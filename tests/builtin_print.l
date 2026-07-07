@@ -1,4 +1,4 @@
-(setg assert-eq (fn (a b) (if (= a b) nil (error (list "expected equal" a b)))))
+(include "core/assert.l")
 
 (assert-eq (print) nil)
 (assert-eq (print "print test 1") nil)

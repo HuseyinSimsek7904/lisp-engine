@@ -1,4 +1,4 @@
-(setg assert-type (fn (x t) (if (= (typeof x) t) nil (error (list "type mismatch" t x)))))
+(include "core/assert.l")
 
 (assert-type nil nil-t)
 
