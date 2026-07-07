@@ -2,5 +2,5 @@
 (include "core/assert.l")
 
 ;; Result test.
-(assert-eq (fib 25) 75025)
-(assert-eq (fib 30) 832040)
+(assert-eq (fib 25) (fib-linear 25))
+(assert-eq (fib 30) (fib-linear 30))

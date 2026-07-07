@@ -1,1 +1,10 @@
 (setg fib (fn (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1)) (fib (- n 2)))))))
+
+(setg fib-linear (fn (n)
+                     (let ((fib-pair (fn (n)
+                                         (if (= n 0)
+                                             (list 0 1)
+                                             (let ((pair (fib-pair (- n 1))))
+                                               (list (head (tail pair))
+                                                     (+ (head pair) (head (tail pair)))))))))
+                       (head (fib-pair n)))))
