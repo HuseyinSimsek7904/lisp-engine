@@ -116,7 +116,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         if (callable->custom_function.args->type == LISP_NIL_T) {
           if (args->type != LISP_NIL_T) {
             roll_env_back(env, original);
-            return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 3, callable);
+            return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
           }
 
         } else {
@@ -126,7 +126,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           while (remaining_func_args->cons.tail->type == LISP_LIST_T) {
             if (remaining_args->type == LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 3, callable);
+              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
             assert(remaining_func_args->type == LISP_LIST_T);
@@ -147,12 +147,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           } else {
             if (remaining_args->type == LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 3, callable);
+              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
             if (remaining_args->cons.tail->type != LISP_NIL_T) {
               roll_env_back(env, original);
-              return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 3, callable);
+              return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
 
             env_set(new_env, last_func_arg->symbol, remaining_args->cons.head);
