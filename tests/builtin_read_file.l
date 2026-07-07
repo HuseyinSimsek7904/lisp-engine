@@ -16,4 +16,4 @@
 (assert-eq (read-file "abcd1234.xyz") (error (list (quote could-not-read-file) "abcd1234.xyz")))
 
 ;; Reading an example file.
-(assert-eq (read-file "examples/fibonacci.l") "(setg fib (fn (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1)) (fib (- n 2)))))))\n")
+(assert-eq (read-file "examples/hello_world.l") "(print \"Hello, world!\")\n")
