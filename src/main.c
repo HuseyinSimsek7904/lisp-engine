@@ -81,19 +81,17 @@ LispValue lisp_builtin_debug_list_env;
 #define ARG1 args->cons.tail->cons.head
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
-  _LispBuiltinFunction _lisp_builtin_fn_##c = {                                \
-      .callback = (LispValue (*)(LispValue, void *))builtin_##c,               \
-      .is_macro = m,                                                           \
-      .tail_call = t,                                                          \
-      .name = n};                                                              \
-  _LispValue _lisp_builtin_##c = {.type = LISP_BUILTIN_FUNC_T,                 \
-                                  .builtin_function = &_lisp_builtin_fn_##c};  \
-  lisp_builtin_##c = &_lisp_builtin_##c;                                       \
+  lisp_builtin_##c = &(_LispValue){                                            \
+      .type = LISP_BUILTIN_FUNC_T,                                             \
+      .builtin_function = &(_LispBuiltinFunction){                             \
+          .callback = (LispValue (*)(LispValue, void *))builtin_##c,           \
+          .is_macro = m,                                                       \
+          .tail_call = t,                                                      \
+          .name = n}};                                                         \
   env_set_shallow(&global_env, n, lisp_builtin_##c)
 
 #define DEFINE_TYPE_REP(n, r)                                                  \
-  env_set(&global_env, n,                                                      \
-          _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = r}));
+  env_set(&global_env, n, &(_LispValue){.type = LISP_TYPE_T, .ref_type = r});
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
@@ -440,7 +438,7 @@ DEFINE_BUILTIN(tail) {
 DEFINE_BUILTIN(typeof) {
   REQUIRES_EQ_ARGS(typeof, 1);
 
-  return _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = ARG0->type});
+  return TYPE_TO_LISP(ARG0->type);
 }
 
 DEFINE_BUILTIN(error) {
@@ -502,9 +500,9 @@ int main(int argc, char **argv) {
   da_init(&global_env);
 
   // Singletons.
-  LISP_NIL = _lisp_init(&(_LispValue){.type = LISP_NIL_T});
-  LISP_FALSE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = false});
-  LISP_TRUE = _lisp_init(&(_LispValue){.type = LISP_BOOL_T, .boolean = true});
+  LISP_NIL = &(_LispValue){.type = LISP_NIL_T};
+  LISP_FALSE = &(_LispValue){.type = LISP_BOOL_T, .boolean = false};
+  LISP_TRUE = &(_LispValue){.type = LISP_BOOL_T, .boolean = true};
 
   env_set_shallow(&global_env, "nil", LISP_NIL);
   env_set_shallow(&global_env, "false", LISP_FALSE);
