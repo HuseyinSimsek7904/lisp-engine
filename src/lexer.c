@@ -167,7 +167,8 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       da_init(&sb);
       da_append(&sb, c);
       while (*lisp_str == '!' || (*lisp_str >= '#' && *lisp_str <= '&') ||
-             (*lisp_str >= '*' && *lisp_str <= '~')) {
+             (*lisp_str >= '*' && *lisp_str <= ':') ||
+             (*lisp_str >= '<' && *lisp_str <= '~')) {
         da_append(&sb, *lisp_str++);
       }
 
