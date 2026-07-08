@@ -143,6 +143,9 @@ bool lisp_is_valid_type(LispType type) {
 }
 
 bool lisp_is_ident(LispValue a, LispValue b) {
+  if (a == b)
+    return true;
+
   if (a->type != b->type)
     return false;
 
