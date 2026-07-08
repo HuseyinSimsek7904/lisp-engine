@@ -34,8 +34,8 @@
       }                                                                        \
       da_resize(da);                                                           \
     }                                                                          \
-    memcpy(&(da)->array[(da)->size], items, da_item_size(da) * n);             \
-    (da)->size += n;                                                           \
+    memcpy(&(da)->array[(da)->size], (items), da_item_size(da) * (n));         \
+    (da)->size += (n);                                                         \
   } while (0)
 #define da_pop(da) ((da)->array[--(da)->size])
 
