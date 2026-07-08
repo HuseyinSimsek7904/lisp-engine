@@ -79,15 +79,15 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
 
   case LISP_BUILTIN_FUNC_T:
     fprintf(file,
-            value->builtin_function.is_macro ? "<builtin-macro `%s`>"
-                                             : "<builtin-function `%s`>",
-            value->builtin_function.name);
+            value->builtin_function->is_macro ? "<builtin-macro `%s`>"
+                                              : "<builtin-function `%s`>",
+            value->builtin_function->name);
     break;
 
   case LISP_FUNC_T:
-    fprintf(file, value->custom_function.is_macro ? "<macro(" : "<function(");
+    fprintf(file, value->custom_function->is_macro ? "<macro(" : "<function(");
 
-    LispValue remaining_args = value->custom_function.args;
+    LispValue remaining_args = value->custom_function->args;
 
     if (remaining_args->type != LISP_NIL_T) {
       assert(remaining_args->type == LISP_LIST_T);
@@ -97,7 +97,7 @@ void lisp_fprint(FILE *file, LispValue value, bool pretty) {
         remaining_args = remaining_args->cons.tail;
       }
 
-      if (value->custom_function.variadic) {
+      if (value->custom_function->variadic) {
         fprintf(file, "(rest %s)", remaining_args->cons.head->symbol);
       } else {
         fprintf(file, "%s", remaining_args->cons.head->symbol);
@@ -166,8 +166,8 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return !strcmp(a->string, b->string);
 
   case LISP_BUILTIN_FUNC_T:
-    return a->builtin_function.is_macro == b->builtin_function.is_macro &&
-           a->builtin_function.callback == b->builtin_function.callback;
+    return a->builtin_function->is_macro == b->builtin_function->is_macro &&
+           a->builtin_function->callback == b->builtin_function->callback;
 
   case LISP_LIST_T:
     do {
@@ -184,10 +184,10 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return !strcmp(a->symbol, b->symbol);
 
   case LISP_FUNC_T:
-    return a->custom_function.is_macro == b->custom_function.is_macro &&
-           a->custom_function.variadic == b->custom_function.variadic &&
-           lisp_is_ident(a->custom_function.args, b->custom_function.args) &&
-           lisp_is_ident(a->custom_function.body, b->custom_function.body);
+    return a->custom_function->is_macro == b->custom_function->is_macro &&
+           a->custom_function->variadic == b->custom_function->variadic &&
+           lisp_is_ident(a->custom_function->args, b->custom_function->args) &&
+           lisp_is_ident(a->custom_function->body, b->custom_function->body);
 
   case LISP_UNPACKED_T:
     return lisp_is_ident(a->item, b->item);
@@ -236,11 +236,15 @@ LispValue lisp_make_unpacked(LispValue item) {
 
 LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
                                 bool is_macro) {
-  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T,
-                                  .custom_function = {.is_macro = is_macro,
-                                                      .args = args,
-                                                      .variadic = variadic,
-                                                      .body = body}});
+  _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
+  *fn = (_LispCustomFunction){
+      .is_macro = is_macro,
+      .args = args,
+      .variadic = variadic,
+      .body = body,
+  };
+
+  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T, .custom_function = fn});
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {

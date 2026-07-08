@@ -96,11 +96,11 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       case LISP_BUILTIN_FUNC_T: {
         LispValue args =
-            generate_args(lisp, env, callable->builtin_function.is_macro);
+            generate_args(lisp, env, callable->builtin_function->is_macro);
 
-        lisp = callable->builtin_function.callback(args, env);
+        lisp = callable->builtin_function->callback(args, env);
 
-        if (!callable->builtin_function.tail_call) {
+        if (!callable->builtin_function->tail_call) {
           roll_env_back(env, original);
           return lisp;
         }
@@ -108,13 +108,13 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       case LISP_FUNC_T: {
         LispValue args =
-            generate_args(lisp, env, callable->custom_function.is_macro);
+            generate_args(lisp, env, callable->custom_function->is_macro);
 
         Environment *new_env = malloc(sizeof(Environment));
         *new_env = (Environment){.other = env};
         da_init(new_env);
 
-        if (callable->custom_function.args->type == LISP_NIL_T) {
+        if (callable->custom_function->args->type == LISP_NIL_T) {
           if (args->type != LISP_NIL_T) {
             roll_env_back(env, original);
             return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
@@ -122,7 +122,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         } else {
           LispValue remaining_args = args;
-          LispValue remaining_func_args = callable->custom_function.args;
+          LispValue remaining_func_args = callable->custom_function->args;
 
           while (remaining_func_args->cons.tail->type == LISP_LIST_T) {
             if (remaining_args->type == LISP_NIL_T) {
@@ -143,7 +143,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           LispValue last_func_arg = remaining_func_args->cons.head;
           assert(last_func_arg->type == LISP_SYMBOL_T);
 
-          if (callable->custom_function.variadic) {
+          if (callable->custom_function->variadic) {
             env_set_shallow(new_env, last_func_arg->symbol, remaining_args);
           } else {
             if (remaining_args->type == LISP_NIL_T) {
@@ -162,7 +162,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         }
 
         lisp =
-            evaluate_lisp_body(callable->custom_function.body, new_env, true);
+            evaluate_lisp_body(callable->custom_function->body, new_env, true);
         env = new_env;
       } break;
 

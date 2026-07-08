@@ -57,8 +57,8 @@ struct _LispValue {
     int64_t integer;
     LispType ref_type;
     bool boolean;
-    _LispBuiltinFunction builtin_function;
-    _LispCustomFunction custom_function;
+    _LispBuiltinFunction *builtin_function;
+    _LispCustomFunction *custom_function;
     _LispCons cons;
     LispValue item;
   };

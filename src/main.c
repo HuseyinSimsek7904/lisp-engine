@@ -81,15 +81,15 @@ LispValue lisp_builtin_debug_list_env;
 #define ARG1 args->cons.tail->cons.head
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
-  lisp_builtin_##c = _lisp_init(&(_LispValue){                                 \
-      .type = LISP_BUILTIN_FUNC_T,                                             \
-      .builtin_function = {.callback =                                         \
-                               (LispValue (*)(LispValue, void *))builtin_##c,  \
-                           .is_macro = m,                                      \
-                           .tail_call = t,                                     \
-                           .name = n}});                                       \
-  ;                                                                            \
-  env_set_shallow(&global_env, n, lisp_builtin_##c);
+  _LispBuiltinFunction _lisp_builtin_fn_##c = {                                \
+      .callback = (LispValue (*)(LispValue, void *))builtin_##c,               \
+      .is_macro = m,                                                           \
+      .tail_call = t,                                                          \
+      .name = n};                                                              \
+  _LispValue _lisp_builtin_##c = {.type = LISP_BUILTIN_FUNC_T,                 \
+                                  .builtin_function = &_lisp_builtin_fn_##c};  \
+  lisp_builtin_##c = &_lisp_builtin_##c;                                       \
+  env_set_shallow(&global_env, n, lisp_builtin_##c)
 
 #define DEFINE_TYPE_REP(n, r)                                                  \
   env_set(&global_env, n,                                                      \
