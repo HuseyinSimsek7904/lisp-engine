@@ -32,12 +32,12 @@
 (assert-type true bool-t)
 
 ;; sym-t
-(assert-type (quote a) sym-t)
-(assert-type (quote a12) sym-t)
-(assert-type (quote a12b) sym-t)
-(assert-type (quote nil) sym-t)
-(assert-type (quote fn-t) sym-t)
-(assert-type (quote str?) sym-t)
+(assert-type 'a sym-t)
+(assert-type 'a12 sym-t)
+(assert-type 'a12b sym-t)
+(assert-type 'nil sym-t)
+(assert-type 'fn-t sym-t)
+(assert-type 'str? sym-t)
 
 ;; builtin-t
 (assert-type print builtin-t)

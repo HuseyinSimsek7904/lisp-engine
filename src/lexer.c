@@ -36,6 +36,10 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       da_append(tokens, (Token){.type = T_R_PAREN});
       break;
 
+    case '\'':
+      da_append(tokens, (Token){.type = T_QUOTE});
+      break;
+
     case '0' ... '9': {
       uint64_t number = c - '0';
       while (*lisp_str >= '0' && *lisp_str <= '9') {
@@ -158,7 +162,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
 
     case '!':
-    case '#' ... '\'':
+    case '#' ... '&':
     case '*' ... ',':
     case '.' ... '/':
     case ':':

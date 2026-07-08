@@ -3,13 +3,18 @@
 ;; `set` structure: (set SYM VALUE)
 
 ;; Wrong number of arguments.
-(assert-eq (set) (error (list (quote wrong-number-of-args-to-builtin) set 0 2)))
-(assert-eq (set 1) (error (list (quote wrong-number-of-args-to-builtin) set 1 2)))
-(assert-eq (set 1 2 3) (error (list (quote wrong-number-of-args-to-builtin) set 3 2)))
-(assert-eq (set 1 2 3 4) (error (list (quote wrong-number-of-args-to-builtin) set 4 2)))
+(assert-eq (set)
+           (error (list 'wrong-number-of-args-to-builtin set 0 2)))
+(assert-eq (set 1)
+           (error (list 'wrong-number-of-args-to-builtin set 1 2)))
+(assert-eq (set 1 2 3)
+           (error (list 'wrong-number-of-args-to-builtin set 3 2)))
+(assert-eq (set 1 2 3 4)
+           (error (list 'wrong-number-of-args-to-builtin set 4 2)))
 
 ;; Wrong type of arguments.
-(assert-eq (set "abc" 1) (error (list (quote wrong-type-arg-to-builtin) set "abc" sym-t)))
+(assert-eq (set "abc" 1)
+           (error (list 'wrong-type-arg-to-builtin set "abc" sym-t)))
 
 ;; Behavior tests.
 (let ((a nil) (b nil))

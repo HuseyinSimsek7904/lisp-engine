@@ -3,18 +3,26 @@
 ;; `<` structure: (< X Y)
 
 ;; Wrong number of arguments.
-(assert-eq (<) (error (list (quote wrong-number-of-args-to-builtin) < 0 2)))
-(assert-eq (< 1) (error (list (quote wrong-number-of-args-to-builtin) < 1 2)))
-(assert-eq (< 1 2 3) (error (list (quote wrong-number-of-args-to-builtin) < 3 2)))
-(assert-eq (< 1 2 3 4) (error (list (quote wrong-number-of-args-to-builtin) < 4 2)))
+(assert-eq (<)
+           (error (list 'wrong-number-of-args-to-builtin < 0 2)))
+(assert-eq (< 1)
+           (error (list 'wrong-number-of-args-to-builtin < 1 2)))
+(assert-eq (< 1 2 3)
+           (error (list 'wrong-number-of-args-to-builtin < 3 2)))
+(assert-eq (< 1 2 3 4)
+           (error (list 'wrong-number-of-args-to-builtin < 4 2)))
 
 ;; Wrong type of arguments.
-(assert-eq (< "abc" 1) (error (list (quote wrong-type-arg-to-builtin) < "abc" int64-t)))
-(assert-eq (< 1 "abc") (error (list (quote wrong-type-arg-to-builtin) < "abc" int64-t)))
+(assert-eq (< "abc" 1)
+           (error (list 'wrong-type-arg-to-builtin < "abc" int64-t)))
+(assert-eq (< 1 "abc")
+           (error (list 'wrong-type-arg-to-builtin < "abc" int64-t)))
 
 ;; Error as argument.
-(assert-eq (< (error "this") "that") (error (list (quote wrong-type-arg-to-builtin) < (error "this") int64-t)))
-(assert-eq (< "that" (error "this")) (error (list (quote wrong-type-arg-to-builtin) < "that" int64-t)))
+(assert-eq (< (error "this") "that")
+           (error (list 'wrong-type-arg-to-builtin < (error "this") int64-t)))
+(assert-eq (< "that" (error "this"))
+           (error (list 'wrong-type-arg-to-builtin < "that" int64-t)))
 
 ;; Behavior tests.
 (assert-eq (< 12 23) true)

@@ -3,17 +3,22 @@
 ;; `setg` structure: (setg SYM VALUE)
 
 ;; Wrong number of arguments.
-(assert-eq (setg) (error (list (quote wrong-number-of-args-to-builtin) setg 0 2)))
-(assert-eq (setg 1) (error (list (quote wrong-number-of-args-to-builtin) setg 1 2)))
-(assert-eq (setg 1 2 3) (error (list (quote wrong-number-of-args-to-builtin) setg 3 2)))
-(assert-eq (setg 1 2 3 4) (error (list (quote wrong-number-of-args-to-builtin) setg 4 2)))
+(assert-eq (setg)
+           (error (list 'wrong-number-of-args-to-builtin setg 0 2)))
+(assert-eq (setg 1)
+           (error (list 'wrong-number-of-args-to-builtin setg 1 2)))
+(assert-eq (setg 1 2 3)
+           (error (list 'wrong-number-of-args-to-builtin setg 3 2)))
+(assert-eq (setg 1 2 3 4)
+           (error (list 'wrong-number-of-args-to-builtin setg 4 2)))
 
 ;; Wrong type of arguments.
-(assert-eq (setg "abc" 1) (error (list (quote wrong-type-arg-to-builtin) setg "abc" sym-t)))
+(assert-eq (setg "abc" 1)
+           (error (list 'wrong-type-arg-to-builtin setg "abc" sym-t)))
 
 ;; Behavior tests.
-(assert-eq a (error (list (quote undefined-symbol) (quote a))))
-(assert-eq b (error (list (quote undefined-symbol) (quote b))))
+(assert-eq a (error (list 'undefined-symbol 'a)))
+(assert-eq b (error (list 'undefined-symbol 'b)))
 
 (setg a 34)
 (setg b 35)

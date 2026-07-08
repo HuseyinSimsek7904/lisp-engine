@@ -7,6 +7,7 @@
 typedef enum {
   T_L_PAREN,
   T_R_PAREN,
+  T_QUOTE,
   T_INT64,
   T_STRING,
   T_SYMBOL,

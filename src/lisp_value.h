@@ -159,6 +159,7 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 #define PARSER_TOO_FEW_R_PAREN "parser:too-few-r-paren"
 #define PARSER_TOO_MANY_R_PAREN "parser:too-many-r-paren"
+#define PARSER_QUOTE_END "parser:reached-end-quote"
 
 extern char *lexer_result_syms[];
 

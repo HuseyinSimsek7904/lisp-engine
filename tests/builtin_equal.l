@@ -3,13 +3,15 @@
 ;; `=` structure: (= A B)
 
 ;; Wrong number of arguments.
-(assert-eq (=) (error (list (quote wrong-number-of-args-to-builtin) = 0 2)))
-(assert-eq (= 1 2 3) (error (list (quote wrong-number-of-args-to-builtin) = 3 2)))
+(assert-eq (=)
+           (error (list 'wrong-number-of-args-to-builtin = 0 2)))
+(assert-eq (= 1 2 3)
+           (error (list 'wrong-number-of-args-to-builtin = 3 2)))
 
 ;; Different type identity checks.
 (assert-eq (= nil 4) false)
 (assert-eq (= "hi" print) false)
-(assert-eq (= (list 1 2 3) (quote abc)) false)
+(assert-eq (= (list 1 2 3) 'abc) false)
 
 ;; nil-t
 (assert-eq (= nil nil) true)
@@ -50,11 +52,11 @@
 (assert-eq (= true false) false)
 
 ;; sym-t
-(assert-eq (= (quote abc) (quote abc)) true)
-(assert-eq (= (quote def) (quote def)) true)
+(assert-eq (= 'abc 'abc) true)
+(assert-eq (= 'def 'def) true)
 
-(assert-eq (= (quote abc) (quote not-equal)) false)
-(assert-eq (= (quote abc) (quote maybe-equal)) false)
+(assert-eq (= 'abc 'not-equal) false)
+(assert-eq (= 'abc 'maybe-equal) false)
 
 ;; builtin-t
 (assert-eq (= print print) true)

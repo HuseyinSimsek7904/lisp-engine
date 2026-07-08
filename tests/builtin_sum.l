@@ -3,13 +3,19 @@
 ;; `+` structure: (+ INT64...)
 
 ;; Wrong type of argument.
-(assert-eq (+ "abc" 1 2) (error (list (quote wrong-type-arg-to-builtin) + "abc" int64-t)))
-(assert-eq (+ 1 "abc" 2) (error (list (quote wrong-type-arg-to-builtin) + "abc" int64-t)))
-(assert-eq (+ 1 2 "abc") (error (list (quote wrong-type-arg-to-builtin) + "abc" int64-t)))
+(assert-eq (+ "abc" 1 2)
+           (error (list 'wrong-type-arg-to-builtin + "abc" int64-t)))
+(assert-eq (+ 1 "abc" 2)
+           (error (list 'wrong-type-arg-to-builtin + "abc" int64-t)))
+(assert-eq (+ 1 2 "abc")
+           (error (list 'wrong-type-arg-to-builtin + "abc" int64-t)))
 
 ;; Error as argument.
-(assert-eq (+ (error "should not return") "anything") (error (list (quote wrong-type-arg-to-builtin) + (error "should not return") int64-t)))
-(assert-eq (+ "anything" (error "should not return")) (error (list (quote wrong-type-arg-to-builtin) + "anything" int64-t)))
+(assert-eq (+ (error "should not return") "anything")
+           (error (list 'wrong-type-arg-to-builtin +
+                        (error "should not return") int64-t)))
+(assert-eq (+ "anything" (error "should not return"))
+           (error (list 'wrong-type-arg-to-builtin + "anything" int64-t)))
 
 ;; Sum tests.
 (assert-eq (+) 0)

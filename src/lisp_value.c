@@ -310,6 +310,53 @@ LispValue lisp_rappend_use_last(LispValue *last, LispValue value) {
   return *last;
 }
 
+LispValue parse_pp_list(LispValue lisp) {
+  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
+
+  LispValue remaining_lisp = lisp;
+  while (remaining_lisp->type == LISP_LIST_T) {
+    LispValue item = remaining_lisp->cons.head;
+
+    if (item->type == LISP_SYMBOL_T && !strcmp(item->symbol, "'")) {
+      // Quote symbols are processed right-to-left.
+      // So ''a => (quote (quote a)) and not ''a => (quote quote) a.
+      // Since it is really hard to go back with Lisp lists, we just count the
+      // number of quotes and nest that many of them.
+      LispValue iter = remaining_lisp->cons.tail;
+      size_t count = 0;
+
+      // Count the number of quote symbols.
+      do {
+        if (iter->type == LISP_NIL_T)
+          return lisp_make_error(
+              lisp_make_cons(SYM_TO_LISP(PARSER_QUOTE_END), LISP_NIL));
+
+        assert(iter->type == LISP_LIST_T);
+
+        count++;
+
+        item = iter->cons.head;
+        iter = iter->cons.tail;
+      } while (item->type == LISP_SYMBOL_T && !strcmp(item->symbol, "'"));
+
+      // Nest quote lists.
+      LispValue result = item;
+      while (count--) {
+        result = lisp_make_cons(SYM_TO_LISP("quote"),
+                                lisp_make_cons(result, LISP_NIL));
+      }
+
+      remaining_lisp->cons.head = result;
+      remaining_lisp->cons.tail = iter;
+    }
+
+    remaining_lisp = remaining_lisp->cons.tail;
+  }
+  assert(remaining_lisp->type == LISP_NIL_T);
+
+  return lisp;
+}
+
 LispValue parse(Token *tokens, size_t token_count) {
   LispValue lisp = LISP_NIL;
   LispValue *last = &lisp;
@@ -345,7 +392,20 @@ LispValue parse(Token *tokens, size_t token_count) {
         last = &((*last)->cons.head);
       }
 
-      last = lisp_cons_find_term_nil(last);
+      assert((*last)->type == LISP_LIST_T);
+      while ((*last)->cons.tail->type == LISP_LIST_T) {
+        last = &((*last)->cons.tail);
+      }
+      assert((*last)->cons.tail->type == LISP_NIL_T);
+
+      LispValue pp = parse_pp_list((*last)->cons.head);
+
+      if (pp->type == LISP_ERROR_T)
+        return pp;
+
+      (*last)->cons.head = pp;
+      last = &((*last)->cons.tail);
+
       continue;
 
     case T_INT64:
@@ -359,6 +419,10 @@ LispValue parse(Token *tokens, size_t token_count) {
     case T_SYMBOL:
       pn = SYM_TO_LISP(t.symbol);
       break;
+
+    case T_QUOTE:
+      pn = SYM_TO_LISP("\'");
+      break;
     }
 
     lisp_rappend_use_last(last, pn);
@@ -369,7 +433,7 @@ LispValue parse(Token *tokens, size_t token_count) {
     return lisp_make_error(
         lisp_make_cons(SYM_TO_LISP(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
 
-  return lisp;
+  return parse_pp_list(lisp);
 }
 
 void env_free(Environment *env) {
