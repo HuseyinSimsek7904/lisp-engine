@@ -35,6 +35,38 @@ typedef struct {
   char *name;
 } _LispBuiltinFunction;
 
+// TODO: The variadic argument should be allowed to be anywhere in the argument
+// list. Any positional argument can be matched from the left and the right and
+// every remaining argument can be passed as the variadic argument.
+
+// TODO: In many cases, the argument count checks are not needed as the function
+// is single use. Because of this, a new builtin could be implemented (e.g.
+// `fn-simple`) that implements the `fn` functionality without the argument
+// count check and parameter matching. For example the syntax `(fn-simple BODY)`
+// could be used for this, where `fn_simple` is a builtin and the returned value
+// is `fn-s-t`. The functionality is equivalent to that of the `(fn ((rest
+// args)) BODY)`. The returned value should be a `simple-fn-t` with its own C
+// struct.
+//
+// Then, for `fn`, there are two options.
+// Either the current builtin `fn`, the struct `_LispCustomFunction` and the
+// type `fn-t` stay as is with their own implementation independant of the
+// simple functions.
+// This idea should be better in terms of performance.
+//
+// Or the builtin, struct and the types are all removed as builtin, but the `fn`
+// is defined as a custom function in the core library.
+// This idea should be better in terms of simplicity, as there are less builtins
+// than the first option and the functionality is implemented only as a custom
+// function which is less error prune than C code. In the future, if an
+// optimizer is implemented, the optimizer will try to eliminate unnecessary
+// code. This option should be more favorable for the optimizer, because of the
+// simpler builtin definition.
+//
+// Third option is that simple functions are not implemented and everything
+// stays as is.
+//
+// I like the second option the most.
 typedef struct {
   bool is_macro;
   LispValue args;
