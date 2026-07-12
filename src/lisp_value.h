@@ -96,12 +96,6 @@ struct _LispValue {
   };
 };
 
-typedef struct {
-  LispValue *array;
-  size_t size;
-  size_t capacity;
-} LispValues;
-
 // Singleton values.
 extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;
