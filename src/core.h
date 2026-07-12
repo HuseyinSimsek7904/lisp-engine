@@ -1,6 +1,7 @@
 #ifndef CORE_H
 #define CORE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +46,17 @@ typedef struct {
   size_t capacity;
 } StringBuilder;
 
+#define sb_append_static_str(da, s)                                            \
+  da_append_many((da), (s), sizeof((s)) / sizeof(char) - 1)
+#define sb_append_cstr(da, s) da_append_many((da), (s), strlen((s)))
+
 #define TODO()                                                                 \
   do {                                                                         \
     fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);          \
   } while (0)
+
+void sb_append_decimal(StringBuilder *builder, int64_t number);
+void sb_append_printable(StringBuilder *builder, char *str, bool use_char_escapes);
 
 char *read_file(char *file_name);
 
