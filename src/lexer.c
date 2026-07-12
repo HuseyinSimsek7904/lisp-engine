@@ -197,30 +197,3 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
 
   return LEXER_SUCCESS;
 }
-
-void print_lisp_token(Token token) {
-  switch (token.type) {
-  case T_L_PAREN:
-    printf("(");
-    break;
-
-  case T_R_PAREN:
-    printf(")");
-    break;
-
-  case T_INT64:
-    printf("%lu", token.integer);
-    break;
-
-  case T_STRING:
-    printf("string[%s]", token.string);
-    break;
-
-  case T_SYMBOL:
-    printf("symbol[%s]", token.symbol);
-    break;
-
-  default:
-    TODO();
-  }
-}
