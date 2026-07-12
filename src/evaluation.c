@@ -7,6 +7,7 @@
 #include "core.h"
 #include "debug.h"
 #include "evaluation.h"
+#include "format.h"
 #include "lisp_value.h"
 
 void roll_env_back(Environment *env, Environment *original) {
@@ -82,9 +83,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
     case LISP_LIST_T: {
       if (debug_flags & DEBUG_PRINT_EVAL) {
-        fprintf(stderr, "eval: ");
-        lisp_fprint(stderr, lisp, true);
-        fprintf(stderr, "\n");
+        lisp_fprintf(stderr, "eval: %l\n", lisp);
       }
 
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
@@ -173,7 +172,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     } break;
 
     case LISP_TYPE_COUNT:
-      fprintf(stderr, "reached unreachable\n");
+      lisp_fprintf(stderr, "reached unreachable\n");
       assert(false);
       break;
     }

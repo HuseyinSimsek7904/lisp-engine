@@ -8,6 +8,7 @@
 
 #include "core.h"
 #include "debug.h"
+#include "format.h"
 #include "lexer.h"
 #include "lisp_value.h"
 
@@ -30,112 +31,10 @@ LispValue _lisp_init(_LispValue *value) {
   *ptr = *value;
 
   if (debug_flags & DEBUG_PRINT_INIT) {
-    fprintf(stderr, "init: ");
-    lisp_fprint(stderr, value, true);
-    fprintf(stderr, "\n");
+    lisp_fprintf(stderr, "init: %l\n", ptr);
   }
 
   return ptr;
-}
-
-void lisp_fprint(FILE *file, LispValue value, bool pretty) {
-  switch (value->type) {
-    // TODO: nil, types and bools are singletons, and because of this, their
-    // representation is their symbol itself. Singleton symbols could be
-    // printed better.
-
-  case LISP_NIL_T:
-    fprintf(file, "nil");
-    break;
-
-  case LISP_TYPE_T:
-    assert(lisp_is_valid_type(value->ref_type));
-    fprintf(file, "<type `");
-    fprintf(file, "%s", lisp_type_syms[value->ref_type]);
-    fprintf(file, "`>");
-    break;
-
-  case LISP_BOOL_T:
-    fprintf(file, value->boolean ? "true" : "false");
-    break;
-
-  case LISP_ERROR_T:
-    fprintf(file, pretty ? "<error " : "error: ");
-    lisp_fprint(file, value->item, true);
-    fprintf(file, pretty ? ">" : "\n");
-    break;
-
-  case LISP_STRING_T:
-    fprintf(file, pretty ? "\"%s\"" : "%s", value->string);
-    break;
-
-  case LISP_SYMBOL_T:
-    fprintf(file, "%s", value->symbol);
-    break;
-
-  case LISP_INT64_T:
-    fprintf(file, "%ld", value->integer);
-    break;
-
-  case LISP_BUILTIN_FUNC_T:
-    fprintf(file,
-            value->builtin_function->is_macro ? "<builtin-macro `%s`>"
-                                              : "<builtin-function `%s`>",
-            value->builtin_function->name);
-    break;
-
-  case LISP_FUNC_T:
-    fprintf(file, value->custom_function->is_macro ? "<macro(" : "<function(");
-
-    LispValue remaining_args = value->custom_function->args;
-
-    if (remaining_args->type != LISP_NIL_T) {
-      assert(remaining_args->type == LISP_LIST_T);
-
-      for (; remaining_args->cons.tail->type == LISP_LIST_T;) {
-        fprintf(file, "%s ", remaining_args->cons.head->symbol);
-        remaining_args = remaining_args->cons.tail;
-      }
-
-      if (value->custom_function->variadic) {
-        fprintf(file, "(rest %s)", remaining_args->cons.head->symbol);
-      } else {
-        fprintf(file, "%s", remaining_args->cons.head->symbol);
-      }
-    }
-
-    fprintf(file, ")>");
-    break;
-
-  case LISP_UNPACKED_T:
-    assert(value->item->type == LISP_LIST_T || value->item->type == LISP_NIL_T);
-    fprintf(file, "<unpacked ");
-    lisp_fprint(file, value->item, true);
-    fprintf(file, ">");
-    break;
-
-  case LISP_LIST_T:
-    fprintf(file, "(");
-    lisp_fprint(file, value->cons.head, true);
-
-    while (value->cons.tail->type != LISP_NIL_T) {
-      value = value->cons.tail;
-
-      fprintf(file, " ");
-      lisp_fprint(file, value->cons.head, true);
-    }
-    fprintf(file, ")");
-    break;
-
-  case LISP_TYPE_COUNT:
-    fprintf(stderr, "reached unreachable\n");
-    assert(false);
-    break;
-  }
-}
-
-inline void lisp_print(LispValue value, bool pretty) {
-  lisp_fprint(stdout, value, pretty);
 }
 
 bool lisp_is_valid_type(LispType type) {
@@ -196,7 +95,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return lisp_is_ident(a->item, b->item);
 
   case LISP_TYPE_COUNT:
-    fprintf(stderr, "reached unreachable\n");
+    lisp_fprintf(stderr, "reached unreachable\n");
     assert(false);
     break;
   }

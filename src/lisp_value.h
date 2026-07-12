@@ -128,9 +128,6 @@ LispValue _lisp_init(_LispValue *value);
 
 bool lisp_is_ident(LispValue a, LispValue b);
 
-void lisp_fprint(FILE *file, LispValue value, bool pretty);
-void lisp_print(LispValue value, bool pretty);
-
 LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(LispValue head, LispValue tail);
 LispValue lisp_make_list(size_t count, ...);

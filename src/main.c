@@ -13,6 +13,7 @@
 #include "core.h"
 #include "debug.h"
 #include "evaluation.h"
+#include "format.h"
 #include "lexer.h"
 #include "lisp_value.h"
 
@@ -297,7 +298,7 @@ DEFINE_BUILTIN(print) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    printf("%s\n", arg->string);
+    lisp_printf("%s\n", arg->string);
   }
 
   assert(remaining_args->type == LISP_NIL_T);
@@ -559,7 +560,7 @@ int main(int argc, char **argv) {
     char *buffer = read_file(startup[i]);
 
     if (!buffer) {
-      fprintf(stderr, "warning: could not read contents of %s\n", startup[i]);
+      lisp_fprintf(stderr, "warning: could not read contents of %s\n", startup[i]);
       continue;
     }
 
@@ -574,7 +575,7 @@ int main(int argc, char **argv) {
     char *buffer = read_file(argv[i]);
 
     if (!buffer) {
-      fprintf(stderr, "warning: could not read contents of %s\n", argv[i]);
+      lisp_fprintf(stderr, "warning: could not read contents of %s\n", argv[i]);
       continue;
     }
 
@@ -585,9 +586,8 @@ int main(int argc, char **argv) {
     // In test mode, every file must return nil.
     // If they do not, that means that the test failed.
     if (test_mode && return_value->type != LISP_NIL_T) {
-      fprintf(stderr, "fail: %s test failed\n", argv[i]);
-      lisp_fprint(stderr, return_value, true);
-      fprintf(stderr, "\n");
+      lisp_fprintf(stderr, "fail: %s test failed\n", argv[i]);
+      lisp_fprintf(stderr, "%l\n", return_value);
       test_failed = true;
     }
   }
@@ -595,7 +595,7 @@ int main(int argc, char **argv) {
   if (test_failed)
     exit(1);
   else if (test_mode)
-    fprintf(stderr, "test: passed all tests\n");
+    lisp_fprintf(stderr, "test: passed all tests\n");
 
   // Interactive mode.
   while (interactive) {
@@ -612,7 +612,6 @@ int main(int argc, char **argv) {
 
     free(lisp);
 
-    lisp_print(return_value, true);
-    printf("\n");
+    lisp_printf("~ %l\n", return_value);
   }
 }

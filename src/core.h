@@ -52,7 +52,7 @@ typedef struct {
 
 #define TODO()                                                                 \
   do {                                                                         \
-    fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);          \
+    lisp_fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);     \
   } while (0)
 
 void sb_append_decimal(StringBuilder *builder, int64_t number);
