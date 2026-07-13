@@ -1,6 +1,7 @@
 #ifndef CORE_H
 #define CORE_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,10 +12,12 @@
 #define da_item_size(da) (sizeof((da)->array[0]))
 #define da_avail(da) ((da)->capacity - (da)->size)
 #define da_resize(da)                                                          \
-  (da)->array = reallocarray((da)->array, (da)->capacity, da_item_size(da));
+  (da)->array = reallocarray((da)->array, (da)->capacity, da_item_size(da));   \
+  assert((da)->array);
 #define da_init(da)                                                            \
   do {                                                                         \
     (da)->array = calloc(DA_INIT_CAP, da_item_size(da));                       \
+    assert((da)->array);                                                       \
     (da)->capacity = DA_INIT_CAP;                                              \
     (da)->size = 0;                                                            \
   } while (0)
