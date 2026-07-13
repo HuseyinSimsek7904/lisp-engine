@@ -25,7 +25,11 @@
 (assert-type 0 int64-t)
 (assert-type 1 int64-t)
 (assert-type 1234 int64-t)
-(assert-type 18446744073709551615 int64-t)
+(assert-type -1 int64-t)
+(assert-type -1234 int64-t)
+(assert-type 9223372036854775807 int64-t)
+(assert-type -9223372036854775807 int64-t)
+(assert-type -9223372036854775808 int64-t)
 
 ;; bool-t
 (assert-type false bool-t)

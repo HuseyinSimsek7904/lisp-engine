@@ -38,11 +38,14 @@
 (assert-eq (= "123" "456") false)
 
 ;; int64-t
+(assert-eq (= 0 0) true)
 (assert-eq (= 123 123) true)
-(assert-eq (= 18446744073709551615 -1) true)
-
 (assert-eq (= 123 234) false)
-(assert-eq (= 18446744073709551615 -2) false)
+(assert-eq (= 123 -123) false)
+(assert-eq (= 123 -234) false)
+
+(assert-eq (= -123 -123) true)
+(assert-eq (= -123 -234) false)
 
 ;; bool-t
 (assert-eq (= false false) true)

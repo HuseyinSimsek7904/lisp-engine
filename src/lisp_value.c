@@ -23,6 +23,7 @@ char *lexer_result_syms[] = {
     [LEXER_EXPECTED_SEPARATOR] = "lexer:expected-separator",
     [LEXER_UNTERMINATED_STRING] = "lexer:unterminated-string",
     [LEXER_INVALID_ESCAPE] = "lexer:invalid-escape",
+    [LEXER_INTEGER_TOO_LARGE] = "lexer:integer-literal-too-large"
 };
 
 LispValue _lisp_init(_LispValue *value) {

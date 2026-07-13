@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdckdint.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -29,10 +30,31 @@ static inline int hex_digit_to_int(char c) {
   return -1;
 }
 
+// Read the next signed decimal int64 and advance the string view.
+// If some part of the number is already parsed, then this function can be used
+// to parse the rest.
+// If the number is negative, the result
+LexerResult read_int64_dec(char **lisp_str, int64_t *number,
+                           bool negative_mode) {
+  while (is_decimal(**lisp_str)) {
+    if (ckd_mul(number, 10, *number))
+      return LEXER_INTEGER_TOO_LARGE;
+
+    if (negative_mode) {
+      if (ckd_sub(number, *number, *(*lisp_str)++ - '0'))
+        return LEXER_INTEGER_TOO_LARGE;
+    } else {
+      if (ckd_add(number, *number, *(*lisp_str)++ - '0'))
+        return LEXER_INTEGER_TOO_LARGE;
+    }
+  }
+
+  return LEXER_SUCCESS;
+}
+
 LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
   while (*lisp_str) {
     char c = *lisp_str++;
-
     switch (c) {
     case ' ':
     case '\n':
@@ -52,10 +74,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       break;
 
     case '0' ... '9': {
-      uint64_t number = c - '0';
-      while (is_decimal(*lisp_str)) {
-        number = 10 * number + *lisp_str++ - '0';
-      }
+      int64_t number = c - '0';
+
+      LexerResult result = read_int64_dec(&lisp_str, &number, false);
+      if (result != LEXER_SUCCESS)
+        return result;
 
       if (*lisp_str != '\0' && !is_separator(*lisp_str))
         return LEXER_EXPECTED_SEPARATOR;
@@ -156,15 +179,16 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
 
     case '-':
       if (is_decimal(*lisp_str)) {
-        uint64_t number = 0;
-        while (is_decimal(*lisp_str)) {
-          number = 10 * number + *lisp_str++ - '0';
-        }
+        int64_t number = -(*lisp_str++ - '0');
+
+        LexerResult result = read_int64_dec(&lisp_str, &number, true);
+        if (result != LEXER_SUCCESS)
+          return result;
 
         if (*lisp_str != '\0' && !is_separator(*lisp_str))
           return LEXER_EXPECTED_SEPARATOR;
 
-        Token token = {.type = T_INT64, .integer = -number};
+        Token token = {.type = T_INT64, .integer = number};
         da_append(tokens, token);
         break;
       }
