@@ -5,6 +5,17 @@
 #include "core.h"
 #include "lexer.h"
 
+static inline bool is_decimal(char c) { return c >= '0' && c <= '9'; }
+
+static inline bool is_separator(char c) {
+  return c == ')' || c == ' ' || c == '\n' || c == '\t';
+}
+
+static inline bool is_symbol_tail(char c) {
+  return c == '!' || (c >= '#' && c <= '&') || (c >= '*' && c <= ':') ||
+         (c >= '<' && c <= '~');
+}
+
 static inline int hex_digit_to_int(char c) {
   if (c >= '0' && c <= '9')
     return c - '0';
@@ -42,12 +53,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
 
     case '0' ... '9': {
       uint64_t number = c - '0';
-      while (*lisp_str >= '0' && *lisp_str <= '9') {
+      while (is_decimal(*lisp_str)) {
         number = 10 * number + *lisp_str++ - '0';
       }
 
-      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t' && *lisp_str != '\0')
+      if (*lisp_str != '\0' && !is_separator(*lisp_str))
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_INT64, .integer = number};
@@ -137,8 +147,7 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       }
       lisp_str++;
 
-      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t' && *lisp_str != '\0')
+      if (*lisp_str != '\0' && !is_separator(*lisp_str))
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_STRING, .string = sb.array};
@@ -146,14 +155,13 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
     } break;
 
     case '-':
-      if (*lisp_str >= '0' && *lisp_str <= '9') {
+      if (is_decimal(*lisp_str)) {
         uint64_t number = 0;
-        while (*lisp_str >= '0' && *lisp_str <= '9') {
+        while (is_decimal(*lisp_str)) {
           number = 10 * number + *lisp_str++ - '0';
         }
 
-        if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-            *lisp_str != '\t' && *lisp_str != '\0')
+        if (*lisp_str != '\0' && !is_separator(*lisp_str))
           return LEXER_EXPECTED_SEPARATOR;
 
         Token token = {.type = T_INT64, .integer = -number};
@@ -170,14 +178,11 @@ LexerResult generate_tokens(char *lisp_str, Tokens *tokens) {
       StringBuilder sb;
       da_init(&sb);
       da_append(&sb, c);
-      while (*lisp_str == '!' || (*lisp_str >= '#' && *lisp_str <= '&') ||
-             (*lisp_str >= '*' && *lisp_str <= ':') ||
-             (*lisp_str >= '<' && *lisp_str <= '~')) {
+      while (is_symbol_tail(*lisp_str)) {
         da_append(&sb, *lisp_str++);
       }
 
-      if (*lisp_str != ')' && *lisp_str != ' ' && *lisp_str != '\n' &&
-          *lisp_str != '\t' && *lisp_str != '\0')
+      if (*lisp_str != '\0' && !is_separator(*lisp_str))
         return LEXER_EXPECTED_SEPARATOR;
 
       Token token = {.type = T_SYMBOL, .string = sb.array};
