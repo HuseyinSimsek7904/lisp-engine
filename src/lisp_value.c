@@ -221,7 +221,7 @@ LispValue parse_pp_list(LispValue lisp) {
   while (remaining_lisp->type == LISP_LIST_T) {
     LispValue item = remaining_lisp->cons.head;
 
-    if (item->type == LISP_SYMBOL_T && !strcmp(item->symbol, "'")) {
+    if (lisp_is_sym(item, "'")) {
       // Quote symbols are processed right-to-left.
       // So ''a => (quote (quote a)) and not ''a => (quote quote) a.
       // Since it is really hard to go back with Lisp lists, we just count the
@@ -241,7 +241,7 @@ LispValue parse_pp_list(LispValue lisp) {
 
         item = iter->cons.head;
         iter = iter->cons.tail;
-      } while (item->type == LISP_SYMBOL_T && !strcmp(item->symbol, "'"));
+      } while (lisp_is_sym(item, "'"));
 
       // Nest quote lists.
       LispValue result = item;

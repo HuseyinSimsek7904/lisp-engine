@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "lexer.h"
 
@@ -121,6 +122,10 @@ bool lisp_is_valid_type(LispType value);
 LispValue _lisp_init(_LispValue *value);
 
 bool lisp_is_ident(LispValue a, LispValue b);
+
+static inline bool lisp_is_sym(LispValue value, const char *symbol) {
+  return value->type == LISP_SYMBOL_T && !strcmp(value->symbol, symbol);
+}
 
 LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(LispValue head, LispValue tail);

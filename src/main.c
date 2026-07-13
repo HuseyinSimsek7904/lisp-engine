@@ -230,8 +230,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                         "SYMBOL)])")));
       ;
 
-      if (arg->cons.head->type != LISP_SYMBOL_T ||
-          strcmp(arg->cons.head->string, "rest"))
+      if (!lisp_is_sym(arg->cons.head, "rest"))
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
             STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
