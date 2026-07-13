@@ -1,6 +1,7 @@
 #include "core.h"
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 char *read_file(char *file_name) {
   FILE *file = fopen(file_name, "r");
@@ -28,16 +29,17 @@ void sb_append_decimal(StringBuilder *builder, int64_t number) {
     return;
   }
 
+  uint64_t positive = number;
   if (number < 0) {
     da_append(builder, '-');
-    number = -number;
+    positive = -number;
   }
 
   char buffer[64];
   char *ptr = buffer + 64;
-  while (number) {
-    *(--ptr) = number % 10 + '0';
-    number = number / 10;
+  while (positive) {
+    *(--ptr) = positive % 10 + '0';
+    positive = positive / 10;
   }
 
   da_append_many(builder, ptr, buffer + 64 - ptr);
