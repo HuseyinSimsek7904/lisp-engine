@@ -40,6 +40,7 @@ LispValue lisp_builtin_macro;
 LispValue lisp_builtin_let;
 LispValue lisp_builtin_if;
 LispValue lisp_builtin_do;
+LispValue lisp_builtin_format;
 LispValue lisp_builtin_debug_set_flags;
 LispValue lisp_builtin_debug_list_env;
 
@@ -456,6 +457,70 @@ DEFINE_BUILTIN(error) {
   return lisp_make_error(ARG0);
 }
 
+DEFINE_BUILTIN(format) {
+  REQUIRES_MIN_ARGS(format, 1);
+  CHECK_ARG_TYPE(format, ARG0, LISP_STRING_T);
+
+  StringBuilder builder;
+  da_init(&builder);
+
+  StringView format_str = ARG0->string;
+  LispValue remaining_args = args->cons.tail;
+
+  while (format_str.size) {
+    // TODO: Rather than calling `da_append` many times for each char, calling
+    // `da_append_many` would be faster. The string should be searched for the
+    // next % sign and appended at once until that character.
+    char c = sv_pop_left(&format_str);
+    if (c != '%') {
+      da_append(&builder, c);
+      continue;
+    }
+
+    switch (c = sv_pop_left(&format_str)) {
+    case '%':
+      da_append(&builder, c);
+      break;
+
+    case 'l': {
+      if (remaining_args->type == LISP_NIL_T) {
+        da_free(&builder);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+      }
+
+      assert(remaining_args->type == LISP_LIST_T);
+
+      lisp_value_format(&builder, remaining_args->cons.head);
+      remaining_args = remaining_args->cons.tail;
+    } break;
+
+    case 's': {
+      if (remaining_args->type == LISP_NIL_T) {
+        da_free(&builder);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+      }
+
+      assert(remaining_args->type == LISP_LIST_T);
+
+      if (remaining_args->cons.head->type != LISP_STRING_T) {
+        da_free(&builder);
+        return ERROR(WRONG_TYPE_ARG_FORMAT_SYM, 2, remaining_args->cons.head,
+                     TYPE_TO_LISP(LISP_STRING_T));
+      }
+
+      sb_append_view(&builder, remaining_args->cons.head->string);
+      remaining_args = remaining_args->cons.tail;
+    } break;
+
+    default:
+      da_free(&builder);
+      return ERROR(INVALID_FORMAT_SYM, 1, ARG0);
+    }
+  }
+
+  return STR_TO_LISP(sb_to_sv(&builder));
+}
+
 // TODO: This should expect a list of symbols, where each symbol is a flag.
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
@@ -544,6 +609,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("tail", tail, false, false);
   DEFINE_BUILTIN_FUNCTION("typeof", typeof, false, false);
   DEFINE_BUILTIN_FUNCTION("error", error, false, false);
+  DEFINE_BUILTIN_FUNCTION("format", format, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);

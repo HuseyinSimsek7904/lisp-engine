@@ -183,6 +183,10 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 #define WRONG_TYPE_ARG_SYM "wrong-type-arg-to-builtin"
 
+#define TOO_FEW_ARGS_FORMAT_SYM "too-few-args-to-format"
+#define WRONG_TYPE_ARG_FORMAT_SYM "wrong-type-arg-to-format"
+#define INVALID_FORMAT_SYM "invalid-format-string"
+
 #define SYMBOL_REDEFINITION_SYM "symbol-redefinition"
 #define COULD_NOT_READ_FILE_SYM "could-not-read-file"
 #define COULD_NOT_GEN_TOKENS_SYM "could-not-gen-tokens"

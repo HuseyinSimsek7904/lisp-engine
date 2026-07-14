@@ -52,6 +52,7 @@ typedef struct {
 #define sb_append_static_str(da, s)                                            \
   da_append_many((da), (s), sizeof((s)) / sizeof(char) - 1)
 #define sb_append_cstr(da, s) da_append_many((da), (s), strlen((s)))
+#define sb_append_view(da, v) da_append_many((da), (v.array), (v.size))
 
 typedef struct {
   char *array;
