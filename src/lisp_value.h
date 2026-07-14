@@ -86,6 +86,8 @@ typedef struct {
 struct _LispValue {
   LispType type;
   union {
+    // TODO: Strings referenced by lisp objects should be kept in a pool, and
+    // they should be deallocated like lisp objects.
     StringView string;
     char *symbol;
     int64_t integer;
