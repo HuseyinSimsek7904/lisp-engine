@@ -41,6 +41,7 @@ LispValue lisp_builtin_let;
 LispValue lisp_builtin_if;
 LispValue lisp_builtin_do;
 LispValue lisp_builtin_format;
+LispValue lisp_builtin_cons;
 LispValue lisp_builtin_debug_set_flags;
 LispValue lisp_builtin_debug_list_env;
 
@@ -521,6 +522,15 @@ DEFINE_BUILTIN(format) {
   return STR_TO_LISP(sb_to_sv(&builder));
 }
 
+DEFINE_BUILTIN(cons) {
+  REQUIRES_EQ_ARGS(cons, 2);
+
+  if (ARG1->type != LISP_NIL_T)
+    CHECK_ARG_TYPE(cons, ARG1, LISP_LIST_T);
+
+  return lisp_make_cons(ARG0, ARG1);
+}
+
 // TODO: This should expect a list of symbols, where each symbol is a flag.
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
@@ -610,6 +620,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("typeof", typeof, false, false);
   DEFINE_BUILTIN_FUNCTION("error", error, false, false);
   DEFINE_BUILTIN_FUNCTION("format", format, false, false);
+  DEFINE_BUILTIN_FUNCTION("cons", cons, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
