@@ -54,7 +54,7 @@ static inline unsigned char hex_char(int x) {
 
 void sb_append_view_printable(StringBuilder *builder, StringView view,
                               bool use_char_escapes) {
-  unsigned char c;
+  char c;
   while (view.size) {
     c = sv_pop_left(&view);
 
@@ -91,7 +91,7 @@ void sb_append_view_printable(StringBuilder *builder, StringView view,
         escape = "\\\"";
         break;
       case '\'':
-        escape = "\\\"";
+        escape = "\\\'";
         break;
       }
 
