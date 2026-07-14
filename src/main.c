@@ -669,9 +669,13 @@ int main(int argc, char **argv) {
 
     free(buffer.array);
 
-    // In test mode, every file must return nil.
-    // If they do not, that means that the test failed.
-    if (test_mode && return_value->type != LISP_NIL_T) {
+    if (!test_mode)
+      lisp_printf("%s: ~ %l\n", argv[i], return_value);
+
+    else if (return_value->type != LISP_NIL_T) {
+      // In test mode, every file must return nil.
+      // If they do not, that means that the test failed.
+
       lisp_fprintf(stderr, "fail: %s test failed\n", argv[i]);
       lisp_fprintf(stderr, "%l\n", return_value);
       test_failed = true;
