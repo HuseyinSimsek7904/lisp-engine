@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core.h"
 #include "lexer.h"
 
 typedef enum {
@@ -85,7 +86,7 @@ typedef struct {
 struct _LispValue {
   LispType type;
   union {
-    char *string;
+    StringView string;
     char *symbol;
     int64_t integer;
     LispType ref_type;
@@ -111,8 +112,13 @@ extern LispValue LISP_FALSE;
 #define INT64_TO_LISP(x)                                                       \
   _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = x})
 
-#define STR_TO_LISP(x)                                                         \
-  _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = x})
+#define STATIC_STR_TO_LISP(x)                                                  \
+  _lisp_init(&(_LispValue){                                                    \
+      .type = LISP_STRING_T,                                                   \
+      .string = {.array = strdup((x)), .size = sizeof((x)) - 1}})
+
+#define STR_TO_LISP(v)                                                         \
+  _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = v})
 
 #define SYM_TO_LISP(x)                                                         \
   _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})

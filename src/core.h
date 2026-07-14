@@ -53,14 +53,47 @@ typedef struct {
   da_append_many((da), (s), sizeof((s)) / sizeof(char) - 1)
 #define sb_append_cstr(da, s) da_append_many((da), (s), strlen((s)))
 
+typedef struct {
+  char *array;
+  size_t size;
+} StringView;
+
+#define sb_to_sv(da)                                                           \
+  (StringView) { .array = (da)->array, .size = (da)->size }
+#define sv_head(v) (*(v).array)
+
+static inline StringView sv_copy(StringView view) {
+  char *buffer = malloc(view.size);
+  assert(buffer);
+
+  memcpy(buffer, view.array, view.size);
+  return (StringView){.array = buffer, .size = view.size};
+}
+
+static inline char *sv_copy_cstr(StringView view) {
+  char *buffer = malloc(view.size + 1);
+  assert(buffer);
+
+  memcpy(buffer, view.array, view.size);
+  buffer[view.size] = '\0';
+  return buffer;
+}
+
+static inline char sv_pop_left(StringView *view) {
+  assert(view->size);
+  view->size--;
+  return *view->array++;
+}
+
 #define TODO()                                                                 \
   do {                                                                         \
     lisp_fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);     \
   } while (0)
 
 void sb_append_decimal(StringBuilder *builder, int64_t number);
-void sb_append_printable(StringBuilder *builder, char *str, bool use_char_escapes);
+void sb_append_view_printable(StringBuilder *builder, StringView string,
+                              bool use_char_escapes);
 
-char *read_file(char *file_name);
+StringView read_file_sv(char *file_name);
 
 #endif

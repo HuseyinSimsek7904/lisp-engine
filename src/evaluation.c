@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "core.h"
@@ -202,7 +201,7 @@ LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
   return evaluate_lisp(lisp->cons.head, env);
 }
 
-LispValue repl(char *lisp, Environment *env) {
+LispValue repl(StringView lisp, Environment *env) {
   Tokens tokens;
   da_init(&tokens);
   LexerResult lexer_result = generate_tokens(lisp, &tokens);

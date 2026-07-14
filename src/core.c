@@ -1,26 +1,25 @@
-#include "core.h"
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-char *read_file(char *file_name) {
+#include "core.h"
+
+StringView read_file_sv(char *file_name) {
   FILE *file = fopen(file_name, "r");
   if (!file)
-    return NULL;
+    return (StringView){.array = NULL};
 
   fseek(file, 0, SEEK_END);
   size_t size = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  char *buffer = malloc(size + 1);
+  char *buffer = malloc(size);
   if (!buffer)
-    return NULL;
+    return (StringView){.array = NULL};
 
   if (fread(buffer, 1, size, file) != size)
-    return NULL;
+    return (StringView){.array = NULL};
 
-  buffer[size] = '\0';
-  return buffer;
+  return (StringView){.array = buffer, .size = size};
 }
 
 void sb_append_decimal(StringBuilder *builder, int64_t number) {
@@ -53,10 +52,12 @@ static inline unsigned char hex_char(int x) {
     return x - 10 + 'a';
 }
 
-void sb_append_printable(StringBuilder *builder, char *str,
-                         bool use_char_escapes) {
+void sb_append_view_printable(StringBuilder *builder, StringView view,
+                              bool use_char_escapes) {
   unsigned char c;
-  while ((c = *str++) != '\0') {
+  while (view.size) {
+    c = sv_pop_left(&view);
+
     if ((c >= ' ' && c < 0x7f) && c != '\"' && c != '\'') {
       da_append(builder, c);
       continue;

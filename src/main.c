@@ -9,6 +9,7 @@
 #include <readline/chardefs.h>
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <string.h>
 
 #include "core.h"
 #include "debug.h"
@@ -142,7 +143,7 @@ DEFINE_BUILTIN(let) {
       if (lisp_get_len(def_node) != 2)
         return ERROR(
             WRONG_TYPE_ARG_SYM, 3, lisp_builtin_let, def_node,
-            STR_TO_LISP(
+            STATIC_STR_TO_LISP(
                 "`let` binding list must be a list of key-value pairs"));
 
       CHECK_ARG_TYPE(let, def_node->cons.head, LISP_SYMBOL_T);
@@ -211,8 +212,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
       if (arg->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
-                        "SYMBOL)])")));
+            STATIC_STR_TO_LISP(
+                "argument list must be in the form ([SYMBOL...] [(rest "
+                "SYMBOL)])")));
       ;
 
       lisp_rappend_use_last(last, arg);
@@ -226,22 +228,25 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
-                        "SYMBOL)])")));
+            STATIC_STR_TO_LISP(
+                "argument list must be in the form ([SYMBOL...] [(rest "
+                "SYMBOL)])")));
       ;
 
       if (!lisp_is_sym(arg->cons.head, "rest"))
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
-                        "SYMBOL)])")));
+            STATIC_STR_TO_LISP(
+                "argument list must be in the form ([SYMBOL...] [(rest "
+                "SYMBOL)])")));
       ;
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
-                        "SYMBOL)])")));
+            STATIC_STR_TO_LISP(
+                "argument list must be in the form ([SYMBOL...] [(rest "
+                "SYMBOL)])")));
       ;
 
       variadic = true;
@@ -254,8 +259,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
     } else
       return lisp_make_error(lisp_make_list(
           4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-          STR_TO_LISP("argument list must be in the form ([SYMBOL...] [(rest "
-                      "SYMBOL)])")));
+          STATIC_STR_TO_LISP(
+              "argument list must be in the form ([SYMBOL...] [(rest "
+              "SYMBOL)])")));
     ;
 
   } else if (ARG0->type != LISP_NIL_T)
@@ -365,9 +371,12 @@ DEFINE_BUILTIN(read_file) {
   REQUIRES_EQ_ARGS(read_file, 1);
   CHECK_ARG_TYPE(read_file, ARG0, LISP_STRING_T);
 
-  char *buffer = read_file(ARG0->string);
+  char *file_name = sv_copy_cstr(ARG0->string);
+  StringView buffer = read_file_sv(file_name);
 
-  if (!buffer)
+  free(file_name);
+
+  if (!buffer.array)
     RETURN_COULD_NOT_READ_FILE(ARG0);
 
   return STR_TO_LISP(buffer);
@@ -556,31 +565,32 @@ int main(int argc, char **argv) {
   char *startup[] = {"core/core.l"};
 
   for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
-    char *buffer = read_file(startup[i]);
+    StringView buffer = read_file_sv(startup[i]);
 
-    if (!buffer) {
-      lisp_fprintf(stderr, "warning: could not read contents of %s\n", startup[i]);
+    if (!buffer.array) {
+      lisp_fprintf(stderr, "warning: could not read contents of %s\n",
+                   startup[i]);
       continue;
     }
 
     repl(buffer, &global_env);
 
-    free(buffer);
+    free(buffer.array);
   }
 
   // Custom passed startup files.
   bool test_failed = false;
   for (size_t i = optind; i < argc; i++) {
-    char *buffer = read_file(argv[i]);
+    StringView buffer = read_file_sv(argv[i]);
 
-    if (!buffer) {
+    if (!buffer.array) {
       lisp_fprintf(stderr, "warning: could not read contents of %s\n", argv[i]);
       continue;
     }
 
     LispValue return_value = repl(buffer, &global_env);
 
-    free(buffer);
+    free(buffer.array);
 
     // In test mode, every file must return nil.
     // If they do not, that means that the test failed.
@@ -599,6 +609,7 @@ int main(int argc, char **argv) {
   // Interactive mode.
   while (interactive) {
     char *lisp = readline("> ");
+    StringView view = {.array = lisp, .size = strlen(lisp)};
 
     if (!lisp) {
       interactive = false;
@@ -607,7 +618,7 @@ int main(int argc, char **argv) {
 
     add_history(lisp);
 
-    LispValue return_value = repl(lisp, &global_env);
+    LispValue return_value = repl(view, &global_env);
 
     free(lisp);
 

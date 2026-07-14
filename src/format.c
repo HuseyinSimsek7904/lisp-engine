@@ -63,7 +63,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
     // Producers: "STRING"
 
     da_append(builder, '"');
-    sb_append_printable(builder, value->string, true);
+    sb_append_view_printable(builder, value->string, true);
     da_append(builder, '"');
 
     break;

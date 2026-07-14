@@ -1,6 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include "core.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,8 +17,8 @@ typedef enum {
 typedef struct {
   TokenType type;
   union {
+    StringView string;
     int64_t integer;
-    char *string;
     char *symbol;
   };
 } Token;
@@ -37,6 +38,6 @@ typedef enum {
   LEXER_INTEGER_TOO_LARGE,
 } LexerResult;
 
-LexerResult generate_tokens(char *lisp_str, Tokens *tokens);
+LexerResult generate_tokens(StringView lisp_str, Tokens *tokens);
 
 #endif

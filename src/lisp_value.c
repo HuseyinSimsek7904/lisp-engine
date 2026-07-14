@@ -66,7 +66,8 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->integer == b->integer;
 
   case LISP_STRING_T:
-    return !strcmp(a->string, b->string);
+    return a->string.size == b->string.size &&
+           !memcmp(a->string.array, b->string.array, a->string.size);
 
   case LISP_BUILTIN_FUNC_T:
     return a->builtin_function->is_macro == b->builtin_function->is_macro &&
