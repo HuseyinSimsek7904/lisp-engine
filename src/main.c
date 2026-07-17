@@ -218,7 +218,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
             STATIC_STR_TO_LISP(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
-      ;
 
       lisp_rappend_use_last(last, arg);
       last = &((*last)->cons.tail);
@@ -234,7 +233,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
             STATIC_STR_TO_LISP(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
-      ;
 
       if (!lisp_is_sym(arg->cons.head, "rest"))
         return lisp_make_error(lisp_make_list(
@@ -242,7 +240,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
             STATIC_STR_TO_LISP(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
-      ;
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
@@ -250,7 +247,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
             STATIC_STR_TO_LISP(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
-      ;
 
       variadic = true;
 
@@ -265,7 +261,6 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
           STATIC_STR_TO_LISP(
               "argument list must be in the form ([SYMBOL...] [(rest "
               "SYMBOL)])")));
-    ;
 
   } else if (ARG0->type != LISP_NIL_T)
     return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM),
@@ -338,7 +333,6 @@ DEFINE_BUILTIN(neg_or_sub) {
 
   REQUIRES_MIN_ARGS(neg_or_sub, 1);
   REQUIRES_MAX_ARGS(neg_or_sub, 2);
-
   CHECK_ARG_TYPE(neg_or_sub, ARG0, LISP_INT64_T);
 
   if (arg_count > 1)

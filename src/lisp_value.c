@@ -13,8 +13,12 @@
 #include "lisp_value.h"
 
 char *lisp_type_syms[] = {
-    "nil-t", "type-t",    "error-t", "str-t",  "int64-t",    "bool-t",
-    "sym-t", "builtin-t", "fn-t",    "list-t", "unpacked-t",
+    [LISP_NIL_T] = "nil-t",           [LISP_TYPE_T] = "type-t",
+    [LISP_ERROR_T] = "error-t",       [LISP_STRING_T] = "str-t",
+    [LISP_INT64_T] = "int64-t",       [LISP_BOOL_T] = "bool-t",
+    [LISP_SYMBOL_T] = "sym-t",        [LISP_BUILTIN_FUNC_T] = "builtin-t",
+    [LISP_FUNC_T] = "fn-t",           [LISP_LIST_T] = "list-t",
+    [LISP_UNPACKED_T] = "unpacked-t",
 };
 
 char *lexer_result_syms[] = {
@@ -23,7 +27,7 @@ char *lexer_result_syms[] = {
     [LEXER_EXPECTED_SEPARATOR] = "lexer:expected-separator",
     [LEXER_UNTERMINATED_STRING] = "lexer:unterminated-string",
     [LEXER_INVALID_ESCAPE] = "lexer:invalid-escape",
-    [LEXER_INTEGER_TOO_LARGE] = "lexer:integer-literal-too-large"
+    [LEXER_INTEGER_TOO_LARGE] = "lexer:integer-literal-too-large",
 };
 
 LispValue _lisp_init(_LispValue *value) {
