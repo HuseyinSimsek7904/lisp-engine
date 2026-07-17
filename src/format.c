@@ -10,9 +10,26 @@
 #include "format.h"
 #include "lisp_value.h"
 
-void lisp_value_format(StringBuilder *builder, LispValue value) {
-  // TODO: A flag that prints singleton symbols rather than <...>
-  // representations should be implemented.
+void lisp_format_items(StringBuilder *builder, LispValue value,
+                       FormattingType formatting) {
+  if (value->type == LISP_NIL_T)
+    return;
+
+  assert(value->type == LISP_LIST_T);
+
+  lisp_value_format(builder, value->cons.head, formatting);
+
+  while (value->cons.tail->type == LISP_LIST_T) {
+    value = value->cons.tail;
+
+    sb_append_static_str(builder, " ");
+    lisp_value_format(builder, value->cons.head, formatting);
+  }
+  assert(value->cons.tail->type == LISP_NIL_T);
+}
+
+void lisp_value_format(StringBuilder *builder, LispValue value,
+                       FormattingType formatting) {
 
   // TODO: A flag that prints values as their producer should be implemented.
   // That way, when the formatted string is evaluated, the result should be
@@ -25,7 +42,13 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
   case LISP_NIL_T:
     // Producers: nil, ()
 
-    sb_append_static_str(builder, "<nil>");
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, "<");
+
+    sb_append_static_str(builder, "nil");
+
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, ">");
 
     break;
 
@@ -34,16 +57,26 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
 
     assert(lisp_is_valid_type(value->ref_type));
 
-    sb_append_static_str(builder, "<type `");
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, "<type `");
+
     sb_append_cstr(builder, lisp_type_syms[value->ref_type]);
-    sb_append_static_str(builder, "`>");
+
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, "`>");
 
     break;
 
   case LISP_BOOL_T:
     // Producers: true, false
 
-    sb_append_cstr(builder, value->boolean ? "<true>" : "<false>");
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, "<");
+
+    sb_append_cstr(builder, value->boolean ? "true" : "false");
+
+    if (formatting == FORMAT_BASIC)
+      sb_append_static_str(builder, ">");
 
     break;
 
@@ -54,9 +87,11 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
     // printing errors with better descriptions. Or a new
     // `lisp_format_desc_error` function could be implemented.
 
-    sb_append_static_str(builder, "<error ");
-    lisp_value_format(builder, value->item);
-    sb_append_static_str(builder, ">");
+    da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
+    sb_append_static_str(builder, "error ");
+    lisp_value_format(builder, value->item, formatting);
+    da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
+
     break;
 
   case LISP_STRING_T:
@@ -71,7 +106,13 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
   case LISP_SYMBOL_T:
     // Producers: (quote SYMBOL)
 
+    if (formatting == FORMAT_PRODUCER)
+      sb_append_static_str(builder, "(quote ");
+
     sb_append_cstr(builder, value->symbol);
+
+    if (formatting == FORMAT_PRODUCER)
+      sb_append_static_str(builder, ")");
 
     break;
 
@@ -88,47 +129,95 @@ void lisp_value_format(StringBuilder *builder, LispValue value) {
   case LISP_BUILTIN_FUNC_T:
     // Producers: BUILTIN_SYM
 
-    if (value->builtin_function->is_macro)
-      sb_append_static_str(builder, "<builtin-macro `");
-    else
-      sb_append_static_str(builder, "<builtin-fn `");
+    if (formatting == FORMAT_PRODUCER) {
+      sb_append_cstr(builder, value->builtin_function->name);
 
-    sb_append_cstr(builder, value->builtin_function->name);
-    sb_append_static_str(builder, "`>");
+    } else {
+      if (value->builtin_function->is_macro)
+        sb_append_static_str(builder, "<builtin-macro `");
+      else
+        sb_append_static_str(builder, "<builtin-fn `");
+
+      sb_append_cstr(builder, value->builtin_function->name);
+      sb_append_static_str(builder, "`>");
+    }
+
     break;
 
   case LISP_FUNC_T:
     // Producers: (fn ARGS BODY...)
 
-    if (value->custom_function->is_macro)
-      sb_append_static_str(builder, "<macro ");
-    else
-      sb_append_static_str(builder, "<fn ");
+    da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
 
-    lisp_value_format(builder, value->custom_function->args);
-    sb_append_static_str(builder, ">");
+    if (value->custom_function->is_macro)
+      sb_append_static_str(builder, "macro ");
+    else
+      sb_append_static_str(builder, "fn ");
+
+    sb_append_static_str(builder, "(");
+    if (value->custom_function->args->type != LISP_NIL_T) {
+      LispValue remaining_args = value->custom_function->args;
+
+      while (remaining_args->cons.tail->type == LISP_LIST_T) {
+        sb_append_cstr(builder, remaining_args->cons.head->symbol);
+        sb_append_static_str(builder, " ");
+        remaining_args = remaining_args->cons.tail;
+      }
+      assert(remaining_args->cons.tail->type == LISP_NIL_T);
+
+      if (value->custom_function->variadic)
+        sb_append_static_str(builder, "(rest ");
+
+      sb_append_cstr(builder, remaining_args->cons.head->symbol);
+
+      if (value->custom_function->variadic)
+        sb_append_static_str(builder, ")");
+    }
+    sb_append_static_str(builder, ")");
+
+    if (formatting == FORMAT_PRODUCER) {
+      value = value->custom_function->body;
+      assert(value->type == LISP_LIST_T);
+
+      sb_append_static_str(builder, " ");
+      lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
+
+      while (value->cons.tail->type == LISP_LIST_T) {
+        value = value->cons.tail;
+
+        sb_append_static_str(builder, " ");
+        lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
+      }
+
+      assert(value->cons.tail->type == LISP_NIL_T);
+    }
+
+    da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
     break;
 
   case LISP_UNPACKED_T:
     // Producers: (unpack ITEM)
 
-    sb_append_static_str(builder, "<unpacked ");
-    lisp_value_format(builder, value->item);
-    sb_append_static_str(builder, ">");
+    da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
+    if (formatting)
+      sb_append_static_str(builder, "unpack ");
+    else
+      sb_append_static_str(builder, "unpacked ");
+
+    lisp_value_format(builder, value->item, formatting);
+    da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
     break;
 
   case LISP_LIST_T:
     // Producers: (list [LIST_ITEMS...])
 
     sb_append_static_str(builder, "(");
-    lisp_value_format(builder, value->cons.head);
 
-    while (value->cons.tail->type != LISP_NIL_T) {
-      value = value->cons.tail;
+    if (formatting)
+      sb_append_static_str(builder, "list ");
 
-      sb_append_static_str(builder, " ");
-      lisp_value_format(builder, value->cons.head);
-    }
+    lisp_format_items(builder, value, formatting);
+
     sb_append_static_str(builder, ")");
     break;
 
@@ -155,7 +244,10 @@ char *lisp_vformat(const char *format, va_list va) {
       da_append(&builder, c);
       break;
     case 'l':
-      lisp_value_format(&builder, va_arg(va, LispValue));
+      lisp_value_format(&builder, va_arg(va, LispValue), FORMAT_BASIC);
+      break;
+    case 'L':
+      lisp_value_format(&builder, va_arg(va, LispValue), FORMAT_PRODUCER);
       break;
     case 's': {
       char *arg = va_arg(va, char *);

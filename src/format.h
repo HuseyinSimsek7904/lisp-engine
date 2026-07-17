@@ -5,7 +5,12 @@
 
 #include "lisp_value.h"
 
-void lisp_value_format(StringBuilder *builder, LispValue value);
+typedef enum {
+  FORMAT_BASIC,
+  FORMAT_PRODUCER,
+} FormattingType;
+
+void lisp_value_format(StringBuilder *builder, LispValue value, FormattingType producer);
 void lisp_fprintf(FILE *file, const char *format, ...);
 void lisp_printf(const char *format, ...);
 

@@ -27,7 +27,7 @@
 (assert-eq (format "%s, %s" "hello" "world") "hello, world")
 (assert-eq (format "%l, %l" "hello" "world") "\"hello\", \"world\"")
 
-;; Test all formats.
+;; Test all types for basic formatting.
 (assert-eq (format "%l" nil) "<nil>")
 
 (assert-eq (format "%l" true) "<true>")
@@ -54,14 +54,14 @@
 (assert-eq (format "%l" format) "<builtin-fn `format`>")
 (assert-eq (format "%l" print) "<builtin-fn `print`>")
 
-(assert-eq (format "%l" (fn () nil)) "<fn <nil>>")
+(assert-eq (format "%l" (fn () nil)) "<fn ()>")
 (assert-eq (format "%l" (fn (a) nil)) "<fn (a)>")
 (assert-eq (format "%l" (fn (a b) nil)) "<fn (a b)>")
 (assert-eq (format "%l" (fn (a b c) nil)) "<fn (a b c)>")
-(assert-eq (format "%l" (fn ((rest r)) nil)) "<fn (r)>")
-(assert-eq (format "%l" (fn (a (rest r)) nil)) "<fn (a r)>")
-(assert-eq (format "%l" (fn (a b (rest r)) nil)) "<fn (a b r)>")
-(assert-eq (format "%l" (fn (a b c (rest r)) nil)) "<fn (a b c r)>")
+(assert-eq (format "%l" (fn ((rest r)) nil)) "<fn ((rest r))>")
+(assert-eq (format "%l" (fn (a (rest r)) nil)) "<fn (a (rest r))>")
+(assert-eq (format "%l" (fn (a b (rest r)) nil)) "<fn (a b (rest r))>")
+(assert-eq (format "%l" (fn (a b c (rest r)) nil)) "<fn (a b c (rest r))>")
 
 (assert-eq (format "%l" (list)) "<nil>")
 (assert-eq (format "%l" (list 1)) "(1)")
@@ -79,3 +79,5 @@
 (assert-eq (format "%l" "hello") "\"hello\"")
 (assert-eq (format "%l" "\a\b\t\n\v\r\e\"\'") "\"\\a\\b\\t\\n\\v\\r\\e\\\"\\\'\"")
 (assert-eq (format "%l" "\x00\x1a\x12\x13") "\"\\x00\\x1a\\x12\\x13\"")
+
+;; Testing of producer formatting is performed in tests/format_identity.l.

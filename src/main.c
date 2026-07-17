@@ -486,7 +486,19 @@ DEFINE_BUILTIN(format) {
 
       assert(remaining_args->type == LISP_LIST_T);
 
-      lisp_value_format(&builder, remaining_args->cons.head);
+      lisp_value_format(&builder, remaining_args->cons.head, FORMAT_BASIC);
+      remaining_args = remaining_args->cons.tail;
+    } break;
+
+    case 'L': {
+      if (remaining_args->type == LISP_NIL_T) {
+        da_free(&builder);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+      }
+
+      assert(remaining_args->type == LISP_LIST_T);
+
+      lisp_value_format(&builder, remaining_args->cons.head, FORMAT_PRODUCER);
       remaining_args = remaining_args->cons.tail;
     } break;
 
