@@ -30,10 +30,10 @@ char *lexer_result_syms[] = {
     [LEXER_INTEGER_TOO_LARGE] = "lexer:integer-literal-too-large",
 };
 
-LispValue _lisp_init(_LispValue *value) {
+LispValue _lisp_init(LispType type) {
   LispValue ptr = malloc(sizeof(_LispValue));
   assert(ptr);
-  *ptr = *value;
+  ptr->type = type;
 
   if (debug_flags & DEBUG_PRINT_INIT) {
     lisp_fprintf(stderr, "init: %l\n", ptr);
@@ -110,17 +110,6 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   return false;
 }
 
-LispValue lisp_make_error(LispValue item) {
-  return _lisp_init(&(_LispValue){.type = LISP_ERROR_T, .item = item});
-}
-
-LispValue lisp_make_cons(LispValue head, LispValue tail) {
-  assert(lisp_is_list(tail));
-
-  return _lisp_init(
-      &(_LispValue){.type = LISP_LIST_T, .cons = {.head = head, .tail = tail}});
-}
-
 LispValue lisp_make_list(size_t count, ...) {
   LispValue list = LISP_NIL;
   LispValue *last = &list;
@@ -136,25 +125,6 @@ LispValue lisp_make_list(size_t count, ...) {
   va_end(va);
 
   return list;
-}
-
-LispValue lisp_make_unpacked(LispValue item) {
-  return _lisp_init(&(_LispValue){.type = LISP_UNPACKED_T, .item = item});
-}
-
-LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
-                                bool is_macro) {
-  _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
-  assert(fn);
-
-  *fn = (_LispCustomFunction){
-      .is_macro = is_macro,
-      .args = args,
-      .variadic = variadic,
-      .body = body,
-  };
-
-  return _lisp_init(&(_LispValue){.type = LISP_FUNC_T, .custom_function = fn});
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {
@@ -238,7 +208,7 @@ LispValue parse_pp_list(LispValue lisp) {
       do {
         if (lisp_is_nil(iter))
           return lisp_make_error(
-              lisp_make_cons(SYM_TO_LISP(PARSER_QUOTE_END), LISP_NIL));
+              lisp_make_cons(lisp_make_sym(PARSER_QUOTE_END), LISP_NIL));
 
         assert(lisp_is_non_empty_list(iter));
 
@@ -251,7 +221,7 @@ LispValue parse_pp_list(LispValue lisp) {
       // Nest quote lists.
       LispValue result = item;
       while (count--) {
-        result = lisp_make_cons(SYM_TO_LISP("quote"),
+        result = lisp_make_cons(lisp_make_sym("quote"),
                                 lisp_make_cons(result, LISP_NIL));
       }
 
@@ -287,7 +257,7 @@ LispValue parse(Token *tokens, size_t token_count) {
     case T_R_PAREN:
       if (depth <= 0)
         return lisp_make_error(
-            lisp_make_cons(SYM_TO_LISP(PARSER_TOO_MANY_R_PAREN), LISP_NIL));
+            lisp_make_cons(lisp_make_sym(PARSER_TOO_MANY_R_PAREN), LISP_NIL));
 
       depth--;
       last = &lisp;
@@ -318,19 +288,19 @@ LispValue parse(Token *tokens, size_t token_count) {
       continue;
 
     case T_INT64:
-      pn = INT64_TO_LISP(t.integer);
+      pn = lisp_make_int64(t.integer);
       break;
 
     case T_STRING:
-      pn = STR_TO_LISP(t.string);
+      pn = lisp_make_str(t.string);
       break;
 
     case T_SYMBOL:
-      pn = SYM_TO_LISP(t.symbol);
+      pn = lisp_make_sym(t.symbol);
       break;
 
     case T_QUOTE:
-      pn = SYM_TO_LISP("\'");
+      pn = lisp_make_sym("\'");
       break;
     }
 
@@ -340,7 +310,7 @@ LispValue parse(Token *tokens, size_t token_count) {
 
   if (depth > 0)
     return lisp_make_error(
-        lisp_make_cons(SYM_TO_LISP(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
+        lisp_make_cons(lisp_make_sym(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
 
   return parse_pp_list(lisp);
 }

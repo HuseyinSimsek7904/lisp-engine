@@ -1,6 +1,7 @@
 #ifndef LISP_VALUE_H
 #define LISP_VALUE_H
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -105,27 +106,9 @@ extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;
 extern LispValue LISP_FALSE;
 
-#define BOOL_TO_LISP(x) x ? LISP_TRUE : LISP_FALSE
-
-// TODO: Types should be singletons.
-#define TYPE_TO_LISP(x)                                                        \
-  _lisp_init(&(_LispValue){.type = LISP_TYPE_T, .ref_type = x})
-
-#define INT64_TO_LISP(x)                                                       \
-  _lisp_init(&(_LispValue){.type = LISP_INT64_T, .integer = x})
-
-#define STATIC_STR_TO_LISP(x)                                                  \
-  _lisp_init(&(_LispValue){                                                    \
-      .type = LISP_STRING_T,                                                   \
-      .string = {.array = strdup((x)), .size = sizeof((x)) - 1}})
-
-#define STR_TO_LISP(v)                                                         \
-  _lisp_init(&(_LispValue){.type = LISP_STRING_T, .string = v})
-
-#define SYM_TO_LISP(x)                                                         \
-  _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})
-
-LispValue _lisp_init(_LispValue *value);
+static inline LispValue lisp_make_bool(bool boolean) {
+  return boolean ? LISP_TRUE : LISP_FALSE;
+}
 
 static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
 static inline bool lisp_is_non_empty_list(LispValue value) {
@@ -135,19 +118,86 @@ static inline bool lisp_is_list(LispValue value) {
   return lisp_is_nil(value) || lisp_is_non_empty_list(value);
 }
 
+LispValue _lisp_init(LispType type);
+
+static inline LispValue lisp_make_error(LispValue item) {
+  LispValue value = _lisp_init(LISP_ERROR_T);
+  value->item = item;
+  return value;
+}
+
+static inline LispValue lisp_make_cons(LispValue head, LispValue tail) {
+  assert(lisp_is_list(tail));
+
+  LispValue value = _lisp_init(LISP_LIST_T);
+  value->cons.head = head;
+  value->cons.tail = tail;
+  return value;
+}
+
+static inline LispValue lisp_make_unpacked(LispValue item) {
+  assert(lisp_is_list(item));
+
+  LispValue value = _lisp_init(LISP_UNPACKED_T);
+  value->item = item;
+  return value;
+}
+
+static inline LispValue lisp_make_fn_or_macro(LispValue args, LispValue body,
+                                              bool variadic, bool is_macro) {
+  _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
+  assert(fn);
+
+  *fn = (_LispCustomFunction){
+      .is_macro = is_macro,
+      .args = args,
+      .variadic = variadic,
+      .body = body,
+  };
+
+  LispValue value = _lisp_init(LISP_FUNC_T);
+  value->custom_function = fn;
+  return value;
+}
+
+// TODO: Types should be singletons.
+static inline LispValue lisp_make_type(LispType ref_type) {
+  LispValue value = _lisp_init(LISP_TYPE_T);
+  value->ref_type = ref_type;
+  return value;
+};
+
+static inline LispValue lisp_make_int64(int64_t integer) {
+  LispValue value = _lisp_init(LISP_INT64_T);
+  value->integer = integer;
+  return value;
+}
+
+static inline LispValue lisp_make_str(StringView string) {
+  LispValue value = _lisp_init(LISP_STRING_T);
+  value->string = string;
+  return value;
+}
+
+static inline LispValue lisp_make_cstr(const char *string) {
+  return lisp_make_str(
+      (StringView){.array = (char *)string, .size = strlen(string)});
+}
+
+static inline LispValue lisp_make_sym(char *symbol) {
+  LispValue value = _lisp_init(LISP_SYMBOL_T);
+  value->symbol = symbol;
+  return value;
+}
+
+LispValue lisp_make_list(size_t count, ...);
+
 bool lisp_is_valid_type(LispType value);
 bool lisp_is_ident(LispValue a, LispValue b);
 
 static inline bool lisp_is_sym(LispValue value, const char *symbol) {
   return value->type == LISP_SYMBOL_T && !strcmp(value->symbol, symbol);
 }
-
-LispValue lisp_make_error(LispValue item);
-LispValue lisp_make_cons(LispValue head, LispValue tail);
-LispValue lisp_make_list(size_t count, ...);
-LispValue lisp_make_unpacked(LispValue item);
-LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
-                                bool is_macro);
 
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
@@ -180,7 +230,7 @@ EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 #define ERROR(s, n, ...)                                                       \
-  lisp_make_error(lisp_make_list(n + 1, SYM_TO_LISP(s), __VA_ARGS__))
+  lisp_make_error(lisp_make_list(n + 1, lisp_make_sym(s), __VA_ARGS__))
 
 #define WRONG_NUMBER_ARGS_SYM "wrong-number-of-args-to-builtin"
 #define TOO_FEW_ARGS_SYM "too-few-args-to-builtin"
@@ -215,6 +265,6 @@ extern char *lexer_result_syms[];
 
 #define RETURN_COULD_NOT_GEN_TOKENS(r)                                         \
   return lisp_make_error(                                                      \
-      lisp_make_cons(SYM_TO_LISP(lexer_result_syms[r]), LISP_NIL))
+      lisp_make_cons(lisp_make_sym(lexer_result_syms[r]), LISP_NIL))
 
 #endif

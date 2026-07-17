@@ -50,7 +50,8 @@ LispValue lisp_builtin_debug_list_env;
   LispValue builtin_##n(LispValue args, Environment *env)
 
 #define RETURN_WRONG_NUMBER_ARGS(m, n, g, c)                                   \
-  return ERROR(m, 3, lisp_builtin_##n, INT64_TO_LISP(argc), INT64_TO_LISP(c));
+  return ERROR(m, 3, lisp_builtin_##n, lisp_make_int64(argc),                  \
+               lisp_make_int64(c));
 
 #define RETURN_INVALID_ARG(n, v, m)                                            \
   return ERROR(WRONG_TYPE_ARG_SYM, 3, n, v, m);
@@ -79,7 +80,7 @@ LispValue lisp_builtin_debug_list_env;
 #define CHECK_ARG_TYPE(n, v, t)                                                \
   do {                                                                         \
     if (v->type != t)                                                          \
-      RETURN_INVALID_ARG(lisp_builtin_##n, v, TYPE_TO_LISP(t));                \
+      RETURN_INVALID_ARG(lisp_builtin_##n, v, lisp_make_type(t));              \
   } while (false)
 
 #define ARG0 args->cons.head
@@ -146,7 +147,7 @@ DEFINE_BUILTIN(let) {
       if (lisp_get_len(def_node) != 2)
         return ERROR(
             WRONG_TYPE_ARG_SYM, 3, lisp_builtin_let, def_node,
-            STATIC_STR_TO_LISP(
+            lisp_make_cstr(
                 "`let` binding list must be a list of key-value pairs"));
 
       CHECK_ARG_TYPE(let, def_node->cons.head, LISP_SYMBOL_T);
@@ -166,7 +167,7 @@ DEFINE_BUILTIN(let) {
     assert(lisp_is_nil(remaining_defs));
 
   } else if (!lisp_is_nil(ARG0))
-    RETURN_INVALID_ARG(lisp_builtin_let, ARG0, TYPE_TO_LISP(LISP_LIST_T));
+    RETURN_INVALID_ARG(lisp_builtin_let, ARG0, lisp_make_type(LISP_LIST_T));
 
   LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
 
@@ -195,9 +196,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                              LispValue builtin, bool is_macro) {
   size_t argc = lisp_get_len(args);
   if (argc < 2)
-    return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(TOO_FEW_ARGS_SYM),
-                                          builtin, INT64_TO_LISP(argc),
-                                          INT64_TO_LISP(2)));
+    return lisp_make_error(lisp_make_list(4, lisp_make_sym(TOO_FEW_ARGS_SYM),
+                                          builtin, lisp_make_int64(argc),
+                                          lisp_make_int64(2)));
 
   bool variadic = false;
   LispValue arg_symbols = LISP_NIL;
@@ -214,8 +215,8 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       if (arg->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
-            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STATIC_STR_TO_LISP(
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
@@ -229,22 +230,22 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
     if (lisp_is_non_empty_list(arg)) {
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list(
-            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STATIC_STR_TO_LISP(
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
       if (!lisp_is_sym(arg->cons.head, "rest"))
         return lisp_make_error(lisp_make_list(
-            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STATIC_STR_TO_LISP(
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
       if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
         return lisp_make_error(lisp_make_list(
-            4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-            STATIC_STR_TO_LISP(
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
@@ -257,15 +258,15 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
     } else
       return lisp_make_error(lisp_make_list(
-          4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
-          STATIC_STR_TO_LISP(
+          4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+          lisp_make_cstr(
               "argument list must be in the form ([SYMBOL...] [(rest "
               "SYMBOL)])")));
 
   } else if (!lisp_is_nil(ARG0))
-    return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM),
+    return lisp_make_error(lisp_make_list(4, lisp_make_sym(WRONG_TYPE_ARG_SYM),
                                           builtin, ARG0,
-                                          TYPE_TO_LISP(LISP_LIST_T)));
+                                          lisp_make_type(LISP_LIST_T)));
 
   return lisp_make_fn_or_macro(arg_symbols, args->cons.tail, variadic,
                                is_macro);
@@ -322,7 +323,7 @@ DEFINE_BUILTIN(sum) {
     sum += arg->integer;
   }
 
-  return INT64_TO_LISP(sum);
+  return lisp_make_int64(sum);
   assert(lisp_is_nil(remaining_args));
 }
 
@@ -339,8 +340,8 @@ DEFINE_BUILTIN(neg_or_sub) {
   if (arg_count > 1)
     CHECK_ARG_TYPE(neg_or_sub, ARG1, LISP_INT64_T);
 
-  return INT64_TO_LISP(arg_count == 1 ? -ARG0->integer
-                                      : ARG0->integer - ARG1->integer);
+  return lisp_make_int64(arg_count == 1 ? -ARG0->integer
+                                        : ARG0->integer - ARG1->integer);
 }
 
 DEFINE_BUILTIN(list) { return args; }
@@ -351,7 +352,7 @@ DEFINE_BUILTIN(list) { return args; }
 DEFINE_BUILTIN(equal) {
   REQUIRES_EQ_ARGS(equal, 2);
 
-  return BOOL_TO_LISP(lisp_is_ident(ARG0, ARG1));
+  return lisp_make_bool(lisp_is_ident(ARG0, ARG1));
 }
 
 // TODO: This builtin should allow for any number of arguments except zero and
@@ -362,7 +363,7 @@ DEFINE_BUILTIN(less_than) {
   CHECK_ARG_TYPE(less_than, ARG0, LISP_INT64_T);
   CHECK_ARG_TYPE(less_than, ARG1, LISP_INT64_T);
 
-  return BOOL_TO_LISP(ARG0->integer < ARG1->integer);
+  return lisp_make_bool(ARG0->integer < ARG1->integer);
 }
 
 DEFINE_BUILTIN(read_file) {
@@ -377,7 +378,7 @@ DEFINE_BUILTIN(read_file) {
   if (!buffer.array)
     RETURN_COULD_NOT_READ_FILE(ARG0);
 
-  return STR_TO_LISP(buffer);
+  return lisp_make_str(buffer);
 }
 
 DEFINE_BUILTIN(parse_lisp) {
@@ -413,7 +414,7 @@ DEFINE_BUILTIN(unpack) {
     remaining_args = remaining_args->cons.tail;
 
     if (!lisp_is_list(arg))
-      RETURN_INVALID_ARG(lisp_builtin_unpack, arg, TYPE_TO_LISP(LISP_LIST_T));
+      RETURN_INVALID_ARG(lisp_builtin_unpack, arg, lisp_make_type(LISP_LIST_T));
 
     *last = arg;
     last = lisp_cons_find_term_nil(last);
@@ -447,7 +448,7 @@ DEFINE_BUILTIN(tail) {
 DEFINE_BUILTIN(typeof) {
   REQUIRES_EQ_ARGS(typeof, 1);
 
-  return TYPE_TO_LISP(ARG0->type);
+  return lisp_make_type(ARG0->type);
 }
 
 DEFINE_BUILTIN(error) {
@@ -516,7 +517,7 @@ DEFINE_BUILTIN(format) {
       if (remaining_args->cons.head->type != LISP_STRING_T) {
         da_free(&builder);
         return ERROR(WRONG_TYPE_ARG_FORMAT_SYM, 2, remaining_args->cons.head,
-                     TYPE_TO_LISP(LISP_STRING_T));
+                     lisp_make_type(LISP_STRING_T));
       }
 
       sb_append_view(&builder, remaining_args->cons.head->string);
@@ -529,7 +530,7 @@ DEFINE_BUILTIN(format) {
     }
   }
 
-  return STR_TO_LISP(sb_to_sv(&builder));
+  return lisp_make_str(sb_to_sv(&builder));
 }
 
 DEFINE_BUILTIN(cons) {
@@ -550,7 +551,7 @@ DEFINE_BUILTIN(read_line) {
   free(prompt);
 
   StringView view = {.array = read, .size = strlen(read)};
-  return STR_TO_LISP(view);
+  return lisp_make_str(view);
 }
 
 // TODO: This should expect a list of symbols, where each symbol is a flag.
