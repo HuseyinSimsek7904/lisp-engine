@@ -42,6 +42,7 @@ LispValue lisp_builtin_if;
 LispValue lisp_builtin_do;
 LispValue lisp_builtin_format;
 LispValue lisp_builtin_cons;
+LispValue lisp_builtin_read_line;
 LispValue lisp_builtin_debug_set_flags;
 LispValue lisp_builtin_debug_list_env;
 
@@ -531,6 +532,18 @@ DEFINE_BUILTIN(cons) {
   return lisp_make_cons(ARG0, ARG1);
 }
 
+DEFINE_BUILTIN(read_line) {
+  REQUIRES_EQ_ARGS(read_line, 1);
+  CHECK_ARG_TYPE(read_line, ARG0, LISP_STRING_T);
+
+  char *prompt = sv_copy_cstr(ARG0->string);
+  char *read = readline(prompt);
+  free(prompt);
+
+  StringView view = {.array = read, .size = strlen(read)};
+  return STR_TO_LISP(view);
+}
+
 // TODO: This should expect a list of symbols, where each symbol is a flag.
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
@@ -621,6 +634,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("error", error, false, false);
   DEFINE_BUILTIN_FUNCTION("format", format, false, false);
   DEFINE_BUILTIN_FUNCTION("cons", cons, false, false);
+  DEFINE_BUILTIN_FUNCTION("read-line", read_line, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
