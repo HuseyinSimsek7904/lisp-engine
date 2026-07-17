@@ -125,10 +125,17 @@ extern LispValue LISP_FALSE;
 #define SYM_TO_LISP(x)                                                         \
   _lisp_init(&(_LispValue){.type = LISP_SYMBOL_T, .symbol = x})
 
-bool lisp_is_valid_type(LispType value);
-
 LispValue _lisp_init(_LispValue *value);
 
+static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
+static inline bool lisp_is_non_empty_list(LispValue value) {
+  return value->type == LISP_LIST_T;
+}
+static inline bool lisp_is_list(LispValue value) {
+  return lisp_is_nil(value) || lisp_is_non_empty_list(value);
+}
+
+bool lisp_is_valid_type(LispType value);
 bool lisp_is_ident(LispValue a, LispValue b);
 
 static inline bool lisp_is_sym(LispValue value, const char *symbol) {

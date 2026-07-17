@@ -32,7 +32,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
     if (arg->type == LISP_UNPACKED_T) {
-      assert(arg->item->type == LISP_LIST_T || arg->item->type == LISP_NIL_T);
+      assert(lisp_is_list(arg->item));
       *last = arg->item;
       last = lisp_cons_find_term_nil(last);
 
@@ -114,7 +114,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         *new_env = (Environment){.other = env};
         da_init(new_env);
 
-        if (callable->custom_function->args->type == LISP_NIL_T) {
+        if (lisp_is_nil(callable->custom_function->args)) {
           if (args->type != LISP_NIL_T) {
             roll_env_back(env, original);
             return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
@@ -124,13 +124,13 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           LispValue remaining_args = args;
           LispValue remaining_func_args = callable->custom_function->args;
 
-          while (remaining_func_args->cons.tail->type == LISP_LIST_T) {
-            if (remaining_args->type == LISP_NIL_T) {
+          while (lisp_is_non_empty_list(remaining_func_args->cons.tail)) {
+            if (lisp_is_nil(remaining_args)) {
               roll_env_back(env, original);
               return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            assert(remaining_func_args->type == LISP_LIST_T);
+            assert(lisp_is_non_empty_list(remaining_func_args));
             assert(remaining_func_args->cons.head->type == LISP_SYMBOL_T);
 
             env_set_shallow(new_env, remaining_func_args->cons.head->symbol,
@@ -146,12 +146,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           if (callable->custom_function->variadic) {
             env_set_shallow(new_env, last_func_arg->symbol, remaining_args);
           } else {
-            if (remaining_args->type == LISP_NIL_T) {
+            if (lisp_is_nil(remaining_args)) {
               roll_env_back(env, original);
               return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            if (remaining_args->cons.tail->type != LISP_NIL_T) {
+            if (!lisp_is_nil(remaining_args->cons.tail)) {
               roll_env_back(env, original);
               return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
@@ -181,19 +181,19 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 }
 
 LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
-  if (lisp->type == LISP_NIL_T)
+  if (lisp_is_nil(lisp))
     return LISP_NIL;
 
-  assert(lisp->type == LISP_LIST_T);
+  assert(lisp_is_non_empty_list(lisp));
 
-  while (lisp->cons.tail->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(lisp->cons.tail)) {
     LispValue return_value = evaluate_lisp(lisp->cons.head, env);
     lisp = lisp->cons.tail;
 
     if (return_value->type == LISP_ERROR_T)
       return return_value;
   }
-  assert(lisp->cons.tail->type == LISP_NIL_T);
+  assert(lisp_is_nil(lisp->cons.tail));
 
   if (tail_call)
     return lisp->cons.head;

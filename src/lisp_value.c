@@ -84,7 +84,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
       a = a->cons.tail;
       b = b->cons.tail;
-    } while (a->type == LISP_LIST_T && b->type == LISP_LIST_T);
+    } while (lisp_is_non_empty_list(a) && lisp_is_non_empty_list(b));
 
     return a->type == b->type;
 
@@ -115,7 +115,7 @@ LispValue lisp_make_error(LispValue item) {
 }
 
 LispValue lisp_make_cons(LispValue head, LispValue tail) {
-  assert(tail->type == LISP_LIST_T || tail->type == LISP_NIL_T);
+  assert(lisp_is_list(tail));
 
   return _lisp_init(
       &(_LispValue){.type = LISP_LIST_T, .cons = {.head = head, .tail = tail}});
@@ -168,14 +168,14 @@ LispValue lisp_consify_array(LispValue *array, size_t size) {
 }
 
 LispValue lisp_head(LispValue lisp) {
-  if (lisp->type == LISP_LIST_T)
+  if (lisp_is_non_empty_list(lisp))
     return lisp->cons.head;
 
   return NULL;
 }
 
 LispValue lisp_tail(LispValue lisp) {
-  if (lisp->type == LISP_LIST_T)
+  if (lisp_is_non_empty_list(lisp))
     return lisp->cons.tail;
 
   return NULL;
@@ -183,7 +183,7 @@ LispValue lisp_tail(LispValue lisp) {
 
 LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
   while ((*lisp)->type != LISP_NIL_T) {
-    assert((*lisp)->type == LISP_LIST_T);
+    assert(lisp_is_non_empty_list(*lisp));
     lisp = &((*lisp)->cons.tail);
   }
 
@@ -192,39 +192,38 @@ LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
 
 size_t lisp_get_len(LispValue lisp) {
   size_t count = 0;
-  for (; lisp->type == LISP_LIST_T; count++) {
-    assert(lisp->type == LISP_LIST_T);
+  for (; lisp_is_non_empty_list(lisp); count++) {
     lisp = lisp->cons.tail;
   }
 
-  assert(lisp->type == LISP_NIL_T);
+  assert(lisp_is_nil(lisp));
 
   return count;
 }
 
 LispValue lisp_lappend(LispValue lisp, LispValue value) {
-  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
+  assert(lisp_is_list(lisp));
   return lisp_make_cons(value, lisp);
 }
 
 LispValue lisp_rappend(LispValue lisp, LispValue value) {
-  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
+  assert(lisp_is_list(lisp));
   LispValue *last = lisp_cons_find_term_nil(&lisp);
   lisp_rappend_use_last(last, value);
   return lisp;
 }
 
 LispValue lisp_rappend_use_last(LispValue *last, LispValue value) {
-  assert((*last)->type == LISP_NIL_T);
+  assert(lisp_is_nil((*last)));
   *last = lisp_make_cons(value, LISP_NIL);
   return *last;
 }
 
 LispValue parse_pp_list(LispValue lisp) {
-  assert(lisp->type == LISP_LIST_T || lisp->type == LISP_NIL_T);
+  assert(lisp_is_list(lisp));
 
   LispValue remaining_lisp = lisp;
-  while (remaining_lisp->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(remaining_lisp)) {
     LispValue item = remaining_lisp->cons.head;
 
     if (lisp_is_sym(item, "'")) {
@@ -237,11 +236,11 @@ LispValue parse_pp_list(LispValue lisp) {
 
       // Count the number of quote symbols.
       do {
-        if (iter->type == LISP_NIL_T)
+        if (lisp_is_nil(iter))
           return lisp_make_error(
               lisp_make_cons(SYM_TO_LISP(PARSER_QUOTE_END), LISP_NIL));
 
-        assert(iter->type == LISP_LIST_T);
+        assert(lisp_is_non_empty_list(iter));
 
         count++;
 
@@ -262,7 +261,7 @@ LispValue parse_pp_list(LispValue lisp) {
 
     remaining_lisp = remaining_lisp->cons.tail;
   }
-  assert(remaining_lisp->type == LISP_NIL_T);
+  assert(lisp_is_nil(remaining_lisp));
 
   return lisp;
 }
@@ -294,19 +293,19 @@ LispValue parse(Token *tokens, size_t token_count) {
       last = &lisp;
 
       for (size_t i = 0; i < depth; i++) {
-        while ((*last)->cons.tail->type == LISP_LIST_T) {
+        while (lisp_is_non_empty_list((*last)->cons.tail)) {
           last = &((*last)->cons.tail);
         }
 
-        assert((*last)->cons.tail->type == LISP_NIL_T);
+        assert(lisp_is_nil((*last)->cons.tail));
         last = &((*last)->cons.head);
       }
 
-      assert((*last)->type == LISP_LIST_T);
-      while ((*last)->cons.tail->type == LISP_LIST_T) {
+      assert(lisp_is_non_empty_list(*last));
+      while (lisp_is_non_empty_list((*last)->cons.tail)) {
         last = &((*last)->cons.tail);
       }
-      assert((*last)->cons.tail->type == LISP_NIL_T);
+      assert(lisp_is_nil((*last)->cons.tail));
 
       LispValue pp = parse_pp_list((*last)->cons.head);
 
