@@ -11,6 +11,8 @@
 #include "core.h"
 #include "lexer.h"
 
+// TODO: Implement LISP_WITH_META_T, which can be used to pass metadata along
+// with data.
 typedef enum {
   LISP_NIL_T = 0,
   LISP_TYPE_T,
