@@ -1,6 +1,6 @@
 (include "core/assert.l")
 
-;; `let` structure: (let [LIST...])
+;; `let` structure: (let ([(SYMBOL VALUE)...]) BODY...)
 
 ;; Wrong number of arguments.
 (assert-eq (let)
