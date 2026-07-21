@@ -113,6 +113,11 @@ static inline bool lisp_is_type(LispValue value, LispType type) {
   return lisp_get_type(value) == type;
 }
 
+static inline StringView lisp_get_str(LispValue value) {
+  assert(lisp_is_type(value, LISP_STRING_T));
+  return value->string;
+}
+
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
 }

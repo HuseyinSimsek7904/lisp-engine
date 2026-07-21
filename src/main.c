@@ -302,7 +302,7 @@ DEFINE_BUILTIN(print) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    lisp_printf("%s\n", arg->string);
+    lisp_printf("%s\n", lisp_get_str(arg));
   }
 
   assert(lisp_is_nil(remaining_args));
@@ -370,7 +370,7 @@ DEFINE_BUILTIN(read_file) {
   REQUIRES_EQ_ARGS(read_file, 1);
   CHECK_ARG_TYPE(read_file, ARG0, LISP_STRING_T);
 
-  char *file_name = sv_copy_cstr(ARG0->string);
+  char *file_name = sv_copy_cstr(lisp_get_str(ARG0));
   StringView buffer = read_file_sv(file_name);
 
   free(file_name);
@@ -387,7 +387,7 @@ DEFINE_BUILTIN(parse_lisp) {
 
   Tokens tokens;
   da_init(&tokens);
-  LexerResult lexer_result = generate_tokens(ARG0->string, &tokens);
+  LexerResult lexer_result = generate_tokens(lisp_get_str(ARG0), &tokens);
 
   if (lexer_result)
     RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
@@ -464,7 +464,7 @@ DEFINE_BUILTIN(format) {
   StringBuilder builder;
   da_init(&builder);
 
-  StringView format_str = ARG0->string;
+  StringView format_str = lisp_get_str(ARG0);
   LispValue remaining_args = args->cons.tail;
 
   while (format_str.size) {
@@ -520,7 +520,7 @@ DEFINE_BUILTIN(format) {
                      lisp_make_type(LISP_STRING_T));
       }
 
-      sb_append_view(&builder, remaining_args->cons.head->string);
+      sb_append_view(&builder, lisp_get_str(remaining_args->cons.head));
       remaining_args = remaining_args->cons.tail;
     } break;
 
@@ -546,7 +546,7 @@ DEFINE_BUILTIN(read_line) {
   REQUIRES_EQ_ARGS(read_line, 1);
   CHECK_ARG_TYPE(read_line, ARG0, LISP_STRING_T);
 
-  char *prompt = sv_copy_cstr(ARG0->string);
+  char *prompt = sv_copy_cstr(lisp_get_str(ARG0));
   char *read = readline(prompt);
   free(prompt);
 

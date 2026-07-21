@@ -86,6 +86,17 @@ static inline char sv_pop_left(StringView *view) {
   return *view->array++;
 }
 
+static inline bool sv_cmp(StringView a, StringView b) {
+  if (a.size == b.size)
+    return memcmp(a.array, b.array, a.size);
+
+  int cmp = memcmp(a.array, b.array, a.size < b.size ? a.size : b.size);
+  if (cmp != 0)
+    return cmp;
+
+  return a.size - b.size;
+}
+
 #define TODO()                                                                 \
   do {                                                                         \
     lisp_fprintf(stderr, __FILE__ ":%u: not implemented yet\n", __LINE__);     \
