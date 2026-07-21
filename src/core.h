@@ -51,13 +51,19 @@ typedef struct {
 
 #define sb_append_static_str(da, s)                                            \
   da_append_many((da), (s), sizeof((s)) / sizeof(char) - 1)
-#define sb_append_cstr(da, s) da_append_many((da), (s), strlen((s)))
-#define sb_append_view(da, v) da_append_many((da), (v.array), (v.size))
+
+static inline void sb_append_cstr(StringBuilder *builder, char *string) {
+  da_append_many(builder, string, strlen(string));
+}
 
 typedef struct {
   char *array;
   size_t size;
 } StringView;
+
+static inline void sb_append_view(StringBuilder *builder, StringView view) {
+  da_append_many(builder, view.array, view.size);
+}
 
 #define sb_to_sv(da)                                                           \
   (StringView) { .array = (da)->array, .size = (da)->size }
