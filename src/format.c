@@ -71,7 +71,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     if (formatting == FORMAT_BASIC)
       sb_append_static_str(builder, "<");
 
-    sb_append_cstr(builder, value->boolean ? "true" : "false");
+    sb_append_cstr(builder, lisp_get_bool(value) ? "true" : "false");
 
     if (formatting == FORMAT_BASIC)
       sb_append_static_str(builder, ">");

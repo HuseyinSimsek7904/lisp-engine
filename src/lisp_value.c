@@ -57,7 +57,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return a->ref_type == b->ref_type;
 
   case LISP_BOOL_T:
-    return a->boolean == b->boolean;
+    return lisp_get_bool(a) == lisp_get_bool(b);
 
   case LISP_ERROR_T:
     return lisp_is_ident(a->item, b->item);

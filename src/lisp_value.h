@@ -130,6 +130,10 @@ static inline char *lisp_get_ref_type_sym(LispValue value) {
   assert(value->ref_type >= 0 && value->ref_type < LISP_TYPE_COUNT);
   return lisp_type_syms[value->ref_type];
 }
+static inline bool lisp_get_bool(LispValue value) {
+  assert(lisp_is_type(value, LISP_BOOL_T));
+  return value->boolean;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;

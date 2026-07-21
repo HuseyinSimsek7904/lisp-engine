@@ -185,7 +185,7 @@ DEFINE_BUILTIN(if) {
 
   CHECK_ARG_TYPE(if, condition, LISP_BOOL_T);
 
-  if (condition->boolean)
+  if (lisp_get_bool(condition))
     return ARG1;
 
   return evaluate_lisp_body(args->cons.tail->cons.tail, env, true);
