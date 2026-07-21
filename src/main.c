@@ -320,7 +320,7 @@ DEFINE_BUILTIN(sum) {
 
     CHECK_ARG_TYPE(sum, arg, LISP_INT64_T);
 
-    sum += arg->integer;
+    sum += lisp_get_int64(arg);
   }
 
   return lisp_make_int64(sum);
@@ -340,8 +340,9 @@ DEFINE_BUILTIN(neg_or_sub) {
   if (arg_count > 1)
     CHECK_ARG_TYPE(neg_or_sub, ARG1, LISP_INT64_T);
 
-  return lisp_make_int64(arg_count == 1 ? -ARG0->integer
-                                        : ARG0->integer - ARG1->integer);
+  return lisp_make_int64(arg_count == 1
+                             ? -lisp_get_int64(ARG0)
+                             : lisp_get_int64(ARG0) - lisp_get_int64(ARG1));
 }
 
 DEFINE_BUILTIN(list) { return args; }
@@ -363,7 +364,7 @@ DEFINE_BUILTIN(less_than) {
   CHECK_ARG_TYPE(less_than, ARG0, LISP_INT64_T);
   CHECK_ARG_TYPE(less_than, ARG1, LISP_INT64_T);
 
-  return lisp_make_bool(ARG0->integer < ARG1->integer);
+  return lisp_make_bool(lisp_get_int64(ARG0) < lisp_get_int64(ARG1));
 }
 
 DEFINE_BUILTIN(read_file) {
@@ -560,7 +561,7 @@ DEFINE_BUILTIN(debug_set_flags) {
   REQUIRES_EQ_ARGS(debug_set_flags, 1);
   CHECK_ARG_TYPE(debug_set_flags, ARG0, LISP_INT64_T);
 
-  debug_flags = ARG0->integer;
+  debug_flags = lisp_get_int64(ARG0);
 
   return LISP_NIL;
 }

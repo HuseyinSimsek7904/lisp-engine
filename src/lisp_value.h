@@ -117,6 +117,10 @@ static inline StringView lisp_get_str(LispValue value) {
   assert(lisp_is_type(value, LISP_STRING_T));
   return value->string;
 }
+static inline int64_t lisp_get_int64(LispValue value) {
+  assert(lisp_is_type(value, LISP_INT64_T));
+  return value->integer;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;

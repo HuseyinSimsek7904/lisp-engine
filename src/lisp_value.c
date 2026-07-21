@@ -67,7 +67,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return lisp_is_ident(a->item, b->item);
 
   case LISP_INT64_T:
-    return a->integer == b->integer;
+    return lisp_get_int64(a) == lisp_get_int64(b);
 
   case LISP_STRING_T:
     return sv_cmp(lisp_get_str(a), lisp_get_str(b)) == 0;

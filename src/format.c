@@ -122,7 +122,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     // TODO: Flags that print the integer as an unsigned number and in any base
     // should be implemented.
 
-    sb_append_decimal(builder, value->integer);
+    sb_append_decimal(builder, lisp_get_int64(value));
 
     break;
 
