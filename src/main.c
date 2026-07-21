@@ -104,7 +104,7 @@ DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
   CHECK_ARG_TYPE(set, ARG0, LISP_SYMBOL_T);
 
-  char *symbol = ARG0->symbol;
+  char *symbol = lisp_get_sym(ARG0);
   LispValue value = evaluate_lisp(ARG1, env);
 
   env_set(env, symbol, value);
@@ -116,7 +116,7 @@ DEFINE_BUILTIN(setg) {
   REQUIRES_EQ_ARGS(setg, 2);
   CHECK_ARG_TYPE(setg, ARG0, LISP_SYMBOL_T);
 
-  char *symbol = ARG0->symbol;
+  char *symbol = lisp_get_sym(ARG0);
   LispValue value = evaluate_lisp(ARG1, env);
 
   Environment *global = env;
@@ -153,7 +153,7 @@ DEFINE_BUILTIN(let) {
 
       CHECK_ARG_TYPE(let, def_node->cons.head, LISP_SYMBOL_T);
 
-      char *symbol = def_node->cons.head->symbol;
+      char *symbol = lisp_get_sym(def_node->cons.head);
 
       if (env_find_shallow(&new_env, symbol))
         return ERROR(REDEF_SYMBOL_SYM, 1, def_node->cons.head);

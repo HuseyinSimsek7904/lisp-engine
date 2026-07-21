@@ -109,7 +109,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     if (formatting == FORMAT_PRODUCER)
       sb_append_static_str(builder, "(quote ");
 
-    sb_append_cstr(builder, value->symbol);
+    sb_append_cstr(builder, lisp_get_sym(value));
 
     if (formatting == FORMAT_PRODUCER)
       sb_append_static_str(builder, ")");
@@ -160,14 +160,14 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
       lisp_iter_init(&args_iter, value->custom_function->args);
 
       while (lisp_iter_has_next_next(&args_iter)) {
-        sb_append_cstr(builder, lisp_iter_next(&args_iter)->symbol);
+        sb_append_cstr(builder, lisp_get_sym(lisp_iter_next(&args_iter)));
         sb_append_static_str(builder, " ");
       }
 
       if (value->custom_function->variadic)
         sb_append_static_str(builder, "(rest ");
 
-      sb_append_cstr(builder, lisp_iter_next(&args_iter)->symbol);
+      sb_append_cstr(builder, lisp_get_sym(lisp_iter_next(&args_iter)));
 
       if (value->custom_function->variadic)
         sb_append_static_str(builder, ")");

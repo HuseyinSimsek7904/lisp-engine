@@ -59,7 +59,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       return lisp;
 
     case LISP_SYMBOL_T: {
-      EnvironmentEntry *entry = env_find(env, lisp->symbol);
+      EnvironmentEntry *entry = env_find(env, lisp_get_sym(lisp));
 
       if (entry) {
         LispValue value = entry->value;
@@ -134,14 +134,14 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
             assert(lisp_is_type(arg, LISP_SYMBOL_T));
 
-            env_set_shallow(new_env, arg->symbol, param);
+            env_set_shallow(new_env, lisp_get_sym(arg), param);
           }
 
           LispValue last_func_arg = lisp_iter_next(&args_iter);
           assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
           if (callable->custom_function->variadic) {
-            env_set_shallow(new_env, last_func_arg->symbol, params_iter.list);
+            env_set_shallow(new_env, lisp_get_sym(last_func_arg), params_iter.list);
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
@@ -153,7 +153,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
               return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            env_set_shallow(new_env, last_func_arg->symbol,
+            env_set_shallow(new_env, lisp_get_sym(last_func_arg),
                             lisp_iter_next(&params_iter));
           }
         }

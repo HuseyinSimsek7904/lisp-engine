@@ -88,7 +88,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return lisp_get_type(a) == lisp_get_type(b);
 
   case LISP_SYMBOL_T:
-    return !strcmp(a->symbol, b->symbol);
+    return !strcmp(lisp_get_sym(a), lisp_get_sym(b));
 
   case LISP_FUNC_T:
     return a->custom_function->is_macro == b->custom_function->is_macro &&

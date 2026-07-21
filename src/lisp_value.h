@@ -121,6 +121,10 @@ static inline int64_t lisp_get_int64(LispValue value) {
   assert(lisp_is_type(value, LISP_INT64_T));
   return value->integer;
 }
+static inline char *lisp_get_sym(LispValue value) {
+  assert(lisp_is_type(value, LISP_SYMBOL_T));
+  return value->symbol;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
@@ -212,7 +216,7 @@ bool lisp_is_valid_type(LispType value);
 bool lisp_is_ident(LispValue a, LispValue b);
 
 static inline bool lisp_is_sym(LispValue value, const char *symbol) {
-  return lisp_is_type(value, LISP_SYMBOL_T) && !strcmp(value->symbol, symbol);
+  return lisp_is_type(value, LISP_SYMBOL_T) && !strcmp(lisp_get_sym(value), symbol);
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size);
