@@ -201,10 +201,14 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                                           lisp_make_int64(2)));
 
   bool variadic = false;
-  LispValue arg_symbols = LISP_NIL;
+  LispValue arg_symbols;
 
-  if (lisp_is_non_empty_list(ARG0)) {
-    LispValue *last = &arg_symbols;
+  if (lisp_is_nil(ARG0)) {
+    arg_symbols = LISP_NIL;
+
+  } else if (lisp_is_non_empty_list(ARG0)) {
+    LispGen args_gen;
+    lisp_gen_init(&args_gen);
 
     LispValue remaining_args = ARG0;
     LispValue arg;
@@ -220,8 +224,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      lisp_rappend_use_last(last, arg);
-      last = &((*last)->cons.tail);
+      lisp_gen_appendr(&args_gen, arg);
     }
 
     assert(lisp_is_nil(remaining_args->cons.tail));
@@ -251,10 +254,10 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       variadic = true;
 
-      lisp_rappend_use_last(last, arg->cons.tail->cons.head);
+      lisp_gen_appendr(&args_gen, arg->cons.tail->cons.head);
 
     } else if (lisp_is_type(arg, LISP_SYMBOL_T)) {
-      lisp_rappend_use_last(last, arg);
+      lisp_gen_appendr(&args_gen, arg);
 
     } else
       return lisp_make_error(lisp_make_list(
@@ -263,7 +266,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
               "argument list must be in the form ([SYMBOL...] [(rest "
               "SYMBOL)])")));
 
-  } else if (!lisp_is_nil(ARG0))
+    arg_symbols = lisp_gen_end(&args_gen);
+
+  } else
     return lisp_make_error(lisp_make_list(4, lisp_make_sym(WRONG_TYPE_ARG_SYM),
                                           builtin, ARG0,
                                           lisp_make_type(LISP_LIST_T)));
@@ -406,8 +411,8 @@ DEFINE_BUILTIN(eval) {
 }
 
 DEFINE_BUILTIN(unpack) {
-  LispValue items = LISP_NIL;
-  LispValue *last = &items;
+  LispGen items_gen;
+  lisp_gen_init(&items_gen);
 
   LispValue remaining_args = args;
   while (lisp_is_non_empty_list(remaining_args)) {
@@ -417,13 +422,12 @@ DEFINE_BUILTIN(unpack) {
     if (!lisp_is_list(arg))
       RETURN_INVALID_ARG(lisp_builtin_unpack, arg, lisp_make_type(LISP_LIST_T));
 
-    *last = arg;
-    last = lisp_cons_find_term_nil(last);
+    lisp_gen_extendr(&items_gen, arg);
   }
 
   assert(lisp_is_nil(remaining_args));
 
-  return lisp_make_unpacked(items);
+  return lisp_make_unpacked(lisp_gen_end(&items_gen));
 }
 
 DEFINE_BUILTIN(quote) {

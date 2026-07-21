@@ -220,11 +220,36 @@ LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
 LispValue *lisp_cons_find_term_nil(LispValue *lisp);
 size_t lisp_get_len(LispValue lisp);
-LispValue lisp_lappend(LispValue lisp, LispValue value);
-LispValue lisp_rappend(LispValue lisp, LispValue value);
-LispValue lisp_rappend_use_last(LispValue *last, LispValue value);
 
 LispValue parse(Token *tokens, size_t token_count);
+
+// Lisp Generators are used for generating lists without directly accessing list
+// cons values. They can append items at the right end of the lists.
+typedef struct {
+  LispValue list;
+  LispValue *last;
+} LispGen;
+
+static inline void lisp_gen_init(LispGen *generator) {
+  generator->list = LISP_NIL;
+  generator->last = &generator->list;
+}
+
+static inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
+  assert(lisp_is_nil((*generator->last)));
+  *generator->last = lisp_make_cons(item, LISP_NIL);
+  generator->last = &((*generator->last)->cons.tail);
+}
+
+static inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
+  assert(lisp_is_list(list));
+  *generator->last = list;
+  generator->last = lisp_cons_find_term_nil(generator->last);
+}
+
+static inline LispValue lisp_gen_end(LispGen *generator) {
+  return generator->list;
+}
 
 typedef struct {
   char *symbol;

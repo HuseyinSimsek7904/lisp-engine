@@ -110,20 +110,17 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 }
 
 LispValue lisp_make_list(size_t count, ...) {
-  LispValue list = LISP_NIL;
-  LispValue *last = &list;
+  LispGen gen;
+  lisp_gen_init(&gen);
 
   va_list va;
   va_start(va, count);
   for (int j = 0; j < count; ++j) {
-    LispValue arg = va_arg(va, LispValue);
-
-    lisp_rappend_use_last(last, arg);
-    last = &((*last)->cons.tail);
+    lisp_gen_appendr(&gen, va_arg(va, LispValue));
   }
   va_end(va);
 
-  return list;
+  return lisp_gen_end(&gen);
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {
@@ -168,24 +165,6 @@ size_t lisp_get_len(LispValue lisp) {
   assert(lisp_is_nil(lisp));
 
   return count;
-}
-
-LispValue lisp_lappend(LispValue lisp, LispValue value) {
-  assert(lisp_is_list(lisp));
-  return lisp_make_cons(value, lisp);
-}
-
-LispValue lisp_rappend(LispValue lisp, LispValue value) {
-  assert(lisp_is_list(lisp));
-  LispValue *last = lisp_cons_find_term_nil(&lisp);
-  lisp_rappend_use_last(last, value);
-  return lisp;
-}
-
-LispValue lisp_rappend_use_last(LispValue *last, LispValue value) {
-  assert(lisp_is_nil((*last)));
-  *last = lisp_make_cons(value, LISP_NIL);
-  return *last;
 }
 
 LispValue parse_pp_list(LispValue lisp) {
@@ -235,9 +214,11 @@ LispValue parse_pp_list(LispValue lisp) {
   return lisp;
 }
 
+// TODO: The use of generators in this function is criminal. This function
+// should be made human readable.
 LispValue parse(Token *tokens, size_t token_count) {
-  LispValue lisp = LISP_NIL;
-  LispValue *last = &lisp;
+  LispGen gen;
+  lisp_gen_init(&gen);
 
   size_t depth = 0;
 
@@ -247,8 +228,8 @@ LispValue parse(Token *tokens, size_t token_count) {
     LispValue pn = LISP_NIL;
     switch (t.type) {
     case T_L_PAREN:
-      lisp_rappend_use_last(last, LISP_NIL);
-      last = &((*last)->cons.head);
+      *gen.last = lisp_make_cons(LISP_NIL, LISP_NIL);
+      gen.last = &((*gen.last)->cons.head);
 
       depth++;
       continue;
@@ -259,30 +240,30 @@ LispValue parse(Token *tokens, size_t token_count) {
             lisp_make_cons(lisp_make_sym(PARSER_TOO_MANY_R_PAREN), LISP_NIL));
 
       depth--;
-      last = &lisp;
+      gen.last = &gen.list;
 
       for (size_t i = 0; i < depth; i++) {
-        while (lisp_is_non_empty_list((*last)->cons.tail)) {
-          last = &((*last)->cons.tail);
+        while (lisp_is_non_empty_list((*gen.last)->cons.tail)) {
+          gen.last = &((*gen.last)->cons.tail);
         }
 
-        assert(lisp_is_nil((*last)->cons.tail));
-        last = &((*last)->cons.head);
+        assert(lisp_is_nil((*gen.last)->cons.tail));
+        gen.last = &((*gen.last)->cons.head);
       }
 
-      assert(lisp_is_non_empty_list(*last));
-      while (lisp_is_non_empty_list((*last)->cons.tail)) {
-        last = &((*last)->cons.tail);
+      assert(lisp_is_non_empty_list(*gen.last));
+      while (lisp_is_non_empty_list((*gen.last)->cons.tail)) {
+        gen.last = &((*gen.last)->cons.tail);
       }
-      assert(lisp_is_nil((*last)->cons.tail));
+      assert(lisp_is_nil((*gen.last)->cons.tail));
 
-      LispValue pp = parse_pp_list((*last)->cons.head);
+      LispValue pp = parse_pp_list((*gen.last)->cons.head);
 
       if (lisp_is_type(pp, LISP_ERROR_T))
         return pp;
 
-      (*last)->cons.head = pp;
-      last = &((*last)->cons.tail);
+      (*gen.last)->cons.head = pp;
+      gen.last = &((*gen.last)->cons.tail);
 
       continue;
 
@@ -303,15 +284,16 @@ LispValue parse(Token *tokens, size_t token_count) {
       break;
     }
 
-    lisp_rappend_use_last(last, pn);
-    last = &((*last)->cons.tail);
+    assert(lisp_is_nil((*gen.last)));
+    *gen.last = lisp_make_cons(pn, LISP_NIL);
+    gen.last = &((*gen.last)->cons.tail);
   }
 
   if (depth > 0)
     return lisp_make_error(
         lisp_make_cons(lisp_make_sym(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
 
-  return parse_pp_list(lisp);
+  return parse_pp_list(lisp_gen_end(&gen));
 }
 
 void env_free(Environment *env) {

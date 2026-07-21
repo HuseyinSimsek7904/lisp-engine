@@ -22,27 +22,24 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
   if (is_macro)
     return lisp->cons.tail;
 
-  LispValue args = LISP_NIL;
-  LispValue *last = &args;
+  LispGen args_gen;
+  lisp_gen_init(&args_gen);
 
-  lisp = lisp->cons.tail;
+  lisp = lisp_tail(lisp);
 
   for (; !lisp_is_nil(lisp); lisp = lisp->cons.tail) {
-
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
     if (lisp_is_type(arg, LISP_UNPACKED_T)) {
       assert(lisp_is_list(arg->item));
-      *last = arg->item;
-      last = lisp_cons_find_term_nil(last);
+      lisp_gen_extendr(&args_gen, arg->item);
 
     } else {
-      lisp_rappend_use_last(last, arg);
-      last = &((*last)->cons.tail);
+      lisp_gen_appendr(&args_gen, arg);
     }
   }
 
-  return args;
+  return lisp_gen_end(&args_gen);
 }
 
 LispValue evaluate_lisp(LispValue lisp, Environment *env) {
