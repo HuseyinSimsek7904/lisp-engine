@@ -79,8 +79,9 @@ LispValue lisp_builtin_debug_list_env;
 
 #define CHECK_ARG_TYPE(n, v, t)                                                \
   do {                                                                         \
-    if (!lisp_is_type(v, t))                                                   \
-      RETURN_INVALID_ARG(lisp_builtin_##n, v, lisp_make_type(t));              \
+    LispValue value = (v);                                                     \
+    if (!lisp_is_type(value, t))                                               \
+      RETURN_INVALID_ARG(lisp_builtin_##n, value, lisp_make_type(t));          \
   } while (false)
 
 #define ARG0 args->cons.head
