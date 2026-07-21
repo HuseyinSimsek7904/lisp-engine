@@ -147,27 +147,29 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
 
-    if (value->custom_function->is_macro)
+    _LispCustomFunction *custom = lisp_get_custom(value);
+
+    if (custom->is_macro)
       sb_append_static_str(builder, "macro ");
     else
       sb_append_static_str(builder, "fn ");
 
     sb_append_static_str(builder, "(");
-    if (!lisp_is_nil(value->custom_function->args)) {
+    if (!lisp_is_nil(custom->args)) {
       LispIter args_iter;
-      lisp_iter_init(&args_iter, value->custom_function->args);
+      lisp_iter_init(&args_iter, custom->args);
 
       while (lisp_iter_has_next_next(&args_iter)) {
         sb_append_cstr(builder, lisp_get_sym(lisp_iter_next(&args_iter)));
         sb_append_static_str(builder, " ");
       }
 
-      if (value->custom_function->variadic)
+      if (custom->variadic)
         sb_append_static_str(builder, "(rest ");
 
       sb_append_cstr(builder, lisp_get_sym(lisp_iter_next(&args_iter)));
 
-      if (value->custom_function->variadic)
+      if (custom->variadic)
         sb_append_static_str(builder, ")");
     }
     sb_append_static_str(builder, ")");
@@ -176,7 +178,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
       sb_append_static_str(builder, " ");
 
       LispIter body_iter;
-      lisp_iter_init(&body_iter, value->custom_function->body);
+      lisp_iter_init(&body_iter, custom->body);
 
       lisp_value_format(builder, lisp_iter_next(&body_iter), FORMAT_BASIC);
 

@@ -86,11 +86,15 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   case LISP_SYMBOL_T:
     return !strcmp(lisp_get_sym(a), lisp_get_sym(b));
 
-  case LISP_FUNC_T:
-    return a->custom_function->is_macro == b->custom_function->is_macro &&
-           a->custom_function->variadic == b->custom_function->variadic &&
-           lisp_is_ident(a->custom_function->args, b->custom_function->args) &&
-           lisp_is_ident(a->custom_function->body, b->custom_function->body);
+  case LISP_FUNC_T: {
+    _LispCustomFunction *a_custom = lisp_get_custom(a);
+    _LispCustomFunction *b_custom = lisp_get_custom(b);
+
+    return a_custom->is_macro == b_custom->is_macro &&
+           a_custom->variadic == b_custom->variadic &&
+           lisp_is_ident(a_custom->args, b_custom->args) &&
+           lisp_is_ident(a_custom->body, b_custom->body);
+  }
 
   case LISP_UNPACKED_T:
     return lisp_is_ident(a->item, b->item);

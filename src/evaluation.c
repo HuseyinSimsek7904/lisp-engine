@@ -103,8 +103,9 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       } break;
 
       case LISP_FUNC_T: {
-        LispValue args =
-            generate_args(lisp, env, callable->custom_function->is_macro);
+        _LispCustomFunction *custom = lisp_get_custom(callable);
+
+        LispValue args = generate_args(lisp, env, custom->is_macro);
 
         Environment *new_env = malloc(sizeof(Environment));
         assert(new_env);
@@ -112,7 +113,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         *new_env = (Environment){.other = env};
         da_init(new_env);
 
-        if (lisp_is_nil(callable->custom_function->args)) {
+        if (lisp_is_nil(custom->args)) {
           if (!lisp_is_nil(args)) {
             roll_env_back(env, original);
             return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
@@ -122,7 +123,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           LispIter params_iter;
           lisp_iter_init(&params_iter, args);
           LispIter args_iter;
-          lisp_iter_init(&args_iter, callable->custom_function->args);
+          lisp_iter_init(&args_iter, custom->args);
 
           while (lisp_iter_has_next_next(&args_iter)) {
             if (!lisp_iter_has_next(&params_iter)) {
@@ -141,7 +142,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           LispValue last_func_arg = lisp_iter_next(&args_iter);
           assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
-          if (callable->custom_function->variadic) {
+          if (custom->variadic) {
             env_set_shallow(new_env, lisp_get_sym(last_func_arg),
                             params_iter.list);
           } else {
@@ -160,8 +161,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           }
         }
 
-        lisp =
-            evaluate_lisp_body(callable->custom_function->body, new_env, true);
+        lisp = evaluate_lisp_body(custom->body, new_env, true);
         env = new_env;
       } break;
 

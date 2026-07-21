@@ -138,6 +138,10 @@ static inline _LispBuiltinFunction *lisp_get_builtin(LispValue value) {
   assert(lisp_is_type(value, LISP_BUILTIN_FUNC_T));
   return value->builtin_function;
 }
+static inline _LispCustomFunction *lisp_get_custom(LispValue value) {
+  assert(lisp_is_type(value, LISP_FUNC_T));
+  return value->custom_function;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
