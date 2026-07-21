@@ -125,6 +125,11 @@ static inline char *lisp_get_sym(LispValue value) {
   assert(lisp_is_type(value, LISP_SYMBOL_T));
   return value->symbol;
 }
+static inline char *lisp_get_ref_type_sym(LispValue value) {
+  assert(lisp_is_type(value, LISP_TYPE_T));
+  assert(value->ref_type >= 0 && value->ref_type < LISP_TYPE_COUNT);
+  return lisp_type_syms[value->ref_type];
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
@@ -182,6 +187,7 @@ static inline LispValue lisp_make_fn_or_macro(LispValue args, LispValue body,
 
 // TODO: Types should be singletons.
 static inline LispValue lisp_make_type(LispType ref_type) {
+  assert(ref_type >= 0 && ref_type < LISP_TYPE_COUNT);
   LispValue value = _lisp_init(LISP_TYPE_T);
   value->ref_type = ref_type;
   return value;
@@ -212,11 +218,11 @@ static inline LispValue lisp_make_sym(char *symbol) {
 
 LispValue lisp_make_list(size_t count, ...);
 
-bool lisp_is_valid_type(LispType value);
 bool lisp_is_ident(LispValue a, LispValue b);
 
 static inline bool lisp_is_sym(LispValue value, const char *symbol) {
-  return lisp_is_type(value, LISP_SYMBOL_T) && !strcmp(lisp_get_sym(value), symbol);
+  return lisp_is_type(value, LISP_SYMBOL_T) &&
+         !strcmp(lisp_get_sym(value), symbol);
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size);

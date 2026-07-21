@@ -55,12 +55,10 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
   case LISP_TYPE_T:
     // Producers: TYPE_t
 
-    assert(lisp_is_valid_type(value->ref_type));
-
     if (formatting == FORMAT_BASIC)
       sb_append_static_str(builder, "<type `");
 
-    sb_append_cstr(builder, lisp_type_syms[value->ref_type]);
+    sb_append_cstr(builder, lisp_get_ref_type_sym(value));
 
     if (formatting == FORMAT_BASIC)
       sb_append_static_str(builder, "`>");

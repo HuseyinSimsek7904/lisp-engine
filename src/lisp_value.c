@@ -42,10 +42,6 @@ LispValue _lisp_init(LispType type) {
   return ptr;
 }
 
-bool lisp_is_valid_type(LispType type) {
-  return type >= 0 && type < LISP_TYPE_COUNT;
-}
-
 bool lisp_is_ident(LispValue a, LispValue b) {
   if (a == b)
     return true;
