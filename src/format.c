@@ -38,7 +38,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
   // formatted string with this flag on):
   // (= (eval (parse-lisp (format x))) x)
 
-  switch (value->type) {
+  switch (lisp_get_type(value)) {
   case LISP_NIL_T:
     // Producers: nil, ()
 

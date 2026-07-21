@@ -31,7 +31,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
 
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
-    if (arg->type == LISP_UNPACKED_T) {
+    if (lisp_is_type(arg, LISP_UNPACKED_T)) {
       assert(lisp_is_list(arg->item));
       *last = arg->item;
       last = lisp_cons_find_term_nil(last);
@@ -49,7 +49,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
   Environment *original = env;
 
   do {
-    switch (lisp->type) {
+    switch (lisp_get_type(lisp)) {
     case LISP_STRING_T:
     case LISP_INT64_T:
     case LISP_NIL_T:
@@ -87,7 +87,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       LispValue callable = evaluate_lisp(lisp->cons.head, env);
 
-      switch (callable->type) {
+      switch (lisp_get_type(callable)) {
       case LISP_ERROR_T:
         roll_env_back(env, original);
         return callable;
@@ -131,7 +131,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
             }
 
             assert(lisp_is_non_empty_list(remaining_func_args));
-            assert(remaining_func_args->cons.head->type == LISP_SYMBOL_T);
+            assert(lisp_is_type(remaining_func_args->cons.head, LISP_SYMBOL_T));
 
             env_set_shallow(new_env, remaining_func_args->cons.head->symbol,
                             remaining_args->cons.head);
@@ -141,7 +141,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           }
 
           LispValue last_func_arg = remaining_func_args->cons.head;
-          assert(last_func_arg->type == LISP_SYMBOL_T);
+          assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
           if (callable->custom_function->variadic) {
             env_set_shallow(new_env, last_func_arg->symbol, remaining_args);
@@ -190,7 +190,7 @@ LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
     LispValue return_value = evaluate_lisp(lisp->cons.head, env);
     lisp = lisp->cons.tail;
 
-    if (return_value->type == LISP_ERROR_T)
+    if (lisp_is_type(return_value, LISP_ERROR_T))
       return return_value;
   }
   assert(lisp_is_nil(lisp->cons.tail));
@@ -212,7 +212,7 @@ LispValue repl(StringView lisp, Environment *env) {
   LispValue parser_result = parse(tokens.array, tokens.size);
   da_free(&tokens);
 
-  if (parser_result->type == LISP_ERROR_T)
+  if (lisp_is_type(parser_result, LISP_ERROR_T))
     return parser_result;
 
   return evaluate_lisp_body(parser_result, env, false);

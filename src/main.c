@@ -79,7 +79,7 @@ LispValue lisp_builtin_debug_list_env;
 
 #define CHECK_ARG_TYPE(n, v, t)                                                \
   do {                                                                         \
-    if (v->type != t)                                                          \
+    if (!lisp_is_type(v, t))                                                   \
       RETURN_INVALID_ARG(lisp_builtin_##n, v, lisp_make_type(t));              \
   } while (false)
 
@@ -181,7 +181,7 @@ DEFINE_BUILTIN(if) {
 
   LispValue condition = evaluate_lisp(ARG0, env);
 
-  if (condition->type == LISP_ERROR_T)
+  if (lisp_is_type(condition, LISP_ERROR_T))
     return condition;
 
   CHECK_ARG_TYPE(if, condition, LISP_BOOL_T);
@@ -213,7 +213,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
       arg = remaining_args->cons.head;
       remaining_args = remaining_args->cons.tail;
 
-      if (arg->type != LISP_SYMBOL_T)
+      if (!lisp_is_type(arg, LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
             4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
             lisp_make_cstr(
@@ -242,7 +242,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      if (arg->cons.tail->cons.head->type != LISP_SYMBOL_T)
+      if (!lisp_is_type(arg->cons.tail->cons.head, LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
             4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
             lisp_make_cstr(
@@ -253,7 +253,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       lisp_rappend_use_last(last, arg->cons.tail->cons.head);
 
-    } else if (arg->type == LISP_SYMBOL_T) {
+    } else if (lisp_is_type(arg, LISP_SYMBOL_T)) {
       lisp_rappend_use_last(last, arg);
 
     } else
@@ -448,7 +448,7 @@ DEFINE_BUILTIN(tail) {
 DEFINE_BUILTIN(typeof) {
   REQUIRES_EQ_ARGS(typeof, 1);
 
-  return lisp_make_type(ARG0->type);
+  return lisp_make_type(lisp_get_type(ARG0));
 }
 
 DEFINE_BUILTIN(error) {
@@ -514,7 +514,7 @@ DEFINE_BUILTIN(format) {
 
       assert(lisp_is_non_empty_list(remaining_args));
 
-      if (remaining_args->cons.head->type != LISP_STRING_T) {
+      if (!lisp_is_type(remaining_args->cons.head, LISP_STRING_T)) {
         da_free(&builder);
         return ERROR(WRONG_TYPE_ARG_FORMAT_SYM, 2, remaining_args->cons.head,
                      lisp_make_type(LISP_STRING_T));

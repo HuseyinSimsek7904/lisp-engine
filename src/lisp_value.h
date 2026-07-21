@@ -108,13 +108,18 @@ extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;
 extern LispValue LISP_FALSE;
 
+static inline LispType lisp_get_type(LispValue value) { return value->type; }
+static inline bool lisp_is_type(LispValue value, LispType type) {
+  return lisp_get_type(value) == type;
+}
+
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
 }
 
 static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
 static inline bool lisp_is_non_empty_list(LispValue value) {
-  return value->type == LISP_LIST_T;
+  return lisp_is_type(value, LISP_LIST_T);
 }
 static inline bool lisp_is_list(LispValue value) {
   return lisp_is_nil(value) || lisp_is_non_empty_list(value);
@@ -198,7 +203,7 @@ bool lisp_is_valid_type(LispType value);
 bool lisp_is_ident(LispValue a, LispValue b);
 
 static inline bool lisp_is_sym(LispValue value, const char *symbol) {
-  return value->type == LISP_SYMBOL_T && !strcmp(value->symbol, symbol);
+  return lisp_is_type(value, LISP_SYMBOL_T) && !strcmp(value->symbol, symbol);
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size);

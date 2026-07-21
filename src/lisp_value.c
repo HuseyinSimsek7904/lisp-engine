@@ -50,10 +50,10 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   if (a == b)
     return true;
 
-  if (a->type != b->type)
+  if (lisp_get_type(a) != lisp_get_type(b))
     return false;
 
-  switch (a->type) {
+  switch (lisp_get_type(a)) {
   case LISP_NIL_T:
     return true;
 
@@ -86,7 +86,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
       b = b->cons.tail;
     } while (lisp_is_non_empty_list(a) && lisp_is_non_empty_list(b));
 
-    return a->type == b->type;
+    return lisp_get_type(a) == lisp_get_type(b);
 
   case LISP_SYMBOL_T:
     return !strcmp(a->symbol, b->symbol);
@@ -279,7 +279,7 @@ LispValue parse(Token *tokens, size_t token_count) {
 
       LispValue pp = parse_pp_list((*last)->cons.head);
 
-      if (pp->type == LISP_ERROR_T)
+      if (lisp_is_type(pp, LISP_ERROR_T))
         return pp;
 
       (*last)->cons.head = pp;
