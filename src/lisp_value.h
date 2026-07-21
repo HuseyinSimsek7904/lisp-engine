@@ -134,6 +134,10 @@ static inline bool lisp_get_bool(LispValue value) {
   assert(lisp_is_type(value, LISP_BOOL_T));
   return value->boolean;
 }
+static inline _LispBuiltinFunction *lisp_get_builtin(LispValue value) {
+  assert(lisp_is_type(value, LISP_BUILTIN_FUNC_T));
+  return value->builtin_function;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;

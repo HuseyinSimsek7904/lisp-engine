@@ -69,8 +69,8 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return sv_cmp(lisp_get_str(a), lisp_get_str(b)) == 0;
 
   case LISP_BUILTIN_FUNC_T:
-    return a->builtin_function->is_macro == b->builtin_function->is_macro &&
-           a->builtin_function->callback == b->builtin_function->callback;
+    // Just check for reference identity.
+    return lisp_get_builtin(a) == lisp_get_builtin(b);
 
   case LISP_LIST_T:
     do {

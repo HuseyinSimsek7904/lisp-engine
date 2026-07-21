@@ -90,12 +90,13 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return callable;
 
       case LISP_BUILTIN_FUNC_T: {
-        LispValue args =
-            generate_args(lisp, env, callable->builtin_function->is_macro);
+        _LispBuiltinFunction *builtin = lisp_get_builtin(callable);
 
-        lisp = callable->builtin_function->callback(args, env);
+        LispValue args = generate_args(lisp, env, builtin->is_macro);
 
-        if (!callable->builtin_function->tail_call) {
+        lisp = builtin->callback(args, env);
+
+        if (!builtin->tail_call) {
           roll_env_back(env, original);
           return lisp;
         }
@@ -141,7 +142,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
           if (callable->custom_function->variadic) {
-            env_set_shallow(new_env, lisp_get_sym(last_func_arg), params_iter.list);
+            env_set_shallow(new_env, lisp_get_sym(last_func_arg),
+                            params_iter.list);
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);

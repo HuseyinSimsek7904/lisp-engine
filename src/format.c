@@ -124,23 +124,23 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     break;
 
-  case LISP_BUILTIN_FUNC_T:
+  case LISP_BUILTIN_FUNC_T: {
     // Producers: BUILTIN_SYM
 
+    _LispBuiltinFunction *builtin = lisp_get_builtin(value);
     if (formatting == FORMAT_PRODUCER) {
-      sb_append_cstr(builder, value->builtin_function->name);
+      sb_append_cstr(builder, builtin->name);
 
     } else {
-      if (value->builtin_function->is_macro)
+      if (builtin->is_macro)
         sb_append_static_str(builder, "<builtin-macro `");
       else
         sb_append_static_str(builder, "<builtin-fn `");
 
-      sb_append_cstr(builder, value->builtin_function->name);
+      sb_append_cstr(builder, builtin->name);
       sb_append_static_str(builder, "`>");
     }
-
-    break;
+  } break;
 
   case LISP_FUNC_T:
     // Producers: (fn ARGS BODY...)
