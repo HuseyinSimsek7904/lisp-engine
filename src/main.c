@@ -134,10 +134,10 @@ DEFINE_BUILTIN(let) {
   Environment new_env = {.other = env};
   da_init(&new_env);
 
-  if (ARG0->type == LISP_LIST_T) {
+  if (lisp_is_non_empty_list(ARG0)) {
     LispValue remaining_defs = ARG0;
 
-    while (remaining_defs->type == LISP_LIST_T) {
+    while (lisp_is_non_empty_list(remaining_defs)) {
       LispValue def_node = remaining_defs->cons.head;
       remaining_defs = remaining_defs->cons.tail;
 
@@ -163,9 +163,9 @@ DEFINE_BUILTIN(let) {
       env_set_shallow(&new_env, symbol, value);
     }
 
-    assert(remaining_defs->type == LISP_NIL_T);
+    assert(lisp_is_nil(remaining_defs));
 
-  } else if (ARG0->type != LISP_NIL_T)
+  } else if (!lisp_is_nil(ARG0))
     RETURN_INVALID_ARG(lisp_builtin_let, ARG0, TYPE_TO_LISP(LISP_LIST_T));
 
   LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
@@ -202,13 +202,13 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
   bool variadic = false;
   LispValue arg_symbols = LISP_NIL;
 
-  if (ARG0->type == LISP_LIST_T) {
+  if (lisp_is_non_empty_list(ARG0)) {
     LispValue *last = &arg_symbols;
 
     LispValue remaining_args = ARG0;
     LispValue arg;
 
-    while (remaining_args->cons.tail->type == LISP_LIST_T) {
+    while (lisp_is_non_empty_list(remaining_args->cons.tail)) {
       arg = remaining_args->cons.head;
       remaining_args = remaining_args->cons.tail;
 
@@ -223,10 +223,10 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
       last = &((*last)->cons.tail);
     }
 
-    assert(remaining_args->cons.tail->type == LISP_NIL_T);
+    assert(lisp_is_nil(remaining_args->cons.tail));
     arg = remaining_args->cons.head;
 
-    if (arg->type == LISP_LIST_T) {
+    if (lisp_is_non_empty_list(arg)) {
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list(
             4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM), builtin, ARG0,
@@ -262,7 +262,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
               "argument list must be in the form ([SYMBOL...] [(rest "
               "SYMBOL)])")));
 
-  } else if (ARG0->type != LISP_NIL_T)
+  } else if (!lisp_is_nil(ARG0))
     return lisp_make_error(lisp_make_list(4, SYM_TO_LISP(WRONG_TYPE_ARG_SYM),
                                           builtin, ARG0,
                                           TYPE_TO_LISP(LISP_LIST_T)));
@@ -287,24 +287,24 @@ DEFINE_BUILTIN(do) {
 
 DEFINE_BUILTIN(print) {
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(remaining_args)) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
     CHECK_ARG_TYPE(print, arg, LISP_STRING_T);
   }
 
-  assert(remaining_args->type == LISP_NIL_T);
+  assert(lisp_is_nil(remaining_args));
 
   remaining_args = args;
-  while (remaining_args->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(remaining_args)) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
     lisp_printf("%s\n", arg->string);
   }
 
-  assert(remaining_args->type == LISP_NIL_T);
+  assert(lisp_is_nil(remaining_args));
 
   return LISP_NIL;
 }
@@ -313,7 +313,7 @@ DEFINE_BUILTIN(sum) {
   int64_t sum = 0;
 
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(remaining_args)) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
@@ -323,6 +323,7 @@ DEFINE_BUILTIN(sum) {
   }
 
   return INT64_TO_LISP(sum);
+  assert(lisp_is_nil(remaining_args));
 }
 
 // TODO: This builtin should allow any number of arguments except zero.
@@ -407,16 +408,18 @@ DEFINE_BUILTIN(unpack) {
   LispValue *last = &items;
 
   LispValue remaining_args = args;
-  while (remaining_args->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(remaining_args)) {
     LispValue arg = remaining_args->cons.head;
     remaining_args = remaining_args->cons.tail;
 
-    if (arg->type != LISP_LIST_T && arg->type != LISP_NIL_T)
+    if (!lisp_is_list(arg))
       RETURN_INVALID_ARG(lisp_builtin_unpack, arg, TYPE_TO_LISP(LISP_LIST_T));
 
     *last = arg;
     last = lisp_cons_find_term_nil(last);
   }
+
+  assert(lisp_is_nil(remaining_args));
 
   return lisp_make_unpacked(items);
 }
@@ -479,36 +482,36 @@ DEFINE_BUILTIN(format) {
       break;
 
     case 'l': {
-      if (remaining_args->type == LISP_NIL_T) {
+      if (lisp_is_nil(remaining_args)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(remaining_args->type == LISP_LIST_T);
+      assert(lisp_is_non_empty_list(remaining_args));
 
       lisp_value_format(&builder, remaining_args->cons.head, FORMAT_BASIC);
       remaining_args = remaining_args->cons.tail;
     } break;
 
     case 'L': {
-      if (remaining_args->type == LISP_NIL_T) {
+      if (lisp_is_nil(remaining_args)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(remaining_args->type == LISP_LIST_T);
+      assert(lisp_is_non_empty_list(remaining_args));
 
       lisp_value_format(&builder, remaining_args->cons.head, FORMAT_PRODUCER);
       remaining_args = remaining_args->cons.tail;
     } break;
 
     case 's': {
-      if (remaining_args->type == LISP_NIL_T) {
+      if (lisp_is_nil(remaining_args)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(remaining_args->type == LISP_LIST_T);
+      assert(lisp_is_non_empty_list(remaining_args));
 
       if (remaining_args->cons.head->type != LISP_STRING_T) {
         da_free(&builder);
@@ -532,7 +535,7 @@ DEFINE_BUILTIN(format) {
 DEFINE_BUILTIN(cons) {
   REQUIRES_EQ_ARGS(cons, 2);
 
-  if (ARG1->type != LISP_NIL_T)
+  if (!lisp_is_nil(ARG1))
     CHECK_ARG_TYPE(cons, ARG1, LISP_LIST_T);
 
   return lisp_make_cons(ARG0, ARG1);
@@ -692,7 +695,7 @@ int main(int argc, char **argv) {
     if (!test_mode)
       lisp_printf("%s: ~ %l\n", argv[i], return_value);
 
-    else if (return_value->type != LISP_NIL_T) {
+    else if (!lisp_is_nil(return_value)) {
       // In test mode, every file must return nil.
       // If they do not, that means that the test failed.
 

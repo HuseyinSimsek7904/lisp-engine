@@ -12,20 +12,20 @@
 
 void lisp_format_items(StringBuilder *builder, LispValue value,
                        FormattingType formatting) {
-  if (value->type == LISP_NIL_T)
+  if (lisp_is_nil(value))
     return;
 
-  assert(value->type == LISP_LIST_T);
+  assert(lisp_is_non_empty_list(value));
 
   lisp_value_format(builder, value->cons.head, formatting);
 
-  while (value->cons.tail->type == LISP_LIST_T) {
+  while (lisp_is_non_empty_list(value->cons.tail)) {
     value = value->cons.tail;
 
     sb_append_static_str(builder, " ");
     lisp_value_format(builder, value->cons.head, formatting);
   }
-  assert(value->cons.tail->type == LISP_NIL_T);
+  assert(lisp_is_nil(value->cons.tail));
 }
 
 void lisp_value_format(StringBuilder *builder, LispValue value,
@@ -155,15 +155,15 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
       sb_append_static_str(builder, "fn ");
 
     sb_append_static_str(builder, "(");
-    if (value->custom_function->args->type != LISP_NIL_T) {
+    if (!lisp_is_nil(value->custom_function->args)) {
       LispValue remaining_args = value->custom_function->args;
 
-      while (remaining_args->cons.tail->type == LISP_LIST_T) {
+      while (lisp_is_non_empty_list(remaining_args->cons.tail)) {
         sb_append_cstr(builder, remaining_args->cons.head->symbol);
         sb_append_static_str(builder, " ");
         remaining_args = remaining_args->cons.tail;
       }
-      assert(remaining_args->cons.tail->type == LISP_NIL_T);
+      assert(lisp_is_nil(remaining_args->cons.tail));
 
       if (value->custom_function->variadic)
         sb_append_static_str(builder, "(rest ");
@@ -177,19 +177,19 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     if (formatting == FORMAT_PRODUCER) {
       value = value->custom_function->body;
-      assert(value->type == LISP_LIST_T);
+      assert(lisp_is_non_empty_list(value));
 
       sb_append_static_str(builder, " ");
       lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
 
-      while (value->cons.tail->type == LISP_LIST_T) {
+      while (lisp_is_non_empty_list(value->cons.tail)) {
         value = value->cons.tail;
 
         sb_append_static_str(builder, " ");
         lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
       }
 
-      assert(value->cons.tail->type == LISP_NIL_T);
+      assert(lisp_is_nil(value->cons.tail));
     }
 
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');

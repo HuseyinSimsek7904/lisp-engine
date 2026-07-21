@@ -182,7 +182,7 @@ LispValue lisp_tail(LispValue lisp) {
 }
 
 LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
-  while ((*lisp)->type != LISP_NIL_T) {
+  while (!lisp_is_nil(*lisp)) {
     assert(lisp_is_non_empty_list(*lisp));
     lisp = &((*lisp)->cons.tail);
   }

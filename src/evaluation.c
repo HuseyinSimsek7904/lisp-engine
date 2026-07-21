@@ -27,7 +27,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
 
   lisp = lisp->cons.tail;
 
-  for (; lisp->type != LISP_NIL_T; lisp = lisp->cons.tail) {
+  for (; !lisp_is_nil(lisp); lisp = lisp->cons.tail) {
 
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
@@ -115,7 +115,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         da_init(new_env);
 
         if (lisp_is_nil(callable->custom_function->args)) {
-          if (args->type != LISP_NIL_T) {
+          if (!lisp_is_nil(args)) {
             roll_env_back(env, original);
             return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
           }
