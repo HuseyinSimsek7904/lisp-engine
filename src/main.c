@@ -585,10 +585,11 @@ LispValue LISP_FALSE;
 int main(int argc, char **argv) {
   bool interactive = true;
   bool test_mode = false;
+  bool always_show_test_results = false;
 
   int opt;
 
-  while ((opt = getopt(argc, argv, "ntd:")) != -1) {
+  while ((opt = getopt(argc, argv, "nTtd:")) != -1) {
     switch (opt) {
     case 'n':
       interactive = false;
@@ -597,6 +598,12 @@ int main(int argc, char **argv) {
     case 't':
       test_mode = true;
       interactive = false;
+      break;
+
+    case 'T':
+      test_mode = true;
+      interactive = false;
+      always_show_test_results = true;
       break;
 
     case 'd':
@@ -694,6 +701,9 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    if (always_show_test_results)
+      lisp_fprintf(stderr, "info: testing %s\n", argv[i]);
+
     LispValue return_value = repl(buffer, &global_env);
 
     free(buffer.array);
@@ -701,13 +711,18 @@ int main(int argc, char **argv) {
     if (!test_mode)
       lisp_printf("%s: ~ %l\n", argv[i], return_value);
 
-    else if (!lisp_is_nil(return_value)) {
+    else {
       // In test mode, every file must return nil.
       // If they do not, that means that the test failed.
 
-      lisp_fprintf(stderr, "fail: %s test failed\n", argv[i]);
-      lisp_fprintf(stderr, "%l\n", return_value);
-      test_failed = true;
+      if (lisp_is_nil(return_value)) {
+        if (always_show_test_results)
+          lisp_printf("info: %s test passed\n", argv[i]);
+      } else {
+        lisp_fprintf(stderr, "fail: %s test failed\n", argv[i]);
+        lisp_fprintf(stderr, "%l\n", return_value);
+        test_failed = true;
+      }
     }
   }
 

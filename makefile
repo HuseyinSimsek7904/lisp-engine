@@ -54,10 +54,10 @@ clean:
 	rm -rf $(BINDIR)
 
 test:
-	$(EXECUTABLE) -t $(TESTDIR)/*
+	$(EXECUTABLE) -T $(TESTDIR)/*
 
 stress-test:
-	$(EXECUTABLE) -t $(STRESSTESTDIR)/*
+	$(EXECUTABLE) -T $(STRESSTESTDIR)/*
 
 gen-bear: clean
 	bear -- make debug
