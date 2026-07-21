@@ -251,6 +251,34 @@ static inline LispValue lisp_gen_end(LispGen *generator) {
   return generator->list;
 }
 
+// Lisp Iterators are used for iterating through lists.
+typedef struct {
+  LispValue list;
+} LispIter;
+
+static inline void lisp_iter_init(LispIter *iter, LispValue list) {
+  assert(lisp_is_list(list));
+  iter->list = list;
+}
+
+static inline bool lisp_iter_has_next(LispIter *iter) {
+  assert(lisp_is_list(iter->list));
+  return lisp_is_non_empty_list(iter->list);
+}
+
+static inline bool lisp_iter_has_next_next(LispIter *iter) {
+  assert(lisp_is_non_empty_list(iter->list));
+  return lisp_is_non_empty_list(iter->list->cons.tail);
+}
+
+static inline LispValue lisp_iter_next(LispIter *iter) {
+  assert(lisp_is_non_empty_list(iter->list));
+  LispValue next = iter->list->cons.head;
+  iter->list = iter->list->cons.tail;
+  assert(lisp_is_list(iter->list));
+  return next;
+}
+
 typedef struct {
   char *symbol;
   LispValue value;

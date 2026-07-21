@@ -17,15 +17,15 @@ void lisp_format_items(StringBuilder *builder, LispValue value,
 
   assert(lisp_is_non_empty_list(value));
 
-  lisp_value_format(builder, value->cons.head, formatting);
+  LispIter items_iter;
+  lisp_iter_init(&items_iter, value);
 
-  while (lisp_is_non_empty_list(value->cons.tail)) {
-    value = value->cons.tail;
+  lisp_value_format(builder, lisp_iter_next(&items_iter), formatting);
 
+  while (lisp_iter_has_next(&items_iter)) {
     sb_append_static_str(builder, " ");
-    lisp_value_format(builder, value->cons.head, formatting);
+    lisp_value_format(builder, lisp_iter_next(&items_iter), formatting);
   }
-  assert(lisp_is_nil(value->cons.tail));
 }
 
 void lisp_value_format(StringBuilder *builder, LispValue value,
@@ -156,19 +156,18 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     sb_append_static_str(builder, "(");
     if (!lisp_is_nil(value->custom_function->args)) {
-      LispValue remaining_args = value->custom_function->args;
+      LispIter args_iter;
+      lisp_iter_init(&args_iter, value->custom_function->args);
 
-      while (lisp_is_non_empty_list(remaining_args->cons.tail)) {
-        sb_append_cstr(builder, remaining_args->cons.head->symbol);
+      while (lisp_iter_has_next_next(&args_iter)) {
+        sb_append_cstr(builder, lisp_iter_next(&args_iter)->symbol);
         sb_append_static_str(builder, " ");
-        remaining_args = remaining_args->cons.tail;
       }
-      assert(lisp_is_nil(remaining_args->cons.tail));
 
       if (value->custom_function->variadic)
         sb_append_static_str(builder, "(rest ");
 
-      sb_append_cstr(builder, remaining_args->cons.head->symbol);
+      sb_append_cstr(builder, lisp_iter_next(&args_iter)->symbol);
 
       if (value->custom_function->variadic)
         sb_append_static_str(builder, ")");
@@ -176,20 +175,17 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     sb_append_static_str(builder, ")");
 
     if (formatting == FORMAT_PRODUCER) {
-      value = value->custom_function->body;
-      assert(lisp_is_non_empty_list(value));
-
       sb_append_static_str(builder, " ");
-      lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
 
-      while (lisp_is_non_empty_list(value->cons.tail)) {
-        value = value->cons.tail;
+      LispIter body_iter;
+      lisp_iter_init(&body_iter, value->custom_function->body);
 
+      lisp_value_format(builder, lisp_iter_next(&body_iter), FORMAT_BASIC);
+
+      while (lisp_iter_has_next(&body_iter)) {
         sb_append_static_str(builder, " ");
-        lisp_value_format(builder, value->cons.head, FORMAT_BASIC);
+        lisp_value_format(builder, lisp_iter_next(&body_iter), FORMAT_BASIC);
       }
-
-      assert(lisp_is_nil(value->cons.tail));
     }
 
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');

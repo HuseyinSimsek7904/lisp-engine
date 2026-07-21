@@ -137,11 +137,11 @@ DEFINE_BUILTIN(let) {
   da_init(&new_env);
 
   if (lisp_is_non_empty_list(ARG0)) {
-    LispValue remaining_defs = ARG0;
+    LispIter defs_iter;
+    lisp_iter_init(&defs_iter, ARG0);
 
-    while (lisp_is_non_empty_list(remaining_defs)) {
-      LispValue def_node = remaining_defs->cons.head;
-      remaining_defs = remaining_defs->cons.tail;
+    while (lisp_iter_has_next(&defs_iter)) {
+      LispValue def_node = lisp_iter_next(&defs_iter);
 
       CHECK_ARG_TYPE(let, def_node, LISP_LIST_T);
 
@@ -164,8 +164,6 @@ DEFINE_BUILTIN(let) {
 
       env_set_shallow(&new_env, symbol, value);
     }
-
-    assert(lisp_is_nil(remaining_defs));
 
   } else if (!lisp_is_nil(ARG0))
     RETURN_INVALID_ARG(lisp_builtin_let, ARG0, lisp_make_type(LISP_LIST_T));
@@ -211,12 +209,13 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
     LispGen args_gen;
     lisp_gen_init(&args_gen);
 
-    LispValue remaining_args = ARG0;
+    LispIter args_iter;
+    lisp_iter_init(&args_iter, ARG0);
+
     LispValue arg;
 
-    while (lisp_is_non_empty_list(remaining_args->cons.tail)) {
-      arg = remaining_args->cons.head;
-      remaining_args = remaining_args->cons.tail;
+    while (lisp_iter_has_next_next(&args_iter)) {
+      arg = lisp_iter_next(&args_iter);
 
       if (!lisp_is_type(arg, LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
@@ -228,8 +227,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
       lisp_gen_appendr(&args_gen, arg);
     }
 
-    assert(lisp_is_nil(remaining_args->cons.tail));
-    arg = remaining_args->cons.head;
+    arg = lisp_iter_next(&args_iter);
 
     if (lisp_is_non_empty_list(arg)) {
       if (lisp_get_len(arg) != 2)
@@ -293,25 +291,17 @@ DEFINE_BUILTIN(do) {
 }
 
 DEFINE_BUILTIN(print) {
-  LispValue remaining_args = args;
-  while (lisp_is_non_empty_list(remaining_args)) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
+  LispIter args_iter;
+  lisp_iter_init(&args_iter, args);
 
-    CHECK_ARG_TYPE(print, arg, LISP_STRING_T);
+  while (lisp_iter_has_next(&args_iter)) {
+    CHECK_ARG_TYPE(print, lisp_iter_next(&args_iter), LISP_STRING_T);
   }
 
-  assert(lisp_is_nil(remaining_args));
-
-  remaining_args = args;
-  while (lisp_is_non_empty_list(remaining_args)) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
-
-    lisp_printf("%s\n", lisp_get_str(arg));
+  lisp_iter_init(&args_iter, args);
+  while (lisp_iter_has_next(&args_iter)) {
+    lisp_printf("%s\n", lisp_get_str(lisp_iter_next(&args_iter)));
   }
-
-  assert(lisp_is_nil(remaining_args));
 
   return LISP_NIL;
 }
@@ -319,10 +309,10 @@ DEFINE_BUILTIN(print) {
 DEFINE_BUILTIN(sum) {
   int64_t sum = 0;
 
-  LispValue remaining_args = args;
-  while (lisp_is_non_empty_list(remaining_args)) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
+  LispIter args_iter;
+  lisp_iter_init(&args_iter, args);
+  while (lisp_iter_has_next(&args_iter)) {
+    LispValue arg = lisp_iter_next(&args_iter);
 
     CHECK_ARG_TYPE(sum, arg, LISP_INT64_T);
 
@@ -330,7 +320,6 @@ DEFINE_BUILTIN(sum) {
   }
 
   return lisp_make_int64(sum);
-  assert(lisp_is_nil(remaining_args));
 }
 
 // TODO: This builtin should allow any number of arguments except zero.
@@ -415,18 +404,17 @@ DEFINE_BUILTIN(unpack) {
   LispGen items_gen;
   lisp_gen_init(&items_gen);
 
-  LispValue remaining_args = args;
-  while (lisp_is_non_empty_list(remaining_args)) {
-    LispValue arg = remaining_args->cons.head;
-    remaining_args = remaining_args->cons.tail;
+  LispIter args_iter;
+  lisp_iter_init(&args_iter, args);
+
+  while (lisp_iter_has_next(&args_iter)) {
+    LispValue arg = lisp_iter_next(&args_iter);
 
     if (!lisp_is_list(arg))
       RETURN_INVALID_ARG(lisp_builtin_unpack, arg, lisp_make_type(LISP_LIST_T));
 
     lisp_gen_extendr(&items_gen, arg);
   }
-
-  assert(lisp_is_nil(remaining_args));
 
   return lisp_make_unpacked(lisp_gen_end(&items_gen));
 }
@@ -471,7 +459,9 @@ DEFINE_BUILTIN(format) {
   da_init(&builder);
 
   StringView format_str = lisp_get_str(ARG0);
-  LispValue remaining_args = args->cons.tail;
+
+  LispIter args_iter;
+  lisp_iter_init(&args_iter, args->cons.tail);
 
   while (format_str.size) {
     // TODO: Rather than calling `da_append` many times for each char, calling
@@ -489,45 +479,38 @@ DEFINE_BUILTIN(format) {
       break;
 
     case 'l': {
-      if (lisp_is_nil(remaining_args)) {
+      if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(lisp_is_non_empty_list(remaining_args));
-
-      lisp_value_format(&builder, remaining_args->cons.head, FORMAT_BASIC);
-      remaining_args = remaining_args->cons.tail;
+      lisp_value_format(&builder, lisp_iter_next(&args_iter), FORMAT_BASIC);
     } break;
 
     case 'L': {
-      if (lisp_is_nil(remaining_args)) {
+      if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(lisp_is_non_empty_list(remaining_args));
-
-      lisp_value_format(&builder, remaining_args->cons.head, FORMAT_PRODUCER);
-      remaining_args = remaining_args->cons.tail;
+      lisp_value_format(&builder, lisp_iter_next(&args_iter), FORMAT_PRODUCER);
     } break;
 
     case 's': {
-      if (lisp_is_nil(remaining_args)) {
+      if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
         return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
       }
 
-      assert(lisp_is_non_empty_list(remaining_args));
+      LispValue arg = lisp_iter_next(&args_iter);
 
-      if (!lisp_is_type(remaining_args->cons.head, LISP_STRING_T)) {
+      if (!lisp_is_type(arg, LISP_STRING_T)) {
         da_free(&builder);
-        return ERROR(WRONG_TYPE_ARG_FORMAT_SYM, 2, remaining_args->cons.head,
+        return ERROR(WRONG_TYPE_ARG_FORMAT_SYM, 2, arg,
                      lisp_make_type(LISP_STRING_T));
       }
 
-      sb_append_view(&builder, lisp_get_str(remaining_args->cons.head));
-      remaining_args = remaining_args->cons.tail;
+      sb_append_view(&builder, lisp_get_str(arg));
     } break;
 
     default:

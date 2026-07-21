@@ -118,43 +118,43 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           }
 
         } else {
-          LispValue remaining_args = args;
-          LispValue remaining_func_args = callable->custom_function->args;
+          LispIter params_iter;
+          lisp_iter_init(&params_iter, args);
+          LispIter args_iter;
+          lisp_iter_init(&args_iter, callable->custom_function->args);
 
-          while (lisp_is_non_empty_list(remaining_func_args->cons.tail)) {
-            if (lisp_is_nil(remaining_args)) {
+          while (lisp_iter_has_next_next(&args_iter)) {
+            if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
               return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            assert(lisp_is_non_empty_list(remaining_func_args));
-            assert(lisp_is_type(remaining_func_args->cons.head, LISP_SYMBOL_T));
+            LispValue arg = lisp_iter_next(&args_iter);
+            LispValue param = lisp_iter_next(&params_iter);
 
-            env_set_shallow(new_env, remaining_func_args->cons.head->symbol,
-                            remaining_args->cons.head);
+            assert(lisp_is_type(arg, LISP_SYMBOL_T));
 
-            remaining_args = remaining_args->cons.tail;
-            remaining_func_args = remaining_func_args->cons.tail;
+            env_set_shallow(new_env, arg->symbol, param);
           }
 
-          LispValue last_func_arg = remaining_func_args->cons.head;
+          LispValue last_func_arg = lisp_iter_next(&args_iter);
           assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
           if (callable->custom_function->variadic) {
-            env_set_shallow(new_env, last_func_arg->symbol, remaining_args);
+            env_set_shallow(new_env, last_func_arg->symbol, params_iter.list);
           } else {
-            if (lisp_is_nil(remaining_args)) {
+            if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
               return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
             }
 
-            if (!lisp_is_nil(remaining_args->cons.tail)) {
+            if (lisp_iter_has_next_next(&params_iter)) {
               roll_env_back(env, original);
               return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
             }
 
             env_set_shallow(new_env, last_func_arg->symbol,
-                            remaining_args->cons.head);
+                            lisp_iter_next(&params_iter));
           }
         }
 
