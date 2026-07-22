@@ -418,17 +418,43 @@ DEFINE_BUILTIN(quote) {
 }
 
 DEFINE_BUILTIN(head) {
-  REQUIRES_EQ_ARGS(head, 1);
+  size_t arg_count = lisp_get_len(args);
+
+  REQUIRES_MIN_ARGS(head, 1);
+  REQUIRES_MAX_ARGS(head, 2);
+
   CHECK_ARG_TYPE(head, ARG(0), LISP_LIST_T);
 
-  return lisp_head(ARG(0));
+  size_t n = 0;
+  if (arg_count == 2) {
+    CHECK_ARG_TYPE(head, ARG(1), LISP_INT64_T);
+    n = lisp_get_int64(ARG(1));
+
+    if (lisp_get_len(ARG(0)) < n + 1)
+      RETURN_INVALID_ARG(lisp_builtin_head, ARG(0), ARG(1));
+  }
+
+  return lisp_head_n(ARG(0), n);
 }
 
 DEFINE_BUILTIN(tail) {
-  REQUIRES_EQ_ARGS(tail, 1);
+  size_t arg_count = lisp_get_len(args);
+
+  REQUIRES_MIN_ARGS(tail, 1);
+  REQUIRES_MAX_ARGS(tail, 2);
+
   CHECK_ARG_TYPE(tail, ARG(0), LISP_LIST_T);
 
-  return lisp_tail(ARG(0));
+  size_t n = 0;
+  if (arg_count == 2) {
+    CHECK_ARG_TYPE(tail, ARG(1), LISP_INT64_T);
+    n = lisp_get_int64(ARG(1));
+
+    if (lisp_get_len(ARG(0)) < n + 1)
+      RETURN_INVALID_ARG(lisp_builtin_tail, ARG(0), ARG(1));
+  }
+
+  return lisp_tail_n(ARG(0), n);
 }
 
 DEFINE_BUILTIN(typeof) {
