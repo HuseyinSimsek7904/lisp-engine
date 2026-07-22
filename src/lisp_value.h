@@ -33,10 +33,12 @@ extern char *lisp_type_syms[];
 typedef struct _LispValue _LispValue;
 typedef _LispValue *LispValue;
 
+typedef struct Environment Environment;
+
 typedef struct {
   bool is_macro;
   bool tail_call;
-  LispValue (*callback)(LispValue, void *);
+  LispValue (*callback)(LispValue, Environment *);
   char *name;
 } _LispBuiltinFunction;
 
@@ -86,165 +88,52 @@ typedef struct {
   LispValue tail;
 } _LispCons;
 
-struct _LispValue {
-  LispType type;
-  union {
-    // TODO: Strings referenced by lisp objects should be kept in a pool, and
-    // they should be deallocated like lisp objects.
-    StringView string;
-    char *symbol;
-    int64_t integer;
-    LispType ref_type;
-    bool boolean;
-    _LispBuiltinFunction *builtin_function;
-    _LispCustomFunction *custom_function;
-    _LispCons cons;
-    LispValue item;
-  };
-};
-
 // Singleton values.
 extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;
 extern LispValue LISP_FALSE;
 
-static inline LispType lisp_get_type(LispValue value) { return value->type; }
-static inline bool lisp_is_type(LispValue value, LispType type) {
-  return lisp_get_type(value) == type;
-}
+LispType lisp_get_type(LispValue value);
 
-static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
-static inline bool lisp_is_non_empty_list(LispValue value) {
-  return lisp_is_type(value, LISP_LIST_T);
-}
-static inline bool lisp_is_list(LispValue value) {
-  return lisp_is_nil(value) || lisp_is_non_empty_list(value);
-}
+bool lisp_is_type(LispValue value, LispType type);
+bool lisp_is_nil(LispValue value);
+bool lisp_is_non_empty_list(LispValue value);
+bool lisp_is_list(LispValue value);
+bool lisp_is_sym(LispValue value, const char *symbol);
 
-static inline StringView lisp_get_str(LispValue value) {
-  assert(lisp_is_type(value, LISP_STRING_T));
-  return value->string;
-}
-static inline int64_t lisp_get_int64(LispValue value) {
-  assert(lisp_is_type(value, LISP_INT64_T));
-  return value->integer;
-}
-static inline char *lisp_get_sym(LispValue value) {
-  assert(lisp_is_type(value, LISP_SYMBOL_T));
-  return value->symbol;
-}
-static inline char *lisp_get_ref_type_sym(LispValue value) {
-  assert(lisp_is_type(value, LISP_TYPE_T));
-  assert(value->ref_type >= 0 && value->ref_type < LISP_TYPE_COUNT);
-  return lisp_type_syms[value->ref_type];
-}
-static inline bool lisp_get_bool(LispValue value) {
-  assert(lisp_is_type(value, LISP_BOOL_T));
-  return value->boolean;
-}
-static inline _LispBuiltinFunction *lisp_get_builtin(LispValue value) {
-  assert(lisp_is_type(value, LISP_BUILTIN_FUNC_T));
-  return value->builtin_function;
-}
-static inline _LispCustomFunction *lisp_get_custom(LispValue value) {
-  assert(lisp_is_type(value, LISP_FUNC_T));
-  return value->custom_function;
-}
-static inline LispValue lisp_get_error_item(LispValue value) {
-  assert(lisp_is_type(value, LISP_ERROR_T));
-  return value->item;
-}
-static inline LispValue lisp_get_unpacked_item(LispValue value) {
-  assert(lisp_is_type(value, LISP_UNPACKED_T));
-  assert(lisp_is_list(value->item));
-  return value->item;
-}
-
-static inline LispValue lisp_make_bool(bool boolean) {
-  return boolean ? LISP_TRUE : LISP_FALSE;
-}
+StringView lisp_get_str(LispValue value);
+int64_t lisp_get_int64(LispValue value);
+char *lisp_get_sym(LispValue value);
+char *lisp_get_ref_type_sym(LispValue value);
+bool lisp_get_bool(LispValue value);
+_LispBuiltinFunction *lisp_get_builtin(LispValue value);
+_LispCustomFunction *lisp_get_custom(LispValue value);
+LispValue lisp_get_error_item(LispValue value);
+LispValue lisp_get_unpacked_item(LispValue value);
 
 LispValue _lisp_init(LispType type);
 
-static inline LispValue lisp_make_error(LispValue item) {
-  LispValue value = _lisp_init(LISP_ERROR_T);
-  value->item = item;
-  return value;
-}
+LispValue lisp_make_singleton_nil();
+LispValue lisp_make_singleton_bool(bool boolean);
+LispValue lisp_make_builtin(bool is_macro, bool tail_call,
+                            LispValue (*callback)(LispValue, Environment *),
+                            char *name);
 
-static inline LispValue lisp_make_cons(LispValue head, LispValue tail) {
-  assert(lisp_is_list(tail));
-
-  LispValue value = _lisp_init(LISP_LIST_T);
-  value->cons.head = head;
-  value->cons.tail = tail;
-  return value;
-}
-
-static inline LispValue lisp_make_unpacked(LispValue item) {
-  assert(lisp_is_list(item));
-
-  LispValue value = _lisp_init(LISP_UNPACKED_T);
-  value->item = item;
-  return value;
-}
-
-static inline LispValue lisp_make_fn_or_macro(LispValue args, LispValue body,
-                                              bool variadic, bool is_macro) {
-  _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
-  assert(fn);
-
-  *fn = (_LispCustomFunction){
-      .is_macro = is_macro,
-      .args = args,
-      .variadic = variadic,
-      .body = body,
-  };
-
-  LispValue value = _lisp_init(LISP_FUNC_T);
-  value->custom_function = fn;
-  return value;
-}
-
-// TODO: Types should be singletons.
-static inline LispValue lisp_make_type(LispType ref_type) {
-  assert(ref_type >= 0 && ref_type < LISP_TYPE_COUNT);
-  LispValue value = _lisp_init(LISP_TYPE_T);
-  value->ref_type = ref_type;
-  return value;
-};
-
-static inline LispValue lisp_make_int64(int64_t integer) {
-  LispValue value = _lisp_init(LISP_INT64_T);
-  value->integer = integer;
-  return value;
-}
-
-static inline LispValue lisp_make_str(StringView string) {
-  LispValue value = _lisp_init(LISP_STRING_T);
-  value->string = string;
-  return value;
-}
-
-static inline LispValue lisp_make_cstr(const char *string) {
-  return lisp_make_str(
-      (StringView){.array = (char *)string, .size = strlen(string)});
-}
-
-static inline LispValue lisp_make_sym(char *symbol) {
-  LispValue value = _lisp_init(LISP_SYMBOL_T);
-  value->symbol = symbol;
-  return value;
-}
+LispValue lisp_make_bool(bool boolean);
+LispValue lisp_make_error(LispValue item);
+LispValue lisp_make_cons(LispValue head, LispValue tail);
+LispValue lisp_make_unpacked(LispValue item);
+LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
+                                bool is_macro);
+LispValue lisp_make_type(LispType ref_type);
+LispValue lisp_make_int64(int64_t integer);
+LispValue lisp_make_str(StringView string);
+LispValue lisp_make_cstr(const char *string);
+LispValue lisp_make_sym(char *symbol);
 
 LispValue lisp_make_list(size_t count, ...);
 
 bool lisp_is_ident(LispValue a, LispValue b);
-
-static inline bool lisp_is_sym(LispValue value, const char *symbol) {
-  return lisp_is_type(value, LISP_SYMBOL_T) &&
-         !strcmp(lisp_get_sym(value), symbol);
-}
 
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
@@ -260,64 +149,21 @@ typedef struct {
   LispValue *last;
 } LispGen;
 
-static inline void lisp_gen_init(LispGen *generator) {
-  generator->list = LISP_NIL;
-  generator->last = &generator->list;
-}
-
-static inline void _lisp_gen_move(LispGen *generator) {
-  assert(lisp_is_non_empty_list(*generator->last));
-  generator->last = &((*generator->last)->cons.tail);
-}
-
-static inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
-  assert(lisp_is_nil(*generator->last));
-  *generator->last = lisp_make_cons(item, LISP_NIL);
-  _lisp_gen_move(generator);
-}
-
-static inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
-  assert(lisp_is_list(list));
-  *generator->last = list;
-
-  // Find the nil element and move generator to point to this element.
-  while (!lisp_is_nil(*generator->last)) {
-    assert(lisp_is_non_empty_list(*generator->last));
-    _lisp_gen_move(generator);
-  }
-}
-
-static inline LispValue lisp_gen_end(LispGen *generator) {
-  return generator->list;
-}
+void lisp_gen_init(LispGen *generator);
+void _lisp_gen_move(LispGen *generator);
+void lisp_gen_appendr(LispGen *generator, LispValue item);
+void lisp_gen_extendr(LispGen *generator, LispValue list);
+LispValue lisp_gen_end(LispGen *generator);
 
 // Lisp Iterators are used for iterating through lists.
 typedef struct {
   LispValue list;
 } LispIter;
 
-static inline void lisp_iter_init(LispIter *iter, LispValue list) {
-  assert(lisp_is_list(list));
-  iter->list = list;
-}
-
-static inline bool lisp_iter_has_next(LispIter *iter) {
-  assert(lisp_is_list(iter->list));
-  return lisp_is_non_empty_list(iter->list);
-}
-
-static inline bool lisp_iter_has_next_next(LispIter *iter) {
-  assert(lisp_is_non_empty_list(iter->list));
-  return lisp_is_non_empty_list(lisp_tail(iter->list));
-}
-
-static inline LispValue lisp_iter_next(LispIter *iter) {
-  assert(lisp_is_non_empty_list(iter->list));
-  LispValue next = lisp_head(iter->list);
-  iter->list = lisp_tail(iter->list);
-  assert(lisp_is_list(iter->list));
-  return next;
-}
+void lisp_iter_init(LispIter *iter, LispValue list);
+bool lisp_iter_has_next(LispIter *iter);
+bool lisp_iter_has_next_next(LispIter *iter);
+LispValue lisp_iter_next(LispIter *iter);
 
 typedef struct {
   char *symbol;

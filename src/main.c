@@ -88,17 +88,10 @@ LispValue lisp_builtin_debug_list_env;
 #define ARG1 lisp_head(lisp_tail(args))
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
-  lisp_builtin_##c = &(_LispValue){                                            \
-      .type = LISP_BUILTIN_FUNC_T,                                             \
-      .builtin_function = &(_LispBuiltinFunction){                             \
-          .callback = (LispValue (*)(LispValue, void *))builtin_##c,           \
-          .is_macro = m,                                                       \
-          .tail_call = t,                                                      \
-          .name = n}};                                                         \
-  env_set_shallow(&global_env, n, lisp_builtin_##c)
+  lisp_builtin_##c = lisp_make_builtin(m, t, builtin_##c, n);                  \
+  env_set_shallow(&global_env, n, lisp_builtin_##c);
 
-#define DEFINE_TYPE_REP(n, r)                                                  \
-  env_set(&global_env, n, &(_LispValue){.type = LISP_TYPE_T, .ref_type = r});
+#define DEFINE_TYPE_REP(n, c, r) env_set(&global_env, n, lisp_make_type(r));
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
@@ -603,25 +596,25 @@ int main(int argc, char **argv) {
   da_init(&global_env);
 
   // Singletons.
-  LISP_NIL = &(_LispValue){.type = LISP_NIL_T};
-  LISP_FALSE = &(_LispValue){.type = LISP_BOOL_T, .boolean = false};
-  LISP_TRUE = &(_LispValue){.type = LISP_BOOL_T, .boolean = true};
+  LISP_NIL = lisp_make_singleton_nil();
+  LISP_TRUE = lisp_make_singleton_bool(true);
+  LISP_FALSE = lisp_make_singleton_bool(false);
 
   env_set_shallow(&global_env, "nil", LISP_NIL);
   env_set_shallow(&global_env, "false", LISP_FALSE);
   env_set_shallow(&global_env, "true", LISP_TRUE);
 
   // Type representative singletons.
-  DEFINE_TYPE_REP("nil-t", LISP_NIL_T);
-  DEFINE_TYPE_REP("type-t", LISP_TYPE_T);
-  DEFINE_TYPE_REP("error-t", LISP_ERROR_T);
-  DEFINE_TYPE_REP("str-t", LISP_STRING_T);
-  DEFINE_TYPE_REP("int64-t", LISP_INT64_T);
-  DEFINE_TYPE_REP("bool-t", LISP_BOOL_T);
-  DEFINE_TYPE_REP("sym-t", LISP_SYMBOL_T);
-  DEFINE_TYPE_REP("builtin-t", LISP_BUILTIN_FUNC_T);
-  DEFINE_TYPE_REP("fn-t", LISP_FUNC_T);
-  DEFINE_TYPE_REP("list-t", LISP_LIST_T);
+  DEFINE_TYPE_REP("nil-t", nil, LISP_NIL_T);
+  DEFINE_TYPE_REP("type-t", type, LISP_TYPE_T);
+  DEFINE_TYPE_REP("error-t", error, LISP_ERROR_T);
+  DEFINE_TYPE_REP("str-t", string, LISP_STRING_T);
+  DEFINE_TYPE_REP("int64-t", int64, LISP_INT64_T);
+  DEFINE_TYPE_REP("bool-t", bool, LISP_BOOL_T);
+  DEFINE_TYPE_REP("sym-t", symbol, LISP_SYMBOL_T);
+  DEFINE_TYPE_REP("builtin-t", builtin_func, LISP_BUILTIN_FUNC_T);
+  DEFINE_TYPE_REP("fn-t", func, LISP_FUNC_T);
+  DEFINE_TYPE_REP("list-t", list, LISP_LIST_T);
 
   // Builtin functions.
   DEFINE_BUILTIN_FUNCTION("print", print, false, false);

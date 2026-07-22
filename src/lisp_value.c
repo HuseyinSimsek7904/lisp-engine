@@ -12,6 +12,23 @@
 #include "lexer.h"
 #include "lisp_value.h"
 
+struct _LispValue {
+  LispType type;
+  union {
+    // TODO: Strings referenced by lisp objects should be kept in a pool, and
+    // they should be deallocated like lisp objects.
+    StringView string;
+    char *symbol;
+    int64_t integer;
+    LispType ref_type;
+    bool boolean;
+    _LispBuiltinFunction *builtin_function;
+    _LispCustomFunction *custom_function;
+    _LispCons cons;
+    LispValue item;
+  };
+};
+
 char *lisp_type_syms[] = {
     [LISP_NIL_T] = "nil-t",           [LISP_TYPE_T] = "type-t",
     [LISP_ERROR_T] = "error-t",       [LISP_STRING_T] = "str-t",
@@ -30,6 +47,63 @@ char *lexer_result_syms[] = {
     [LEXER_INTEGER_TOO_LARGE] = "lexer:integer-literal-too-large",
 };
 
+extern inline LispType lisp_get_type(LispValue value) { return value->type; }
+extern inline bool lisp_is_type(LispValue value, LispType type) {
+  return lisp_get_type(value) == type;
+}
+
+extern inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
+extern inline bool lisp_is_non_empty_list(LispValue value) {
+  return lisp_is_type(value, LISP_LIST_T);
+}
+extern inline bool lisp_is_list(LispValue value) {
+  return lisp_is_nil(value) || lisp_is_non_empty_list(value);
+}
+
+extern inline bool lisp_is_sym(LispValue value, const char *symbol) {
+  return lisp_is_type(value, LISP_SYMBOL_T) &&
+         !strcmp(lisp_get_sym(value), symbol);
+}
+
+extern inline StringView lisp_get_str(LispValue value) {
+  assert(lisp_is_type(value, LISP_STRING_T));
+  return value->string;
+}
+extern inline int64_t lisp_get_int64(LispValue value) {
+  assert(lisp_is_type(value, LISP_INT64_T));
+  return value->integer;
+}
+extern inline char *lisp_get_sym(LispValue value) {
+  assert(lisp_is_type(value, LISP_SYMBOL_T));
+  return value->symbol;
+}
+extern inline char *lisp_get_ref_type_sym(LispValue value) {
+  assert(lisp_is_type(value, LISP_TYPE_T));
+  assert(value->ref_type >= 0 && value->ref_type < LISP_TYPE_COUNT);
+  return lisp_type_syms[value->ref_type];
+}
+extern inline bool lisp_get_bool(LispValue value) {
+  assert(lisp_is_type(value, LISP_BOOL_T));
+  return value->boolean;
+}
+extern inline _LispBuiltinFunction *lisp_get_builtin(LispValue value) {
+  assert(lisp_is_type(value, LISP_BUILTIN_FUNC_T));
+  return value->builtin_function;
+}
+extern inline _LispCustomFunction *lisp_get_custom(LispValue value) {
+  assert(lisp_is_type(value, LISP_FUNC_T));
+  return value->custom_function;
+}
+extern inline LispValue lisp_get_error_item(LispValue value) {
+  assert(lisp_is_type(value, LISP_ERROR_T));
+  return value->item;
+}
+extern inline LispValue lisp_get_unpacked_item(LispValue value) {
+  assert(lisp_is_type(value, LISP_UNPACKED_T));
+  assert(lisp_is_list(value->item));
+  return value->item;
+}
+
 LispValue _lisp_init(LispType type) {
   LispValue ptr = malloc(sizeof(_LispValue));
   assert(ptr);
@@ -40,6 +114,120 @@ LispValue _lisp_init(LispType type) {
   }
 
   return ptr;
+}
+
+extern inline LispValue lisp_make_singleton_nil() {
+  return _lisp_init(LISP_NIL_T);
+}
+
+extern inline LispValue lisp_make_singleton_bool(bool boolean) {
+  LispValue value = _lisp_init(LISP_BOOL_T);
+  value->boolean = boolean;
+  return value;
+}
+
+extern inline LispValue
+lisp_make_builtin(bool is_macro, bool tail_call,
+                  LispValue (*callback)(LispValue, Environment *), char *name) {
+
+  _LispBuiltinFunction *fn = malloc(sizeof(_LispBuiltinFunction));
+  *fn = (_LispBuiltinFunction){.is_macro = is_macro,
+                               .tail_call = tail_call,
+                               .callback = callback,
+                               .name = name};
+
+  LispValue value = _lisp_init(LISP_BUILTIN_FUNC_T);
+  value->builtin_function = fn;
+  return value;
+}
+
+extern inline LispValue lisp_make_bool(bool boolean) {
+  return boolean ? LISP_TRUE : LISP_FALSE;
+}
+
+extern inline LispValue lisp_make_error(LispValue item) {
+  LispValue value = _lisp_init(LISP_ERROR_T);
+  value->item = item;
+  return value;
+}
+
+extern inline LispValue lisp_make_cons(LispValue head, LispValue tail) {
+  assert(lisp_is_list(tail));
+
+  LispValue value = _lisp_init(LISP_LIST_T);
+  value->cons.head = head;
+  value->cons.tail = tail;
+  return value;
+}
+
+extern inline LispValue lisp_make_unpacked(LispValue item) {
+  assert(lisp_is_list(item));
+
+  LispValue value = _lisp_init(LISP_UNPACKED_T);
+  value->item = item;
+  return value;
+}
+
+extern inline LispValue lisp_make_fn_or_macro(LispValue args, LispValue body,
+                                              bool variadic, bool is_macro) {
+  _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
+  assert(fn);
+
+  *fn = (_LispCustomFunction){
+      .is_macro = is_macro,
+      .args = args,
+      .variadic = variadic,
+      .body = body,
+  };
+
+  LispValue value = _lisp_init(LISP_FUNC_T);
+  value->custom_function = fn;
+  return value;
+}
+
+// TODO: Types should be singletons.
+extern inline LispValue lisp_make_type(LispType ref_type) {
+  assert(ref_type >= 0 && ref_type < LISP_TYPE_COUNT);
+  LispValue value = _lisp_init(LISP_TYPE_T);
+  value->ref_type = ref_type;
+  return value;
+};
+
+extern inline LispValue lisp_make_int64(int64_t integer) {
+  LispValue value = _lisp_init(LISP_INT64_T);
+  value->integer = integer;
+  return value;
+}
+
+extern inline LispValue lisp_make_str(StringView string) {
+  LispValue value = _lisp_init(LISP_STRING_T);
+  value->string = string;
+  return value;
+}
+
+extern inline LispValue lisp_make_cstr(const char *string) {
+  return lisp_make_str(
+      (StringView){.array = (char *)string, .size = strlen(string)});
+}
+
+extern inline LispValue lisp_make_sym(char *symbol) {
+  LispValue value = _lisp_init(LISP_SYMBOL_T);
+  value->symbol = symbol;
+  return value;
+}
+
+extern inline LispValue lisp_make_list(size_t count, ...) {
+  LispGen gen;
+  lisp_gen_init(&gen);
+
+  va_list va;
+  va_start(va, count);
+  for (int j = 0; j < count; ++j) {
+    lisp_gen_appendr(&gen, va_arg(va, LispValue));
+  }
+  va_end(va);
+
+  return lisp_gen_end(&gen);
 }
 
 bool lisp_is_ident(LispValue a, LispValue b) {
@@ -109,20 +297,6 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   return false;
 }
 
-LispValue lisp_make_list(size_t count, ...) {
-  LispGen gen;
-  lisp_gen_init(&gen);
-
-  va_list va;
-  va_start(va, count);
-  for (int j = 0; j < count; ++j) {
-    lisp_gen_appendr(&gen, va_arg(va, LispValue));
-  }
-  va_end(va);
-
-  return lisp_gen_end(&gen);
-}
-
 LispValue lisp_consify_array(LispValue *array, size_t size) {
   LispValue cons = LISP_NIL;
 
@@ -156,6 +330,62 @@ size_t lisp_get_len(LispValue lisp) {
   assert(lisp_is_nil(lisp));
 
   return count;
+}
+
+// Lisp Generators
+extern inline void lisp_gen_init(LispGen *generator) {
+  generator->list = LISP_NIL;
+  generator->last = &generator->list;
+}
+
+extern inline void _lisp_gen_move(LispGen *generator) {
+  assert(lisp_is_non_empty_list(*generator->last));
+  generator->last = &((*generator->last)->cons.tail);
+}
+
+extern inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
+  assert(lisp_is_nil(*generator->last));
+  *generator->last = lisp_make_cons(item, LISP_NIL);
+  _lisp_gen_move(generator);
+}
+
+extern inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
+  assert(lisp_is_list(list));
+  *generator->last = list;
+
+  // Find the nil element and move generator to point to this element.
+  while (!lisp_is_nil(*generator->last)) {
+    assert(lisp_is_non_empty_list(*generator->last));
+    _lisp_gen_move(generator);
+  }
+}
+
+extern inline LispValue lisp_gen_end(LispGen *generator) {
+  return generator->list;
+}
+
+// Lisp Iterators
+extern inline void lisp_iter_init(LispIter *iter, LispValue list) {
+  assert(lisp_is_list(list));
+  iter->list = list;
+}
+
+extern inline bool lisp_iter_has_next(LispIter *iter) {
+  assert(lisp_is_list(iter->list));
+  return lisp_is_non_empty_list(iter->list);
+}
+
+extern inline bool lisp_iter_has_next_next(LispIter *iter) {
+  assert(lisp_is_non_empty_list(iter->list));
+  return lisp_is_non_empty_list(lisp_tail(iter->list));
+}
+
+extern inline LispValue lisp_iter_next(LispIter *iter) {
+  assert(lisp_is_non_empty_list(iter->list));
+  LispValue next = lisp_head(iter->list);
+  iter->list = lisp_tail(iter->list);
+  assert(lisp_is_list(iter->list));
+  return next;
 }
 
 LispValue parse_pp_list(LispValue lisp) {
