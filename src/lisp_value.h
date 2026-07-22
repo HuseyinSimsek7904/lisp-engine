@@ -131,7 +131,11 @@ LispValue lisp_make_str(StringView string);
 LispValue lisp_make_cstr(const char *string);
 LispValue lisp_make_sym(char *symbol);
 
-LispValue lisp_make_list(size_t count, ...);
+LispValue lisp_make_list_1(LispValue item0);
+LispValue lisp_make_list_2(LispValue item0, LispValue item1);
+LispValue lisp_make_list_3(LispValue item0, LispValue item1, LispValue item2);
+LispValue lisp_make_list_4(LispValue item0, LispValue item1, LispValue item2,
+                           LispValue item3);
 
 bool lisp_is_ident(LispValue a, LispValue b);
 
@@ -186,8 +190,12 @@ EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
                                   LispValue value);
 EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
-#define ERROR(s, n, ...)                                                       \
-  lisp_make_error(lisp_make_list(n + 1, lisp_make_sym(s), __VA_ARGS__))
+#define ERROR0(s) lisp_make_error(lisp_make_list_1(lisp_make_sym(s)))
+#define ERROR1(s, i0) lisp_make_error(lisp_make_list_2(lisp_make_sym(s), i0))
+#define ERROR2(s, i0, i1)                                                      \
+  lisp_make_error(lisp_make_list_3(lisp_make_sym(s), i0, i1))
+#define ERROR3(s, i0, i1, i2)                                                  \
+  lisp_make_error(lisp_make_list_4(lisp_make_sym(s), i0, i1, i2))
 
 #define WRONG_NUMBER_ARGS_SYM "wrong-number-of-args-to-builtin"
 #define TOO_FEW_ARGS_SYM "too-few-args-to-builtin"
@@ -217,11 +225,9 @@ EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
 
 extern char *lexer_result_syms[];
 
-#define RETURN_COULD_NOT_READ_FILE(f)                                          \
-  return ERROR(COULD_NOT_READ_FILE_SYM, 1, f)
+#define RETURN_COULD_NOT_READ_FILE(f) return ERROR1(COULD_NOT_READ_FILE_SYM, f)
 
 #define RETURN_COULD_NOT_GEN_TOKENS(r)                                         \
-  return lisp_make_error(                                                      \
-      lisp_make_cons(lisp_make_sym(lexer_result_syms[r]), LISP_NIL))
+  return lisp_make_error(lisp_make_list_1(lisp_make_sym(lexer_result_syms[r])))
 
 #endif

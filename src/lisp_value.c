@@ -216,18 +216,19 @@ extern inline LispValue lisp_make_sym(char *symbol) {
   return value;
 }
 
-extern inline LispValue lisp_make_list(size_t count, ...) {
-  LispGen gen;
-  lisp_gen_init(&gen);
-
-  va_list va;
-  va_start(va, count);
-  for (int j = 0; j < count; ++j) {
-    lisp_gen_appendr(&gen, va_arg(va, LispValue));
-  }
-  va_end(va);
-
-  return lisp_gen_end(&gen);
+extern inline LispValue lisp_make_list_1(LispValue item0) {
+  return lisp_make_cons(item0, LISP_NIL);
+}
+extern inline LispValue lisp_make_list_2(LispValue item0, LispValue item1) {
+  return lisp_make_cons(item0, lisp_make_list_1(item1));
+}
+extern inline LispValue lisp_make_list_3(LispValue item0, LispValue item1,
+                                         LispValue item2) {
+  return lisp_make_cons(item0, lisp_make_list_2(item1, item2));
+}
+extern inline LispValue lisp_make_list_4(LispValue item0, LispValue item1,
+                                         LispValue item2, LispValue item3) {
+  return lisp_make_cons(item0, lisp_make_list_3(item1, item2, item3));
 }
 
 bool lisp_is_ident(LispValue a, LispValue b) {
@@ -417,7 +418,7 @@ LispValue parse_pp_list(LispValue lisp) {
       do {
         if (lisp_is_nil(iter))
           return lisp_make_error(
-              lisp_make_cons(lisp_make_sym(PARSER_QUOTE_END), LISP_NIL));
+              lisp_make_list_1(lisp_make_sym(PARSER_QUOTE_END)));
 
         assert(lisp_is_non_empty_list(iter));
 
@@ -430,8 +431,7 @@ LispValue parse_pp_list(LispValue lisp) {
       // Nest quote lists.
       LispValue result = item;
       while (count--) {
-        result = lisp_make_cons(lisp_make_sym("quote"),
-                                lisp_make_cons(result, LISP_NIL));
+        result = lisp_make_list_2(lisp_make_sym("quote"), result);
       }
 
       remaining_lisp->cons.head = result;
@@ -468,7 +468,7 @@ LispValue parse(Token *tokens, size_t token_count) {
     case T_R_PAREN:
       if (depth <= 0)
         return lisp_make_error(
-            lisp_make_cons(lisp_make_sym(PARSER_TOO_MANY_R_PAREN), LISP_NIL));
+            lisp_make_list_1(lisp_make_sym(PARSER_TOO_MANY_R_PAREN)));
 
       depth--;
       gen.last = &gen.list;
@@ -522,7 +522,7 @@ LispValue parse(Token *tokens, size_t token_count) {
 
   if (depth > 0)
     return lisp_make_error(
-        lisp_make_cons(lisp_make_sym(PARSER_TOO_FEW_R_PAREN), LISP_NIL));
+        lisp_make_list_1(lisp_make_sym(PARSER_TOO_FEW_R_PAREN)));
 
   return parse_pp_list(lisp_gen_end(&gen));
 }

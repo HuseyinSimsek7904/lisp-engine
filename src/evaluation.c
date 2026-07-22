@@ -67,7 +67,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       }
 
       roll_env_back(env, original);
-      return ERROR(UNDEF_SYMBOL_SYM, 1, lisp);
+      return ERROR1(UNDEF_SYMBOL_SYM, lisp);
     }
 
     case LISP_UNPACKED_T:
@@ -115,7 +115,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         if (lisp_is_nil(custom->args)) {
           if (!lisp_is_nil(args)) {
             roll_env_back(env, original);
-            return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
+            return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
           }
 
         } else {
@@ -127,7 +127,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           while (lisp_iter_has_next_next(&args_iter)) {
             if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
-              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
+              return ERROR1(TOO_FEW_ARGS_CUSTOM_SYM, callable);
             }
 
             LispValue arg = lisp_iter_next(&args_iter);
@@ -147,12 +147,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
-              return ERROR(TOO_FEW_ARGS_CUSTOM_SYM, 1, callable);
+              return ERROR1(TOO_FEW_ARGS_CUSTOM_SYM, callable);
             }
 
             if (lisp_iter_has_next_next(&params_iter)) {
               roll_env_back(env, original);
-              return ERROR(TOO_MANY_ARGS_CUSTOM_SYM, 1, callable);
+              return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
             }
 
             env_set_shallow(new_env, lisp_get_sym(last_func_arg),
@@ -166,7 +166,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       default:
         roll_env_back(env, original);
-        return ERROR("not-callable", 1, callable);
+        return ERROR1("not-callable", callable);
       }
     } break;
 
