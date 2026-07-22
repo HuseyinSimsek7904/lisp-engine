@@ -60,7 +60,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     return lisp_get_bool(a) == lisp_get_bool(b);
 
   case LISP_ERROR_T:
-    return lisp_is_ident(a->item, b->item);
+    return lisp_is_ident(lisp_get_error_item(a), lisp_get_error_item(b));
 
   case LISP_INT64_T:
     return lisp_get_int64(a) == lisp_get_int64(b);
@@ -97,7 +97,7 @@ bool lisp_is_ident(LispValue a, LispValue b) {
   }
 
   case LISP_UNPACKED_T:
-    return lisp_is_ident(a->item, b->item);
+    return lisp_is_ident(lisp_get_unpacked_item(a), lisp_get_unpacked_item(b));
 
   case LISP_TYPE_COUNT:
     lisp_fprintf(stderr, "reached unreachable\n");

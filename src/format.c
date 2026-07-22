@@ -87,7 +87,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
     sb_append_static_str(builder, "error ");
-    lisp_value_format(builder, value->item, formatting);
+    lisp_value_format(builder, lisp_get_error_item(value), formatting);
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
 
     break;
@@ -200,7 +200,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     else
       sb_append_static_str(builder, "unpacked ");
 
-    lisp_value_format(builder, value->item, formatting);
+    lisp_value_format(builder, lisp_get_unpacked_item(value), formatting);
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
     break;
 

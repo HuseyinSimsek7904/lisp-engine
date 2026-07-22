@@ -113,6 +113,14 @@ static inline bool lisp_is_type(LispValue value, LispType type) {
   return lisp_get_type(value) == type;
 }
 
+static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
+static inline bool lisp_is_non_empty_list(LispValue value) {
+  return lisp_is_type(value, LISP_LIST_T);
+}
+static inline bool lisp_is_list(LispValue value) {
+  return lisp_is_nil(value) || lisp_is_non_empty_list(value);
+}
+
 static inline StringView lisp_get_str(LispValue value) {
   assert(lisp_is_type(value, LISP_STRING_T));
   return value->string;
@@ -142,17 +150,18 @@ static inline _LispCustomFunction *lisp_get_custom(LispValue value) {
   assert(lisp_is_type(value, LISP_FUNC_T));
   return value->custom_function;
 }
+static inline LispValue lisp_get_error_item(LispValue value) {
+  assert(lisp_is_type(value, LISP_ERROR_T));
+  return value->item;
+}
+static inline LispValue lisp_get_unpacked_item(LispValue value) {
+  assert(lisp_is_type(value, LISP_UNPACKED_T));
+  assert(lisp_is_list(value->item));
+  return value->item;
+}
 
 static inline LispValue lisp_make_bool(bool boolean) {
   return boolean ? LISP_TRUE : LISP_FALSE;
-}
-
-static inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
-static inline bool lisp_is_non_empty_list(LispValue value) {
-  return lisp_is_type(value, LISP_LIST_T);
-}
-static inline bool lisp_is_list(LispValue value) {
-  return lisp_is_nil(value) || lisp_is_non_empty_list(value);
 }
 
 LispValue _lisp_init(LispType type);

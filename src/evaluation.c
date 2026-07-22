@@ -31,8 +31,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
     LispValue arg = evaluate_lisp(lisp->cons.head, env);
 
     if (lisp_is_type(arg, LISP_UNPACKED_T)) {
-      assert(lisp_is_list(arg->item));
-      lisp_gen_extendr(&args_gen, arg->item);
+      lisp_gen_extendr(&args_gen, lisp_get_unpacked_item(arg));
 
     } else {
       lisp_gen_appendr(&args_gen, arg);
@@ -75,7 +74,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       // I do not think calling an unpacked type is possible by regular means,
       // but just in case adding this fall through to list.
 
-      lisp = lisp->item;
+      lisp = lisp_get_unpacked_item(lisp);
 
     case LISP_LIST_T: {
       if (debug_flags & DEBUG_PRINT_EVAL) {
