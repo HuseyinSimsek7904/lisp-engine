@@ -308,17 +308,27 @@ LispValue lisp_consify_array(LispValue *array, size_t size) {
 }
 
 LispValue lisp_head(LispValue lisp) {
-  if (lisp_is_non_empty_list(lisp))
-    return lisp->cons.head;
-
-  return NULL;
+  assert(lisp_is_non_empty_list(lisp));
+  return lisp->cons.head;
 }
 
 LispValue lisp_tail(LispValue lisp) {
-  if (lisp_is_non_empty_list(lisp))
-    return lisp->cons.tail;
+  assert(lisp_is_non_empty_list(lisp));
+  return lisp->cons.tail;
+}
 
-  return NULL;
+LispValue lisp_head_n(LispValue lisp, size_t n) {
+  while (n--) {
+    lisp = lisp_tail(lisp);
+  }
+  return lisp_head(lisp);
+}
+
+LispValue lisp_tail_n(LispValue lisp, size_t n) {
+  while (n--) {
+    lisp = lisp_tail(lisp);
+  }
+  return lisp_tail(lisp);
 }
 
 size_t lisp_get_len(LispValue lisp) {

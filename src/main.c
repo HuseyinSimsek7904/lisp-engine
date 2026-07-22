@@ -84,8 +84,7 @@ LispValue lisp_builtin_debug_list_env;
       RETURN_INVALID_ARG(lisp_builtin_##n, value, lisp_make_type(t));          \
   } while (false)
 
-#define ARG0 lisp_head(args)
-#define ARG1 lisp_head(lisp_tail(args))
+#define ARG(n) lisp_head_n(args, n)
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   lisp_builtin_##c = lisp_make_builtin(m, t, builtin_##c, n);                  \
@@ -95,10 +94,10 @@ LispValue lisp_builtin_debug_list_env;
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
-  CHECK_ARG_TYPE(set, ARG0, LISP_SYMBOL_T);
+  CHECK_ARG_TYPE(set, ARG(0), LISP_SYMBOL_T);
 
-  char *symbol = lisp_get_sym(ARG0);
-  LispValue value = evaluate_lisp(ARG1, env);
+  char *symbol = lisp_get_sym(ARG(0));
+  LispValue value = evaluate_lisp(ARG(1), env);
 
   env_set(env, symbol, value);
 
@@ -107,10 +106,10 @@ DEFINE_BUILTIN(set) {
 
 DEFINE_BUILTIN(setg) {
   REQUIRES_EQ_ARGS(setg, 2);
-  CHECK_ARG_TYPE(setg, ARG0, LISP_SYMBOL_T);
+  CHECK_ARG_TYPE(setg, ARG(0), LISP_SYMBOL_T);
 
-  char *symbol = lisp_get_sym(ARG0);
-  LispValue value = evaluate_lisp(ARG1, env);
+  char *symbol = lisp_get_sym(ARG(0));
+  LispValue value = evaluate_lisp(ARG(1), env);
 
   Environment *global = env;
   while (global->other)
@@ -129,9 +128,9 @@ DEFINE_BUILTIN(let) {
   Environment new_env = {.other = env};
   da_init(&new_env);
 
-  if (lisp_is_non_empty_list(ARG0)) {
+  if (lisp_is_non_empty_list(ARG(0))) {
     LispIter defs_iter;
-    lisp_iter_init(&defs_iter, ARG0);
+    lisp_iter_init(&defs_iter, ARG(0));
 
     while (lisp_iter_has_next(&defs_iter)) {
       LispValue def_node = lisp_iter_next(&defs_iter);
@@ -153,13 +152,13 @@ DEFINE_BUILTIN(let) {
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
-      LispValue value = evaluate_lisp(lisp_head(lisp_tail(def_node)), env);
+      LispValue value = evaluate_lisp(lisp_head_n(def_node, 1), env);
 
       env_set_shallow(&new_env, symbol, value);
     }
 
-  } else if (!lisp_is_nil(ARG0))
-    RETURN_INVALID_ARG(lisp_builtin_let, ARG0, lisp_make_type(LISP_LIST_T));
+  } else if (!lisp_is_nil(ARG(0)))
+    RETURN_INVALID_ARG(lisp_builtin_let, ARG(0), lisp_make_type(LISP_LIST_T));
 
   LispValue return_value = evaluate_lisp_body(lisp_tail(args), &new_env, false);
 
@@ -171,7 +170,7 @@ DEFINE_BUILTIN(let) {
 DEFINE_BUILTIN(if) {
   REQUIRES_MIN_ARGS(if, 2);
 
-  LispValue condition = evaluate_lisp(ARG0, env);
+  LispValue condition = evaluate_lisp(ARG(0), env);
 
   if (lisp_is_type(condition, LISP_ERROR_T))
     return condition;
@@ -179,9 +178,9 @@ DEFINE_BUILTIN(if) {
   CHECK_ARG_TYPE(if, condition, LISP_BOOL_T);
 
   if (lisp_get_bool(condition))
-    return ARG1;
+    return ARG(1);
 
-  return evaluate_lisp_body(lisp_tail(lisp_tail(args)), env, true);
+  return evaluate_lisp_body(lisp_tail_n(args, 1), env, true);
 }
 
 LispValue define_fn_or_macro(LispValue args, Environment *env,
@@ -195,15 +194,15 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
   bool variadic = false;
   LispValue arg_symbols;
 
-  if (lisp_is_nil(ARG0)) {
+  if (lisp_is_nil(ARG(0))) {
     arg_symbols = LISP_NIL;
 
-  } else if (lisp_is_non_empty_list(ARG0)) {
+  } else if (lisp_is_non_empty_list(ARG(0))) {
     LispGen args_gen;
     lisp_gen_init(&args_gen);
 
     LispIter args_iter;
-    lisp_iter_init(&args_iter, ARG0);
+    lisp_iter_init(&args_iter, ARG(0));
 
     LispValue arg;
 
@@ -212,7 +211,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       if (!lisp_is_type(arg, LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
-            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
             lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
@@ -225,35 +224,35 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
     if (lisp_is_non_empty_list(arg)) {
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list(
-            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
             lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
       if (!lisp_is_sym(lisp_head(arg), "rest"))
         return lisp_make_error(lisp_make_list(
-            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
             lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      if (!lisp_is_type(lisp_head(lisp_tail(arg)), LISP_SYMBOL_T))
+      if (!lisp_is_type(lisp_head_n(arg, 1), LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
-            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+            4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
             lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
       variadic = true;
 
-      lisp_gen_appendr(&args_gen, lisp_head(lisp_tail(arg)));
+      lisp_gen_appendr(&args_gen, lisp_head_n(arg, 1));
 
     } else if (lisp_is_type(arg, LISP_SYMBOL_T)) {
       lisp_gen_appendr(&args_gen, arg);
 
     } else
       return lisp_make_error(lisp_make_list(
-          4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
+          4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
           lisp_make_cstr(
               "argument list must be in the form ([SYMBOL...] [(rest "
               "SYMBOL)])")));
@@ -262,7 +261,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
   } else
     return lisp_make_error(lisp_make_list(4, lisp_make_sym(WRONG_TYPE_ARG_SYM),
-                                          builtin, ARG0,
+                                          builtin, ARG(0),
                                           lisp_make_type(LISP_LIST_T)));
 
   return lisp_make_fn_or_macro(arg_symbols, lisp_tail(args), variadic,
@@ -323,14 +322,14 @@ DEFINE_BUILTIN(neg_or_sub) {
 
   REQUIRES_MIN_ARGS(neg_or_sub, 1);
   REQUIRES_MAX_ARGS(neg_or_sub, 2);
-  CHECK_ARG_TYPE(neg_or_sub, ARG0, LISP_INT64_T);
+  CHECK_ARG_TYPE(neg_or_sub, ARG(0), LISP_INT64_T);
 
   if (arg_count > 1)
-    CHECK_ARG_TYPE(neg_or_sub, ARG1, LISP_INT64_T);
+    CHECK_ARG_TYPE(neg_or_sub, ARG(1), LISP_INT64_T);
 
   return lisp_make_int64(arg_count == 1
-                             ? -lisp_get_int64(ARG0)
-                             : lisp_get_int64(ARG0) - lisp_get_int64(ARG1));
+                             ? -lisp_get_int64(ARG(0))
+                             : lisp_get_int64(ARG(0)) - lisp_get_int64(ARG(1)));
 }
 
 DEFINE_BUILTIN(list) { return args; }
@@ -341,7 +340,7 @@ DEFINE_BUILTIN(list) { return args; }
 DEFINE_BUILTIN(equal) {
   REQUIRES_EQ_ARGS(equal, 2);
 
-  return lisp_make_bool(lisp_is_ident(ARG0, ARG1));
+  return lisp_make_bool(lisp_is_ident(ARG(0), ARG(1)));
 }
 
 // TODO: This builtin should allow for any number of arguments except zero and
@@ -349,34 +348,34 @@ DEFINE_BUILTIN(equal) {
 // (< a b c) should compare a < b < c.
 DEFINE_BUILTIN(less_than) {
   REQUIRES_EQ_ARGS(less_than, 2);
-  CHECK_ARG_TYPE(less_than, ARG0, LISP_INT64_T);
-  CHECK_ARG_TYPE(less_than, ARG1, LISP_INT64_T);
+  CHECK_ARG_TYPE(less_than, ARG(0), LISP_INT64_T);
+  CHECK_ARG_TYPE(less_than, ARG(1), LISP_INT64_T);
 
-  return lisp_make_bool(lisp_get_int64(ARG0) < lisp_get_int64(ARG1));
+  return lisp_make_bool(lisp_get_int64(ARG(0)) < lisp_get_int64(ARG(1)));
 }
 
 DEFINE_BUILTIN(read_file) {
   REQUIRES_EQ_ARGS(read_file, 1);
-  CHECK_ARG_TYPE(read_file, ARG0, LISP_STRING_T);
+  CHECK_ARG_TYPE(read_file, ARG(0), LISP_STRING_T);
 
-  char *file_name = sv_copy_cstr(lisp_get_str(ARG0));
+  char *file_name = sv_copy_cstr(lisp_get_str(ARG(0)));
   StringView buffer = read_file_sv(file_name);
 
   free(file_name);
 
   if (!buffer.array)
-    RETURN_COULD_NOT_READ_FILE(ARG0);
+    RETURN_COULD_NOT_READ_FILE(ARG(0));
 
   return lisp_make_str(buffer);
 }
 
 DEFINE_BUILTIN(parse_lisp) {
   REQUIRES_EQ_ARGS(parse_lisp, 1);
-  CHECK_ARG_TYPE(parse_lisp, ARG0, LISP_STRING_T);
+  CHECK_ARG_TYPE(parse_lisp, ARG(0), LISP_STRING_T);
 
   Tokens tokens;
   da_init(&tokens);
-  LexerResult lexer_result = generate_tokens(lisp_get_str(ARG0), &tokens);
+  LexerResult lexer_result = generate_tokens(lisp_get_str(ARG(0)), &tokens);
 
   if (lexer_result)
     RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
@@ -415,43 +414,43 @@ DEFINE_BUILTIN(unpack) {
 DEFINE_BUILTIN(quote) {
   REQUIRES_EQ_ARGS(quote, 1);
 
-  return ARG0;
+  return ARG(0);
 }
 
 DEFINE_BUILTIN(head) {
   REQUIRES_EQ_ARGS(head, 1);
-  CHECK_ARG_TYPE(head, ARG0, LISP_LIST_T);
+  CHECK_ARG_TYPE(head, ARG(0), LISP_LIST_T);
 
-  return lisp_head(ARG0);
+  return lisp_head(ARG(0));
 }
 
 DEFINE_BUILTIN(tail) {
   REQUIRES_EQ_ARGS(tail, 1);
-  CHECK_ARG_TYPE(tail, ARG0, LISP_LIST_T);
+  CHECK_ARG_TYPE(tail, ARG(0), LISP_LIST_T);
 
-  return lisp_tail(ARG0);
+  return lisp_tail(ARG(0));
 }
 
 DEFINE_BUILTIN(typeof) {
   REQUIRES_EQ_ARGS(typeof, 1);
 
-  return lisp_make_type(lisp_get_type(ARG0));
+  return lisp_make_type(lisp_get_type(ARG(0)));
 }
 
 DEFINE_BUILTIN(error) {
   REQUIRES_EQ_ARGS(error, 1);
 
-  return lisp_make_error(ARG0);
+  return lisp_make_error(ARG(0));
 }
 
 DEFINE_BUILTIN(format) {
   REQUIRES_MIN_ARGS(format, 1);
-  CHECK_ARG_TYPE(format, ARG0, LISP_STRING_T);
+  CHECK_ARG_TYPE(format, ARG(0), LISP_STRING_T);
 
   StringBuilder builder;
   da_init(&builder);
 
-  StringView format_str = lisp_get_str(ARG0);
+  StringView format_str = lisp_get_str(ARG(0));
 
   LispIter args_iter;
   lisp_iter_init(&args_iter, lisp_tail(args));
@@ -474,7 +473,7 @@ DEFINE_BUILTIN(format) {
     case 'l': {
       if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
-        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG(0));
       }
 
       lisp_value_format(&builder, lisp_iter_next(&args_iter), FORMAT_BASIC);
@@ -483,7 +482,7 @@ DEFINE_BUILTIN(format) {
     case 'L': {
       if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
-        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG(0));
       }
 
       lisp_value_format(&builder, lisp_iter_next(&args_iter), FORMAT_PRODUCER);
@@ -492,7 +491,7 @@ DEFINE_BUILTIN(format) {
     case 's': {
       if (!lisp_iter_has_next(&args_iter)) {
         da_free(&builder);
-        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG0);
+        return ERROR(TOO_FEW_ARGS_FORMAT_SYM, 1, ARG(0));
       }
 
       LispValue arg = lisp_iter_next(&args_iter);
@@ -508,7 +507,7 @@ DEFINE_BUILTIN(format) {
 
     default:
       da_free(&builder);
-      return ERROR(INVALID_FORMAT_SYM, 1, ARG0);
+      return ERROR(INVALID_FORMAT_SYM, 1, ARG(0));
     }
   }
 
@@ -518,17 +517,17 @@ DEFINE_BUILTIN(format) {
 DEFINE_BUILTIN(cons) {
   REQUIRES_EQ_ARGS(cons, 2);
 
-  if (!lisp_is_nil(ARG1))
-    CHECK_ARG_TYPE(cons, ARG1, LISP_LIST_T);
+  if (!lisp_is_nil(ARG(1)))
+    CHECK_ARG_TYPE(cons, ARG(1), LISP_LIST_T);
 
-  return lisp_make_cons(ARG0, ARG1);
+  return lisp_make_cons(ARG(0), ARG(1));
 }
 
 DEFINE_BUILTIN(read_line) {
   REQUIRES_EQ_ARGS(read_line, 1);
-  CHECK_ARG_TYPE(read_line, ARG0, LISP_STRING_T);
+  CHECK_ARG_TYPE(read_line, ARG(0), LISP_STRING_T);
 
-  char *prompt = sv_copy_cstr(lisp_get_str(ARG0));
+  char *prompt = sv_copy_cstr(lisp_get_str(ARG(0)));
   char *read = readline(prompt);
   free(prompt);
 
@@ -540,9 +539,9 @@ DEFINE_BUILTIN(read_line) {
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
   REQUIRES_EQ_ARGS(debug_set_flags, 1);
-  CHECK_ARG_TYPE(debug_set_flags, ARG0, LISP_INT64_T);
+  CHECK_ARG_TYPE(debug_set_flags, ARG(0), LISP_INT64_T);
 
-  debug_flags = lisp_get_int64(ARG0);
+  debug_flags = lisp_get_int64(ARG(0));
 
   return LISP_NIL;
 }
