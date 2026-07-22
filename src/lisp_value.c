@@ -74,11 +74,11 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 
   case LISP_LIST_T:
     do {
-      if (!lisp_is_ident(a->cons.head, b->cons.head))
+      if (!lisp_is_ident(lisp_head(a), lisp_head(b)))
         return false;
 
-      a = a->cons.tail;
-      b = b->cons.tail;
+      a = lisp_tail(a);
+      b = lisp_tail(b);
     } while (lisp_is_non_empty_list(a) && lisp_is_non_empty_list(b));
 
     return lisp_get_type(a) == lisp_get_type(b);
@@ -147,19 +147,10 @@ LispValue lisp_tail(LispValue lisp) {
   return NULL;
 }
 
-LispValue *lisp_cons_find_term_nil(LispValue *lisp) {
-  while (!lisp_is_nil(*lisp)) {
-    assert(lisp_is_non_empty_list(*lisp));
-    lisp = &((*lisp)->cons.tail);
-  }
-
-  return lisp;
-}
-
 size_t lisp_get_len(LispValue lisp) {
   size_t count = 0;
   for (; lisp_is_non_empty_list(lisp); count++) {
-    lisp = lisp->cons.tail;
+    lisp = lisp_tail(lisp);
   }
 
   assert(lisp_is_nil(lisp));
@@ -172,14 +163,14 @@ LispValue parse_pp_list(LispValue lisp) {
 
   LispValue remaining_lisp = lisp;
   while (lisp_is_non_empty_list(remaining_lisp)) {
-    LispValue item = remaining_lisp->cons.head;
+    LispValue item = lisp_head(remaining_lisp);
 
     if (lisp_is_sym(item, "'")) {
       // Quote symbols are processed right-to-left.
       // So ''a => (quote (quote a)) and not ''a => (quote quote) a.
       // Since it is really hard to go back with Lisp lists, we just count the
       // number of quotes and nest that many of them.
-      LispValue iter = remaining_lisp->cons.tail;
+      LispValue iter = lisp_tail(remaining_lisp);
       size_t count = 0;
 
       // Count the number of quote symbols.
@@ -192,8 +183,8 @@ LispValue parse_pp_list(LispValue lisp) {
 
         count++;
 
-        item = iter->cons.head;
-        iter = iter->cons.tail;
+        item = lisp_head(iter);
+        iter = lisp_tail(iter);
       } while (lisp_is_sym(item, "'"));
 
       // Nest quote lists.
@@ -207,7 +198,7 @@ LispValue parse_pp_list(LispValue lisp) {
       remaining_lisp->cons.tail = iter;
     }
 
-    remaining_lisp = remaining_lisp->cons.tail;
+    remaining_lisp = lisp_tail(remaining_lisp);
   }
   assert(lisp_is_nil(remaining_lisp));
 
@@ -243,27 +234,27 @@ LispValue parse(Token *tokens, size_t token_count) {
       gen.last = &gen.list;
 
       for (size_t i = 0; i < depth; i++) {
-        while (lisp_is_non_empty_list((*gen.last)->cons.tail)) {
-          gen.last = &((*gen.last)->cons.tail);
+        while (lisp_is_non_empty_list(lisp_tail(*gen.last))) {
+          _lisp_gen_move(&gen);
         }
 
-        assert(lisp_is_nil((*gen.last)->cons.tail));
+        assert(lisp_is_nil(lisp_tail(*gen.last)));
         gen.last = &((*gen.last)->cons.head);
       }
 
       assert(lisp_is_non_empty_list(*gen.last));
-      while (lisp_is_non_empty_list((*gen.last)->cons.tail)) {
-        gen.last = &((*gen.last)->cons.tail);
+      while (lisp_is_non_empty_list(lisp_tail(*gen.last))) {
+        _lisp_gen_move(&gen);
       }
-      assert(lisp_is_nil((*gen.last)->cons.tail));
+      assert(lisp_is_nil(lisp_tail(*gen.last)));
 
-      LispValue pp = parse_pp_list((*gen.last)->cons.head);
+      LispValue pp = parse_pp_list(lisp_head(*gen.last));
 
       if (lisp_is_type(pp, LISP_ERROR_T))
         return pp;
 
       (*gen.last)->cons.head = pp;
-      gen.last = &((*gen.last)->cons.tail);
+      _lisp_gen_move(&gen);
 
       continue;
 
@@ -286,7 +277,7 @@ LispValue parse(Token *tokens, size_t token_count) {
 
     assert(lisp_is_nil((*gen.last)));
     *gen.last = lisp_make_cons(pn, LISP_NIL);
-    gen.last = &((*gen.last)->cons.tail);
+    _lisp_gen_move(&gen);
   }
 
   if (depth > 0)

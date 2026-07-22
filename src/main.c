@@ -84,8 +84,8 @@ LispValue lisp_builtin_debug_list_env;
       RETURN_INVALID_ARG(lisp_builtin_##n, value, lisp_make_type(t));          \
   } while (false)
 
-#define ARG0 args->cons.head
-#define ARG1 args->cons.tail->cons.head
+#define ARG0 lisp_head(args)
+#define ARG1 lisp_head(lisp_tail(args))
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   lisp_builtin_##c = &(_LispValue){                                            \
@@ -151,16 +151,16 @@ DEFINE_BUILTIN(let) {
             lisp_make_cstr(
                 "`let` binding list must be a list of key-value pairs"));
 
-      CHECK_ARG_TYPE(let, def_node->cons.head, LISP_SYMBOL_T);
+      CHECK_ARG_TYPE(let, lisp_head(def_node), LISP_SYMBOL_T);
 
-      char *symbol = lisp_get_sym(def_node->cons.head);
+      char *symbol = lisp_get_sym(lisp_head(def_node));
 
       if (env_find_shallow(&new_env, symbol))
-        return ERROR(REDEF_SYMBOL_SYM, 1, def_node->cons.head);
+        return ERROR(REDEF_SYMBOL_SYM, 1, lisp_head(def_node));
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
-      LispValue value = evaluate_lisp(def_node->cons.tail->cons.head, env);
+      LispValue value = evaluate_lisp(lisp_head(lisp_tail(def_node)), env);
 
       env_set_shallow(&new_env, symbol, value);
     }
@@ -168,7 +168,7 @@ DEFINE_BUILTIN(let) {
   } else if (!lisp_is_nil(ARG0))
     RETURN_INVALID_ARG(lisp_builtin_let, ARG0, lisp_make_type(LISP_LIST_T));
 
-  LispValue return_value = evaluate_lisp_body(args->cons.tail, &new_env, false);
+  LispValue return_value = evaluate_lisp_body(lisp_tail(args), &new_env, false);
 
   env_free(&new_env);
 
@@ -188,7 +188,7 @@ DEFINE_BUILTIN(if) {
   if (lisp_get_bool(condition))
     return ARG1;
 
-  return evaluate_lisp_body(args->cons.tail->cons.tail, env, true);
+  return evaluate_lisp_body(lisp_tail(lisp_tail(args)), env, true);
 }
 
 LispValue define_fn_or_macro(LispValue args, Environment *env,
@@ -237,14 +237,14 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      if (!lisp_is_sym(arg->cons.head, "rest"))
+      if (!lisp_is_sym(lisp_head(arg), "rest"))
         return lisp_make_error(lisp_make_list(
             4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
             lisp_make_cstr(
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      if (!lisp_is_type(arg->cons.tail->cons.head, LISP_SYMBOL_T))
+      if (!lisp_is_type(lisp_head(lisp_tail(arg)), LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list(
             4, lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG0,
             lisp_make_cstr(
@@ -253,7 +253,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       variadic = true;
 
-      lisp_gen_appendr(&args_gen, arg->cons.tail->cons.head);
+      lisp_gen_appendr(&args_gen, lisp_head(lisp_tail(arg)));
 
     } else if (lisp_is_type(arg, LISP_SYMBOL_T)) {
       lisp_gen_appendr(&args_gen, arg);
@@ -272,7 +272,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                                           builtin, ARG0,
                                           lisp_make_type(LISP_LIST_T)));
 
-  return lisp_make_fn_or_macro(arg_symbols, args->cons.tail, variadic,
+  return lisp_make_fn_or_macro(arg_symbols, lisp_tail(args), variadic,
                                is_macro);
 }
 
@@ -429,14 +429,14 @@ DEFINE_BUILTIN(head) {
   REQUIRES_EQ_ARGS(head, 1);
   CHECK_ARG_TYPE(head, ARG0, LISP_LIST_T);
 
-  return ARG0->cons.head;
+  return lisp_head(ARG0);
 }
 
 DEFINE_BUILTIN(tail) {
   REQUIRES_EQ_ARGS(tail, 1);
   CHECK_ARG_TYPE(tail, ARG0, LISP_LIST_T);
 
-  return ARG0->cons.tail;
+  return lisp_tail(ARG0);
 }
 
 DEFINE_BUILTIN(typeof) {
@@ -461,7 +461,7 @@ DEFINE_BUILTIN(format) {
   StringView format_str = lisp_get_str(ARG0);
 
   LispIter args_iter;
-  lisp_iter_init(&args_iter, args->cons.tail);
+  lisp_iter_init(&args_iter, lisp_tail(args));
 
   while (format_str.size) {
     // TODO: Rather than calling `da_append` many times for each char, calling

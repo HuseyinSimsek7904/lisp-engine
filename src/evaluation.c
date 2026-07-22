@@ -20,15 +20,15 @@ void roll_env_back(Environment *env, Environment *original) {
 
 LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
   if (is_macro)
-    return lisp->cons.tail;
+    return lisp_tail(lisp);
 
   LispGen args_gen;
   lisp_gen_init(&args_gen);
 
   lisp = lisp_tail(lisp);
 
-  for (; !lisp_is_nil(lisp); lisp = lisp->cons.tail) {
-    LispValue arg = evaluate_lisp(lisp->cons.head, env);
+  for (; !lisp_is_nil(lisp); lisp = lisp_tail(lisp)) {
+    LispValue arg = evaluate_lisp(lisp_head(lisp), env);
 
     if (lisp_is_type(arg, LISP_UNPACKED_T)) {
       lisp_gen_extendr(&args_gen, lisp_get_unpacked_item(arg));
@@ -81,7 +81,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         lisp_fprintf(stderr, "eval: %l\n", lisp);
       }
 
-      LispValue callable = evaluate_lisp(lisp->cons.head, env);
+      LispValue callable = evaluate_lisp(lisp_head(lisp), env);
 
       switch (lisp_get_type(callable)) {
       case LISP_ERROR_T:
@@ -184,19 +184,19 @@ LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
 
   assert(lisp_is_non_empty_list(lisp));
 
-  while (lisp_is_non_empty_list(lisp->cons.tail)) {
-    LispValue return_value = evaluate_lisp(lisp->cons.head, env);
-    lisp = lisp->cons.tail;
+  while (lisp_is_non_empty_list(lisp_tail(lisp))) {
+    LispValue return_value = evaluate_lisp(lisp_head(lisp), env);
+    lisp = lisp_tail(lisp);
 
     if (lisp_is_type(return_value, LISP_ERROR_T))
       return return_value;
   }
-  assert(lisp_is_nil(lisp->cons.tail));
+  assert(lisp_is_nil(lisp_tail(lisp)));
 
   if (tail_call)
-    return lisp->cons.head;
+    return lisp_head(lisp);
 
-  return evaluate_lisp(lisp->cons.head, env);
+  return evaluate_lisp(lisp_head(lisp), env);
 }
 
 LispValue repl(StringView lisp, Environment *env) {

@@ -249,7 +249,6 @@ static inline bool lisp_is_sym(LispValue value, const char *symbol) {
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
-LispValue *lisp_cons_find_term_nil(LispValue *lisp);
 size_t lisp_get_len(LispValue lisp);
 
 LispValue parse(Token *tokens, size_t token_count);
@@ -266,16 +265,26 @@ static inline void lisp_gen_init(LispGen *generator) {
   generator->last = &generator->list;
 }
 
-static inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
-  assert(lisp_is_nil((*generator->last)));
-  *generator->last = lisp_make_cons(item, LISP_NIL);
+static inline void _lisp_gen_move(LispGen *generator) {
+  assert(lisp_is_non_empty_list(*generator->last));
   generator->last = &((*generator->last)->cons.tail);
+}
+
+static inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
+  assert(lisp_is_nil(*generator->last));
+  *generator->last = lisp_make_cons(item, LISP_NIL);
+  _lisp_gen_move(generator);
 }
 
 static inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
   assert(lisp_is_list(list));
   *generator->last = list;
-  generator->last = lisp_cons_find_term_nil(generator->last);
+
+  // Find the nil element and move generator to point to this element.
+  while (!lisp_is_nil(*generator->last)) {
+    assert(lisp_is_non_empty_list(*generator->last));
+    _lisp_gen_move(generator);
+  }
 }
 
 static inline LispValue lisp_gen_end(LispGen *generator) {
@@ -299,13 +308,13 @@ static inline bool lisp_iter_has_next(LispIter *iter) {
 
 static inline bool lisp_iter_has_next_next(LispIter *iter) {
   assert(lisp_is_non_empty_list(iter->list));
-  return lisp_is_non_empty_list(iter->list->cons.tail);
+  return lisp_is_non_empty_list(lisp_tail(iter->list));
 }
 
 static inline LispValue lisp_iter_next(LispIter *iter) {
   assert(lisp_is_non_empty_list(iter->list));
-  LispValue next = iter->list->cons.head;
-  iter->list = iter->list->cons.tail;
+  LispValue next = lisp_head(iter->list);
+  iter->list = lisp_tail(iter->list);
   assert(lisp_is_list(iter->list));
   return next;
 }
