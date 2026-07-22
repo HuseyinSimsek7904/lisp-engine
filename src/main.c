@@ -711,12 +711,13 @@ int main(int argc, char **argv) {
   // Interactive mode.
   while (interactive) {
     char *lisp = readline("> ");
-    StringView view = {.array = lisp, .size = strlen(lisp)};
 
     if (!lisp) {
       interactive = false;
       continue;
     }
+
+    StringView view = {.array = lisp, .size = strlen(lisp)};
 
     add_history(lisp);
 
