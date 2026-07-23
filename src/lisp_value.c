@@ -17,7 +17,7 @@ struct _LispValue {
   union {
     // TODO: Strings referenced by lisp objects should be kept in a pool, and
     // they should be deallocated like lisp objects.
-    StringView string;
+    StringView *string;
     const char *symbol;
     int64_t integer;
     LispType ref_type;
@@ -71,7 +71,7 @@ extern inline bool lisp_is_sym(LispValue value, const char *symbol) {
 
 extern inline StringView lisp_get_str(LispValue value) {
   assert(lisp_is_type(value, LISP_STRING_T));
-  return value->string;
+  return *value->string;
 }
 extern inline int64_t lisp_get_int64(LispValue value) {
   assert(lisp_is_type(value, LISP_INT64_T));
@@ -209,8 +209,11 @@ extern inline LispValue lisp_make_int64(int64_t integer) {
 }
 
 extern inline LispValue lisp_make_str(StringView string) {
+  StringView *view = malloc(sizeof(StringView));
+  *view = string;
+
   LispValue value = _lisp_init(LISP_STRING_T);
-  value->string = string;
+  value->string = view;
   return value;
 }
 
