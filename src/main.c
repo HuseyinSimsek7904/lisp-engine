@@ -141,12 +141,13 @@ DEFINE_BUILTIN(let) {
             lisp_make_cstr(
                 "`let` binding list must be a list of key-value pairs"));
 
-      CHECK_ARG_TYPE(let, lisp_head(def_node), LISP_SYMBOL_T);
+      LispValue symbol_lisp = lisp_head(def_node);
+      CHECK_ARG_TYPE(let, symbol_lisp, LISP_SYMBOL_T);
 
-      const char *symbol = lisp_get_sym(lisp_head(def_node));
+      const char *symbol = lisp_get_sym(symbol_lisp);
 
       if (env_find_shallow(&new_env, symbol))
-        return ERROR1(REDEF_SYMBOL_SYM, lisp_head(def_node));
+        return ERROR1(REDEF_SYMBOL_SYM, symbol_lisp);
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
@@ -234,7 +235,9 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                 "argument list must be in the form ([SYMBOL...] [(rest "
                 "SYMBOL)])")));
 
-      if (!lisp_is_type(lisp_head_n(arg, 1), LISP_SYMBOL_T))
+      LispValue rest_arg_symbol = lisp_head_n(arg, 1);
+
+      if (!lisp_is_type(rest_arg_symbol, LISP_SYMBOL_T))
         return lisp_make_error(lisp_make_list_4(
             lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
             lisp_make_cstr(
@@ -243,7 +246,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
       variadic = true;
 
-      lisp_gen_appendr(&args_gen, lisp_head_n(arg, 1));
+      lisp_gen_appendr(&args_gen, rest_arg_symbol);
 
     } else if (lisp_is_type(arg, LISP_SYMBOL_T)) {
       lisp_gen_appendr(&args_gen, arg);
