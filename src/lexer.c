@@ -70,9 +70,10 @@ LexerResult generate_tokens(StringView view, Tokens *tokens) {
       da_append(tokens, (Token){.type = T_R_PAREN});
       break;
 
-    case '\'':
-      da_append(tokens, (Token){.type = T_QUOTE});
-      break;
+    case '\'': {
+      Token token = {.type = T_SYMBOL, .symbol = "'"};
+      da_append(tokens, token);
+    } break;
 
     case '0' ... '9': {
       int64_t number = c - '0';

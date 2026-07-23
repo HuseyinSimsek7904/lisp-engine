@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "core.h"
-#include "lexer.h"
 
 // TODO: Implement LISP_WITH_META_T, which can be used to pass metadata along
 // with data.
@@ -146,8 +145,6 @@ LispValue lisp_head_n(LispValue lisp, size_t n);
 LispValue lisp_tail_n(LispValue lisp, size_t n);
 size_t lisp_get_len(LispValue lisp);
 
-LispValue parse(Token *tokens, size_t token_count);
-
 // Lisp Generators are used for generating lists without directly accessing list
 // cons values. They can append items at the right end of the lists.
 typedef struct {
@@ -223,6 +220,7 @@ EnvironmentEntry *env_set(Environment *env, const char *symbol,
 
 #define PARSER_TOO_FEW_R_PAREN "parser:too-few-r-paren"
 #define PARSER_TOO_MANY_R_PAREN "parser:too-many-r-paren"
+#define PARSER_REACHED_END "parser:reached-end"
 #define PARSER_QUOTE_END "parser:reached-end-quote"
 
 extern char *lexer_result_syms[];

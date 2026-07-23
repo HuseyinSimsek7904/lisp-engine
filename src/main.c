@@ -15,8 +15,8 @@
 #include "debug.h"
 #include "evaluation.h"
 #include "format.h"
-#include "lexer.h"
 #include "lisp_value.h"
+#include "parser.h"
 
 LispValue lisp_builtin_print;
 LispValue lisp_builtin_sum;

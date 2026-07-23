@@ -7,7 +7,9 @@
 #include "debug.h"
 #include "evaluation.h"
 #include "format.h"
+#include "lexer.h"
 #include "lisp_value.h"
+#include "parser.h"
 
 void roll_env_back(Environment *env, Environment *original) {
   while (env != original && env->other) {
