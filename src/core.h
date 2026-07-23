@@ -52,7 +52,7 @@ typedef struct {
 #define sb_append_static_str(da, s)                                            \
   da_append_many((da), (s), sizeof((s)) / sizeof(char) - 1)
 
-static inline void sb_append_cstr(StringBuilder *builder, char *string) {
+static inline void sb_append_cstr(StringBuilder *builder, const char *string) {
   da_append_many(builder, string, strlen(string));
 }
 

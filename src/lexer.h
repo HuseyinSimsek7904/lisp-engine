@@ -19,7 +19,7 @@ typedef struct {
   union {
     StringView string;
     int64_t integer;
-    char *symbol;
+    const char *symbol;
   };
 } Token;
 

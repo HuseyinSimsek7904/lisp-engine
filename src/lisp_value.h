@@ -103,7 +103,7 @@ bool lisp_is_sym(LispValue value, const char *symbol);
 
 StringView lisp_get_str(LispValue value);
 int64_t lisp_get_int64(LispValue value);
-char *lisp_get_sym(LispValue value);
+const char *lisp_get_sym(LispValue value);
 char *lisp_get_ref_type_sym(LispValue value);
 bool lisp_get_bool(LispValue value);
 _LispBuiltinFunction *lisp_get_builtin(LispValue value);
@@ -129,7 +129,7 @@ LispValue lisp_make_type(LispType ref_type);
 LispValue lisp_make_int64(int64_t integer);
 LispValue lisp_make_str(StringView string);
 LispValue lisp_make_cstr(const char *string);
-LispValue lisp_make_sym(char *symbol);
+LispValue lisp_make_sym(const char *symbol);
 
 LispValue lisp_make_list_1(LispValue item0);
 LispValue lisp_make_list_2(LispValue item0, LispValue item1);
@@ -185,11 +185,12 @@ typedef struct Environment {
 } Environment;
 
 void env_free(Environment *env);
-EnvironmentEntry *env_find_shallow(Environment *env, char *symbol);
-EnvironmentEntry *env_find(Environment *env, char *symbol);
-EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
+EnvironmentEntry *env_find_shallow(Environment *env, const char *symbol);
+EnvironmentEntry *env_find(Environment *env, const char *symbol);
+EnvironmentEntry *env_set_shallow(Environment *env, const char *symbol,
                                   LispValue value);
-EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value);
+EnvironmentEntry *env_set(Environment *env, const char *symbol,
+                          LispValue value);
 
 #define ERROR0(s) lisp_make_error(lisp_make_list_1(lisp_make_sym(s)))
 #define ERROR1(s, i0) lisp_make_error(lisp_make_list_2(lisp_make_sym(s), i0))

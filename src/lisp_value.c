@@ -18,7 +18,7 @@ struct _LispValue {
     // TODO: Strings referenced by lisp objects should be kept in a pool, and
     // they should be deallocated like lisp objects.
     StringView string;
-    char *symbol;
+    const char *symbol;
     int64_t integer;
     LispType ref_type;
     bool boolean;
@@ -73,7 +73,7 @@ extern inline int64_t lisp_get_int64(LispValue value) {
   assert(lisp_is_type(value, LISP_INT64_T));
   return value->integer;
 }
-extern inline char *lisp_get_sym(LispValue value) {
+extern inline const char *lisp_get_sym(LispValue value) {
   assert(lisp_is_type(value, LISP_SYMBOL_T));
   return value->symbol;
 }
@@ -210,7 +210,7 @@ extern inline LispValue lisp_make_cstr(const char *string) {
       (StringView){.array = (char *)string, .size = strlen(string)});
 }
 
-extern inline LispValue lisp_make_sym(char *symbol) {
+extern inline LispValue lisp_make_sym(const char *symbol) {
   LispValue value = _lisp_init(LISP_SYMBOL_T);
   value->symbol = symbol;
   return value;
@@ -543,7 +543,7 @@ void env_free(Environment *env) {
   da_free(env);
 }
 
-EnvironmentEntry *env_find_shallow(Environment *env, char *symbol) {
+EnvironmentEntry *env_find_shallow(Environment *env, const char *symbol) {
   for (size_t i = 0; i < env->size; i++) {
     if (strcmp(env->array[i].symbol, symbol) == 0)
       return &env->array[i];
@@ -552,7 +552,7 @@ EnvironmentEntry *env_find_shallow(Environment *env, char *symbol) {
   return NULL;
 }
 
-EnvironmentEntry *env_find(Environment *env, char *symbol) {
+EnvironmentEntry *env_find(Environment *env, const char *symbol) {
   EnvironmentEntry *search = env_find_shallow(env, symbol);
 
   if (search)
@@ -564,7 +564,7 @@ EnvironmentEntry *env_find(Environment *env, char *symbol) {
   return env_find(env->other, symbol);
 }
 
-EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
+EnvironmentEntry *env_set_shallow(Environment *env, const char *symbol,
                                   LispValue value) {
   EnvironmentEntry *entry = env_find_shallow(env, symbol);
 
@@ -579,7 +579,8 @@ EnvironmentEntry *env_set_shallow(Environment *env, char *symbol,
   return entry;
 }
 
-EnvironmentEntry *env_set(Environment *env, char *symbol, LispValue value) {
+EnvironmentEntry *env_set(Environment *env, const char *symbol,
+                          LispValue value) {
   EnvironmentEntry *entry = env_find(env, symbol);
 
   if (!entry) {
