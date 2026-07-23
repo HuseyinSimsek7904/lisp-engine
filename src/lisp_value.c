@@ -24,7 +24,7 @@ struct _LispValue {
     bool boolean;
     _LispBuiltinFunction *builtin_function;
     _LispCustomFunction *custom_function;
-    _LispCons cons;
+    _LispCons *cons;
     LispValue item;
   };
 };
@@ -54,7 +54,11 @@ extern inline bool lisp_is_type(LispValue value, LispType type) {
 
 extern inline bool lisp_is_nil(LispValue value) { return value == LISP_NIL; }
 extern inline bool lisp_is_non_empty_list(LispValue value) {
-  return lisp_is_type(value, LISP_LIST_T);
+  if (!lisp_is_type(value, LISP_LIST_T))
+    return false;
+
+  assert(value->cons);
+  return true;
 }
 extern inline bool lisp_is_list(LispValue value) {
   return lisp_is_nil(value) || lisp_is_non_empty_list(value);
@@ -102,6 +106,11 @@ extern inline LispValue lisp_get_unpacked_item(LispValue value) {
   assert(lisp_is_type(value, LISP_UNPACKED_T));
   assert(lisp_is_list(value->item));
   return value->item;
+}
+extern inline _LispCons *lisp_get_cons(LispValue value) {
+  assert(lisp_is_type(value, LISP_LIST_T));
+  assert(value->cons);
+  return value->cons;
 }
 
 LispValue _lisp_init(LispType type) {
@@ -151,12 +160,12 @@ extern inline LispValue lisp_make_error(LispValue item) {
   return value;
 }
 
-extern inline LispValue lisp_make_cons(LispValue head, LispValue tail) {
-  assert(lisp_is_list(tail));
+extern inline LispValue lisp_make_cons(_LispCons *cons) {
+  if (!cons)
+    return LISP_NIL;
 
   LispValue value = _lisp_init(LISP_LIST_T);
-  value->cons.head = head;
-  value->cons.tail = tail;
+  value->cons = cons;
   return value;
 }
 
@@ -217,18 +226,25 @@ extern inline LispValue lisp_make_sym(const char *symbol) {
 }
 
 extern inline LispValue lisp_make_list_1(LispValue item0) {
-  return lisp_make_cons(item0, LISP_NIL);
+  _LispCons *cons = lisp_cons_make(item0, NULL);
+  return lisp_make_cons(cons);
 }
 extern inline LispValue lisp_make_list_2(LispValue item0, LispValue item1) {
-  return lisp_make_cons(item0, lisp_make_list_1(item1));
+  _LispCons *cons = lisp_cons_make(item0, lisp_cons_make(item1, NULL));
+  return lisp_make_cons(cons);
 }
 extern inline LispValue lisp_make_list_3(LispValue item0, LispValue item1,
                                          LispValue item2) {
-  return lisp_make_cons(item0, lisp_make_list_2(item1, item2));
+  _LispCons *cons =
+      lisp_cons_make(item0, lisp_cons_make(item1, lisp_cons_make(item2, NULL)));
+  return lisp_make_cons(cons);
 }
 extern inline LispValue lisp_make_list_4(LispValue item0, LispValue item1,
                                          LispValue item2, LispValue item3) {
-  return lisp_make_cons(item0, lisp_make_list_3(item1, item2, item3));
+  _LispCons *cons = lisp_cons_make(
+      item0, lisp_cons_make(
+                 item1, lisp_cons_make(item2, lisp_cons_make(item3, NULL))));
+  return lisp_make_cons(cons);
 }
 
 bool lisp_is_ident(LispValue a, LispValue b) {
@@ -313,99 +329,128 @@ LispValue lisp_consify_array(LispValue *array, size_t size) {
   return lisp_gen_end(&gen);
 }
 
+LispValue lisp_cons(LispValue head, LispValue tail) {
+  return lisp_make_cons(lisp_cons_make(head, tail->cons));
+}
+
 LispValue lisp_head(LispValue lisp) {
   assert(lisp_is_non_empty_list(lisp));
-  return lisp->cons.head;
+  return lisp->cons->head;
 }
 
 LispValue lisp_tail(LispValue lisp) {
   assert(lisp_is_non_empty_list(lisp));
-  return lisp->cons.tail;
+  if (!lisp->cons->tail)
+    return LISP_NIL;
+
+  LispValue tail = _lisp_init(LISP_LIST_T);
+  tail->cons = lisp->cons->tail;
+  return tail;
 }
 
 LispValue lisp_head_n(LispValue lisp, size_t n) {
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
+
   while (n--) {
-    lisp = lisp_tail(lisp);
+    lisp_iter_next(&iter);
   }
-  return lisp_head(lisp);
+
+  return lisp_iter_next(&iter);
 }
 
 LispValue lisp_tail_n(LispValue lisp, size_t n) {
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
+
   while (n--) {
-    lisp = lisp_tail(lisp);
+    lisp_iter_next(&iter);
   }
-  return lisp_tail(lisp);
+
+  lisp_iter_next(&iter);
+  return lisp_iter_remaining(&iter);
 }
 
 size_t lisp_get_len(LispValue lisp) {
   size_t count = 0;
-  for (; lisp_is_non_empty_list(lisp); count++) {
-    lisp = lisp_tail(lisp);
-  }
 
-  assert(lisp_is_nil(lisp));
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
+
+  while (lisp_iter_has_next(&iter)) {
+    count++;
+    lisp_iter_next(&iter);
+  }
 
   return count;
 }
 
+// Lisp Cons
+extern inline _LispCons *lisp_cons_make(LispValue head, _LispCons *tail) {
+  _LispCons *cons = malloc(sizeof(_LispCons));
+  assert(cons);
+
+  *cons = (_LispCons){.head = head, .tail = tail};
+
+  return cons;
+}
+
 // Lisp Generators
 extern inline void lisp_gen_init(LispGen *generator) {
-  generator->list = LISP_NIL;
-  generator->last = &generator->list;
+  generator->list = NULL;
+  generator->last = &(generator->list);
 }
 
 extern inline void _lisp_gen_move(LispGen *generator) {
-  assert(lisp_is_non_empty_list(*generator->last));
-  generator->last = &((*generator->last)->cons.tail);
+  generator->last = &((*generator->last)->tail);
 }
 
 extern inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
-  assert(lisp_is_nil(*generator->last));
-  *generator->last = lisp_make_cons(item, LISP_NIL);
+  *generator->last = lisp_cons_make(item, NULL);
   _lisp_gen_move(generator);
 }
 
 extern inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
   assert(lisp_is_list(list));
-  *generator->last = list;
+  *generator->last = list->cons;
 
   // Find the nil element and move generator to point to this element.
-  while (!lisp_is_nil(*generator->last)) {
-    assert(lisp_is_non_empty_list(*generator->last));
+  while (*generator->last) {
     _lisp_gen_move(generator);
   }
 }
 
 extern inline LispValue lisp_gen_end(LispGen *generator) {
-  return generator->list;
+  return lisp_make_cons(generator->list);
 }
 
 // Lisp Iterators
 extern inline void lisp_iter_init(LispIter *iter, LispValue list) {
-  assert(lisp_is_list(list));
-  iter->list = list;
+  if (lisp_is_nil(list)) {
+    iter->cons = NULL;
+    return;
+  }
+
+  assert(lisp_is_non_empty_list(list));
+  iter->cons = list->cons;
 }
 
-extern inline bool lisp_iter_has_next(LispIter *iter) {
-  assert(lisp_is_list(iter->list));
-  return lisp_is_non_empty_list(iter->list);
-}
+extern inline bool lisp_iter_has_next(LispIter *iter) { return iter->cons; }
 
 extern inline bool lisp_iter_has_next_next(LispIter *iter) {
-  assert(lisp_is_non_empty_list(iter->list));
-  return lisp_is_non_empty_list(lisp_tail(iter->list));
+  assert(iter->cons);
+  return iter->cons->tail;
 }
 
 extern inline LispValue lisp_iter_next(LispIter *iter) {
-  assert(lisp_is_non_empty_list(iter->list));
-  LispValue next = lisp_head(iter->list);
-  iter->list = lisp_tail(iter->list);
-  assert(lisp_is_list(iter->list));
+  assert(iter->cons);
+  LispValue next = iter->cons->head;
+  iter->cons = iter->cons->tail;
   return next;
 }
 
 extern inline LispValue lisp_iter_remaining(LispIter *iter) {
-  return iter->list;
+  return lisp_make_cons(iter->cons);
 }
 
 // Environments

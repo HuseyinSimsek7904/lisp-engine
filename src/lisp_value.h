@@ -80,12 +80,7 @@ typedef struct {
   LispValue body;
 } _LispCustomFunction;
 
-typedef struct {
-  LispValue head;
-
-  // tail must be either another LISP_LIST_T or LISP_NIL_T.
-  LispValue tail;
-} _LispCons;
+typedef struct _LispCons _LispCons;
 
 // Singleton values.
 extern LispValue LISP_NIL;
@@ -120,7 +115,7 @@ LispValue lisp_make_builtin(bool is_macro, bool tail_call,
 
 LispValue lisp_make_bool(bool boolean);
 LispValue lisp_make_error(LispValue item);
-LispValue lisp_make_cons(LispValue head, LispValue tail);
+LispValue lisp_make_cons(_LispCons *cons);
 LispValue lisp_make_unpacked(LispValue item);
 LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
                                 bool is_macro);
@@ -138,6 +133,14 @@ LispValue lisp_make_list_4(LispValue item0, LispValue item1, LispValue item2,
 
 bool lisp_is_ident(LispValue a, LispValue b);
 
+// Lisp Cons are used for the linked list representation of the lisp lists.
+struct _LispCons {
+  LispValue head;
+  _LispCons *tail;
+};
+
+_LispCons *lisp_cons_make(LispValue head, _LispCons *tail);
+LispValue lisp_cons(LispValue head, LispValue tail);
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);
 LispValue lisp_tail(LispValue lisp);
@@ -148,8 +151,8 @@ size_t lisp_get_len(LispValue lisp);
 // Lisp Generators are used for generating lists without directly accessing list
 // cons values. They can append items at the right end of the lists.
 typedef struct {
-  LispValue list;
-  LispValue *last;
+  _LispCons *list;
+  _LispCons **last;
 } LispGen;
 
 void lisp_gen_init(LispGen *generator);
@@ -160,7 +163,7 @@ LispValue lisp_gen_end(LispGen *generator);
 
 // Lisp Iterators are used for iterating through lists.
 typedef struct {
-  LispValue list;
+  _LispCons *cons;
 } LispIter;
 
 void lisp_iter_init(LispIter *iter, LispValue list);

@@ -547,7 +547,7 @@ DEFINE_BUILTIN(cons) {
   if (!lisp_is_nil(ARG(1)))
     CHECK_ARG_TYPE(cons, ARG(1), LISP_LIST_T);
 
-  return lisp_make_cons(ARG(0), ARG(1));
+  return lisp_cons(ARG(0), ARG(1));
 }
 
 DEFINE_BUILTIN(read_line) {
