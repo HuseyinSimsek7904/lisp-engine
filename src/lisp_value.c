@@ -261,16 +261,20 @@ bool lisp_is_ident(LispValue a, LispValue b) {
     // Just check for reference identity.
     return lisp_get_builtin(a) == lisp_get_builtin(b);
 
-  case LISP_LIST_T:
-    do {
-      if (!lisp_is_ident(lisp_head(a), lisp_head(b)))
+  case LISP_LIST_T: {
+    LispIter a_iter;
+    LispIter b_iter;
+
+    lisp_iter_init(&a_iter, a);
+    lisp_iter_init(&b_iter, b);
+
+    while (lisp_iter_has_next(&a_iter) && lisp_iter_has_next(&b_iter)) {
+      if (!lisp_is_ident(lisp_iter_next(&a_iter), lisp_iter_next(&b_iter)))
         return false;
+    }
 
-      a = lisp_tail(a);
-      b = lisp_tail(b);
-    } while (lisp_is_non_empty_list(a) && lisp_is_non_empty_list(b));
-
-    return lisp_get_type(a) == lisp_get_type(b);
+    return !lisp_iter_has_next(&a_iter) && !lisp_iter_has_next(&b_iter);
+  }
 
   case LISP_SYMBOL_T:
     return !strcmp(lisp_get_sym(a), lisp_get_sym(b));
@@ -299,13 +303,14 @@ bool lisp_is_ident(LispValue a, LispValue b) {
 }
 
 LispValue lisp_consify_array(LispValue *array, size_t size) {
-  LispValue cons = LISP_NIL;
+  LispGen gen;
+  lisp_gen_init(&gen);
 
   for (size_t i = size; i-- > 0;) {
-    cons = lisp_make_cons(array[i], cons);
+    lisp_gen_appendr(&gen, array[i]);
   }
 
-  return cons;
+  return lisp_gen_end(&gen);
 }
 
 LispValue lisp_head(LispValue lisp) {
@@ -515,9 +520,7 @@ LispValue parse(Token *tokens, size_t token_count) {
       break;
     }
 
-    assert(lisp_is_nil((*gen.last)));
-    *gen.last = lisp_make_cons(pn, LISP_NIL);
-    _lisp_gen_move(&gen);
+    lisp_gen_appendr(&gen, pn);
   }
 
   if (depth > 0)
@@ -527,6 +530,11 @@ LispValue parse(Token *tokens, size_t token_count) {
   return parse_pp_list(lisp_gen_end(&gen));
 }
 
+extern inline LispValue lisp_iter_remaining(LispIter *iter) {
+  return iter->list;
+}
+
+// Environments
 void env_free(Environment *env) {
   for (size_t i = 0; i < env->size; i++) {
     free(env->array[i].symbol);

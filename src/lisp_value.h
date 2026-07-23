@@ -170,6 +170,7 @@ void lisp_iter_init(LispIter *iter, LispValue list);
 bool lisp_iter_has_next(LispIter *iter);
 bool lisp_iter_has_next_next(LispIter *iter);
 LispValue lisp_iter_next(LispIter *iter);
+LispValue lisp_iter_remaining(LispIter *iter);
 
 typedef struct {
   char *symbol;

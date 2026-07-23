@@ -25,10 +25,12 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
   LispGen args_gen;
   lisp_gen_init(&args_gen);
 
-  lisp = lisp_tail(lisp);
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
+  lisp_iter_next(&iter);
 
-  for (; !lisp_is_nil(lisp); lisp = lisp_tail(lisp)) {
-    LispValue arg = evaluate_lisp(lisp_head(lisp), env);
+  while (lisp_iter_has_next(&iter)) {
+    LispValue arg = evaluate_lisp(lisp_iter_next(&iter), env);
 
     if (lisp_is_type(arg, LISP_UNPACKED_T)) {
       lisp_gen_extendr(&args_gen, lisp_get_unpacked_item(arg));
@@ -143,7 +145,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
           if (custom->variadic) {
             env_set_shallow(new_env, lisp_get_sym(last_func_arg),
-                            params_iter.list);
+                            lisp_iter_remaining(&params_iter));
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
               roll_env_back(env, original);
@@ -182,21 +184,20 @@ LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
   if (lisp_is_nil(lisp))
     return LISP_NIL;
 
-  assert(lisp_is_non_empty_list(lisp));
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
 
-  while (lisp_is_non_empty_list(lisp_tail(lisp))) {
-    LispValue return_value = evaluate_lisp(lisp_head(lisp), env);
-    lisp = lisp_tail(lisp);
+  while (lisp_iter_has_next_next(&iter)) {
+    LispValue return_value = evaluate_lisp(lisp_iter_next(&iter), env);
 
     if (lisp_is_type(return_value, LISP_ERROR_T))
       return return_value;
   }
-  assert(lisp_is_nil(lisp_tail(lisp)));
 
   if (tail_call)
-    return lisp_head(lisp);
+    return lisp_iter_next(&iter);
 
-  return evaluate_lisp(lisp_head(lisp), env);
+  return evaluate_lisp(lisp_iter_next(&iter), env);
 }
 
 LispValue repl(StringView lisp, Environment *env) {
