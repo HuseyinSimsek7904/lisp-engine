@@ -689,9 +689,16 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    repl(buffer, &global_env);
+    LispValue return_value = repl(buffer, &global_env);
 
     free(buffer.array);
+
+    if (lisp_is_type(return_value, LISP_ERROR_T)) {
+      lisp_fprintf(stderr,
+                   "warning: startup file %s returned error\n"
+                   "%s: ~ %l\n",
+                   argv[i], argv[i], return_value);
+    }
   }
 
   // Custom passed startup files.
