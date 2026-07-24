@@ -15,6 +15,7 @@
 #include "debug.h"
 #include "evaluation.h"
 #include "format.h"
+#include "lexer.h"
 #include "lisp_value.h"
 #include "parser.h"
 
@@ -581,6 +582,69 @@ DEFINE_BUILTIN(debug_list_env) {
   return LISP_NIL;
 }
 
+const char *history_path = "./.history";
+
+LispValue interactive_repl(Environment *env) {
+  char *full_lisp = readline("> ");
+
+  if (!full_lisp) {
+    return NULL;
+  }
+
+  while (true) {
+    StringView view = {.array = full_lisp, .size = strlen(full_lisp)};
+
+    Tokens tokens;
+    da_init(&tokens);
+
+    LexerResult lexer_result = generate_tokens(view, &tokens);
+
+    if (lexer_result) {
+      da_free(&tokens);
+
+      if (lexer_result != LEXER_UNTERMINATED_STRING) {
+        add_history(full_lisp);
+        write_history(history_path);
+        free(full_lisp);
+        RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
+      }
+
+    } else {
+      LispValue parser_result = parse(tokens.array, tokens.size);
+      da_free(&tokens);
+
+      if (!lisp_is_type(parser_result, LISP_ERROR_T)) {
+        add_history(full_lisp);
+        write_history(history_path);
+        free(full_lisp);
+
+        return evaluate_lisp_body(parser_result, env, false);
+      }
+
+      if (!lisp_is_sym(lisp_head(lisp_get_error_item(parser_result)),
+                       PARSER_TOO_FEW_R_PAREN)) {
+        add_history(full_lisp);
+        write_history(history_path);
+        free(full_lisp);
+
+        return parser_result;
+      }
+    }
+
+    char *new_line = readline(". ");
+
+    if (!new_line) {
+      free(full_lisp);
+      return NULL;
+    }
+
+    full_lisp = realloc(full_lisp, strlen(full_lisp) + strlen(new_line) + 2);
+    assert(full_lisp);
+    strcat(full_lisp, "\n");
+    strcat(full_lisp, new_line);
+  }
+}
+
 LispValue LISP_NIL;
 LispValue LISP_TRUE;
 LispValue LISP_FALSE;
@@ -697,7 +761,7 @@ int main(int argc, char **argv) {
       lisp_fprintf(stderr,
                    "warning: startup file %s returned error\n"
                    "%s: ~ %l\n",
-                   argv[i], argv[i], return_value);
+                   startup[i], startup[i], return_value);
     }
   }
 
@@ -742,22 +806,16 @@ int main(int argc, char **argv) {
     lisp_fprintf(stderr, "test: passed all tests\n");
 
   // Interactive mode.
-  while (interactive) {
-    char *lisp = readline("> ");
+  if (interactive)
+    read_history(history_path);
 
-    if (!lisp) {
-      interactive = false;
-      continue;
+  while (interactive) {
+    LispValue result = interactive_repl(&global_env);
+
+    if (!result) {
+      break;
     }
 
-    StringView view = {.array = lisp, .size = strlen(lisp)};
-
-    add_history(lisp);
-
-    LispValue return_value = repl(view, &global_env);
-
-    free(lisp);
-
-    lisp_printf("~ %l\n", return_value);
+    lisp_printf("~ %l\n", result);
   }
 }
