@@ -157,8 +157,12 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
           }
         }
 
-        lisp = evaluate_lisp_body(custom->body, new_env, true);
-        env = new_env;
+        if (custom->is_macro) {
+          lisp = evaluate_lisp_body(custom->body, new_env, false);
+        } else {
+          lisp = evaluate_lisp_body(custom->body, new_env, true);
+          env = new_env;
+        }
       } break;
 
       default:
