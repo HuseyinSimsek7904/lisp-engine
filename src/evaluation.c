@@ -13,10 +13,7 @@
 
 void roll_env_back(Environment *env, Environment *original) {
   while (env != original && env->other) {
-    env_free(env);
-    Environment *other = env->other;
-    free(env);
-    env = other;
+    env = env->other;
   }
 }
 
@@ -110,7 +107,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         LispValue args = generate_args(lisp, env, custom->is_macro);
 
-        Environment *new_env = env_make(env);
+        Environment *new_env = env_make(custom->env);
 
         if (lisp_is_nil(custom->args)) {
           if (!lisp_is_nil(args)) {

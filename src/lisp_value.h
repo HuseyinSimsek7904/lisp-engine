@@ -78,6 +78,7 @@ typedef struct {
   LispValue args;
   bool variadic;
   LispValue body;
+  Environment *env;
 } _LispCustomFunction;
 
 typedef struct _LispCons _LispCons;
@@ -118,7 +119,7 @@ LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(_LispCons *cons);
 LispValue lisp_make_unpacked(LispValue item);
 LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
-                                bool is_macro);
+                                bool is_macro, Environment *env);
 LispValue lisp_make_type(LispType ref_type);
 LispValue lisp_make_int64(int64_t integer);
 LispValue lisp_make_str(StringView string);

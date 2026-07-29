@@ -178,16 +178,16 @@ extern inline LispValue lisp_make_unpacked(LispValue item) {
 }
 
 extern inline LispValue lisp_make_fn_or_macro(LispValue args, LispValue body,
-                                              bool variadic, bool is_macro) {
+                                              bool variadic, bool is_macro,
+                                              Environment *env) {
   _LispCustomFunction *fn = malloc(sizeof(_LispCustomFunction));
   assert(fn);
 
-  *fn = (_LispCustomFunction){
-      .is_macro = is_macro,
-      .args = args,
-      .variadic = variadic,
-      .body = body,
-  };
+  *fn = (_LispCustomFunction){.is_macro = is_macro,
+                              .args = args,
+                              .variadic = variadic,
+                              .body = body,
+                              .env = env};
 
   LispValue value = _lisp_init(LISP_FUNC_T);
   value->custom_function = fn;

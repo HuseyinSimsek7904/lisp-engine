@@ -159,11 +159,7 @@ DEFINE_BUILTIN(let) {
   } else if (!lisp_is_nil(ARG(0)))
     RETURN_INVALID_ARG(lisp_builtin_let, ARG(0), lisp_make_type(LISP_LIST_T));
 
-  LispValue return_value = evaluate_lisp_body(lisp_tail(args), new_env, false);
-
-  env_free(new_env);
-
-  return return_value;
+  return evaluate_lisp_body(lisp_tail(args), new_env, false);
 }
 
 DEFINE_BUILTIN(if) {
@@ -265,8 +261,8 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
                                             builtin, ARG(0),
                                             lisp_make_type(LISP_LIST_T)));
 
-  return lisp_make_fn_or_macro(arg_symbols, lisp_tail(args), variadic,
-                               is_macro);
+  return lisp_make_fn_or_macro(arg_symbols, lisp_tail(args), variadic, is_macro,
+                               env);
 }
 
 DEFINE_BUILTIN(fn) {
