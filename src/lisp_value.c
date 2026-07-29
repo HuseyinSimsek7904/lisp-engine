@@ -459,6 +459,15 @@ extern inline LispValue lisp_iter_remaining(LispIter *iter) {
 }
 
 // Environments
+Environment *env_make(Environment *other) {
+  Environment *new_env = malloc(sizeof(Environment));
+  assert(new_env);
+  *new_env = (Environment){.other = other};
+  da_init(new_env);
+
+  return new_env;
+}
+
 void env_free(Environment *env) {
   for (size_t i = 0; i < env->size; i++) {
     free(env->array[i].symbol);

@@ -184,6 +184,7 @@ typedef struct Environment {
   struct Environment *other;
 } Environment;
 
+Environment *env_make(Environment *other);
 void env_free(Environment *env);
 EnvironmentEntry *env_find_shallow(Environment *env, const char *symbol);
 EnvironmentEntry *env_find(Environment *env, const char *symbol);

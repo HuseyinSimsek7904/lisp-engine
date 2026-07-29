@@ -87,9 +87,9 @@ LispValue lisp_builtin_debug_list_env;
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   lisp_builtin_##c = lisp_make_builtin(m, t, builtin_##c, n);                  \
-  env_set_shallow(&global_env, n, lisp_builtin_##c);
+  env_set_shallow(global_env, n, lisp_builtin_##c);
 
-#define DEFINE_TYPE_REP(n, c, r) env_set(&global_env, n, lisp_make_type(r));
+#define DEFINE_TYPE_REP(n, c, r) env_set(global_env, n, lisp_make_type(r));
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
@@ -124,8 +124,7 @@ DEFINE_BUILTIN(setg) {
 DEFINE_BUILTIN(let) {
   REQUIRES_MIN_ARGS(let, 2);
 
-  Environment new_env = {.other = env};
-  da_init(&new_env);
+  Environment *new_env = env_make(env);
 
   if (lisp_is_non_empty_list(ARG(0))) {
     LispIter defs_iter;
@@ -147,22 +146,22 @@ DEFINE_BUILTIN(let) {
 
       const char *symbol = lisp_get_sym(symbol_lisp);
 
-      if (env_find_shallow(&new_env, symbol))
+      if (env_find_shallow(new_env, symbol))
         return ERROR1(REDEF_SYMBOL_SYM, symbol_lisp);
 
       // TODO: Maybe the passed environment should be the new environment.
       // That way one variable defined can be used in the other one.
       LispValue value = evaluate_lisp(lisp_head_n(def_node, 1), env);
 
-      env_set_shallow(&new_env, symbol, value);
+      env_set_shallow(new_env, symbol, value);
     }
 
   } else if (!lisp_is_nil(ARG(0)))
     RETURN_INVALID_ARG(lisp_builtin_let, ARG(0), lisp_make_type(LISP_LIST_T));
 
-  LispValue return_value = evaluate_lisp_body(lisp_tail(args), &new_env, false);
+  LispValue return_value = evaluate_lisp_body(lisp_tail(args), new_env, false);
 
-  env_free(&new_env);
+  env_free(new_env);
 
   return return_value;
 }
@@ -682,17 +681,16 @@ int main(int argc, char **argv) {
     }
   }
 
-  Environment global_env = {.other = NULL};
-  da_init(&global_env);
+  Environment *global_env = env_make(NULL);
 
   // Singletons.
   LISP_NIL = lisp_make_singleton_nil();
   LISP_TRUE = lisp_make_singleton_bool(true);
   LISP_FALSE = lisp_make_singleton_bool(false);
 
-  env_set_shallow(&global_env, "nil", LISP_NIL);
-  env_set_shallow(&global_env, "false", LISP_FALSE);
-  env_set_shallow(&global_env, "true", LISP_TRUE);
+  env_set_shallow(global_env, "nil", LISP_NIL);
+  env_set_shallow(global_env, "false", LISP_FALSE);
+  env_set_shallow(global_env, "true", LISP_TRUE);
 
   // Type representative singletons.
   DEFINE_TYPE_REP("nil-t", nil, LISP_NIL_T);
@@ -753,7 +751,7 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    LispValue return_value = repl(buffer, &global_env);
+    LispValue return_value = repl(buffer, global_env);
 
     free(buffer.array);
 
@@ -778,7 +776,7 @@ int main(int argc, char **argv) {
     if (always_show_test_results)
       lisp_fprintf(stderr, "info: testing %s\n", argv[i]);
 
-    LispValue return_value = repl(buffer, &global_env);
+    LispValue return_value = repl(buffer, global_env);
 
     free(buffer.array);
 
@@ -810,7 +808,7 @@ int main(int argc, char **argv) {
     read_history(history_path);
 
   while (interactive) {
-    LispValue result = interactive_repl(&global_env);
+    LispValue result = interactive_repl(global_env);
 
     if (!result) {
       break;

@@ -110,11 +110,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         LispValue args = generate_args(lisp, env, custom->is_macro);
 
-        Environment *new_env = malloc(sizeof(Environment));
-        assert(new_env);
-
-        *new_env = (Environment){.other = env};
-        da_init(new_env);
+        Environment *new_env = env_make(env);
 
         if (lisp_is_nil(custom->args)) {
           if (!lisp_is_nil(args)) {
