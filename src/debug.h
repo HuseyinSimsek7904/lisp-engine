@@ -7,8 +7,7 @@
 #include "lisp_value.h"
 
 typedef enum {
-  DEBUG_PRINT_INIT = 1,
-  DEBUG_PRINT_EVAL = 2,
+  DEBUG_PRINT_EVAL = 1,
 } DebugFlags;
 
 extern DebugFlags debug_flags;

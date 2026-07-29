@@ -118,9 +118,6 @@ LispValue _lisp_init(LispType type) {
   assert(ptr);
   ptr->type = type;
 
-  if (debug_flags & DEBUG_PRINT_INIT) {
-    lisp_fprintf(stderr, "init: %l\n", ptr);
-  }
 
   return ptr;
 }
