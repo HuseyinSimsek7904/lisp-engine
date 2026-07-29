@@ -415,11 +415,12 @@ extern inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
 
 extern inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
   assert(lisp_is_list(list));
-  *generator->last = list->cons;
 
-  // Find the nil element and move generator to point to this element.
-  while (*generator->last) {
-    _lisp_gen_move(generator);
+  LispIter iter;
+  lisp_iter_init(&iter, list);
+
+  while (lisp_iter_has_next(&iter)) {
+    lisp_gen_appendr(generator, lisp_iter_next(&iter));
   }
 }
 
