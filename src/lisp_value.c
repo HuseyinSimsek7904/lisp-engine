@@ -333,7 +333,8 @@ LispValue lisp_consify_array(LispValue *array, size_t size) {
 }
 
 LispValue lisp_cons(LispValue head, LispValue tail) {
-  return lisp_make_cons(lisp_cons_make(head, tail->cons));
+  return lisp_make_cons(
+      lisp_cons_make(head, lisp_is_nil(tail) ? NULL : lisp_get_cons(tail)));
 }
 
 LispValue lisp_head(LispValue lisp) {
