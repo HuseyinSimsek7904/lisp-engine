@@ -11,12 +11,6 @@
 #include "lisp_value.h"
 #include "parser.h"
 
-void roll_env_back(Environment *env, Environment *original) {
-  while (env != original && env->other) {
-    env = env->other;
-  }
-}
-
 LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
   if (is_macro)
     return lisp_tail(lisp);
@@ -43,8 +37,6 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
 }
 
 LispValue evaluate_lisp(LispValue lisp, Environment *env) {
-  Environment *original = env;
-
   do {
     switch (lisp_get_type(lisp)) {
     case LISP_STRING_T:
@@ -55,7 +47,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     case LISP_BUILTIN_FUNC_T:
     case LISP_FUNC_T:
     case LISP_ERROR_T:
-      roll_env_back(env, original);
       return lisp;
 
     case LISP_SYMBOL_T: {
@@ -63,11 +54,9 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       if (entry) {
         LispValue value = entry->value;
-        roll_env_back(env, original);
         return value;
       }
 
-      roll_env_back(env, original);
       return ERROR1(UNDEF_SYMBOL_SYM, lisp);
     }
 
@@ -86,7 +75,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       switch (lisp_get_type(callable)) {
       case LISP_ERROR_T:
-        roll_env_back(env, original);
         return callable;
 
       case LISP_BUILTIN_FUNC_T: {
@@ -97,7 +85,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         lisp = builtin->callback(args, env);
 
         if (!builtin->tail_call) {
-          roll_env_back(env, original);
           return lisp;
         }
       } break;
@@ -111,7 +98,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         if (lisp_is_nil(custom->args)) {
           if (!lisp_is_nil(args)) {
-            roll_env_back(env, original);
             return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
           }
 
@@ -123,7 +109,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
           while (lisp_iter_has_next_next(&args_iter)) {
             if (!lisp_iter_has_next(&params_iter)) {
-              roll_env_back(env, original);
               return ERROR1(TOO_FEW_ARGS_CUSTOM_SYM, callable);
             }
 
@@ -143,12 +128,10 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
                             lisp_iter_remaining(&params_iter));
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
-              roll_env_back(env, original);
               return ERROR1(TOO_FEW_ARGS_CUSTOM_SYM, callable);
             }
 
             if (lisp_iter_has_next_next(&params_iter)) {
-              roll_env_back(env, original);
               return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
             }
 
@@ -166,7 +149,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       } break;
 
       default:
-        roll_env_back(env, original);
         return ERROR1("not-callable", callable);
       }
     } break;
