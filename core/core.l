@@ -43,3 +43,18 @@
                                  `(if ~(head (head ps))
                                       ~(head (head ps) 1)
                                       (cond ~@(tail ps))))))
+
+;; List utilities
+(set last (fn (l) (cond ((nil? l) (error 'list-empty))
+                        ((not (list? l)) (error 'not-a-list))
+                        ((nil? (tail l)) (head l))
+                        (true (last (tail l))))))
+
+(set init (fn (l) (cond ((nil? l) (error 'list-empty))
+                        ((not (list? l)) (error 'not-a-list))
+                        ((nil? (tail l)) nil)
+                        (true (cons (head l) (init (tail l)))))))
+
+(set reverse (fn (l) (cond ((nil? l) nil)
+                           ((not (list? l)) (error 'not-a-list))
+                           (true (cons (last l) (reverse (init l)))))))

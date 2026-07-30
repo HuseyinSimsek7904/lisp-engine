@@ -1,5 +1,5 @@
-(set assert-eq (fn (a b) (if (!= a b)
-                             (error (list 'assert-failed (list '= a b))))))
+(set assert (macro (c) `(if (true? ~c) nil (error `(assert-failed ~c)))))
 
-(set assert-type (fn (x t) (if (!= t (typeof x))
-                               (error (list 'assert-failed (list '= t (typeof x)))))))
+(set assert-eq (macro (a b) `(assert (= ~a ~b))))
+
+(set assert-type (macro (x t) `(assert (= ~t (typeof ~x)))))
