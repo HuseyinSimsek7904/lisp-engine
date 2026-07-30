@@ -20,3 +20,8 @@
 (setg builtin? (fn (x) (= (typeof x) builtin-t)))
 (setg fn? (fn (x) (= (typeof x) fn-t)))
 (setg list? (fn (x) (= (typeof x) list-t)))
+
+(setg concat (fn (l1 l2) (if (nil? l1) l2
+                             (if (list? l1) (cons (head l1) (concat (tail l1) l2))
+                                 (error 'l1-not-list)))))
+

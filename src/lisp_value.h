@@ -23,6 +23,9 @@ typedef enum {
   LISP_BUILTIN_FUNC_T,
   LISP_FUNC_T,
   LISP_LIST_T,
+
+  // NOTE: With the implementation of `quasi-quote`, this value type lost its
+  // use completely (probably). Perhaps could be removed.
   LISP_UNPACKED_T,
   LISP_TYPE_COUNT,
 } LispType;
@@ -227,6 +230,9 @@ EnvironmentEntry *env_set(Environment *env, const char *symbol,
 #define PARSER_TOO_MANY_R_PAREN "parser:too-many-r-paren"
 #define PARSER_REACHED_END "parser:reached-end"
 #define PARSER_QUOTE_END "parser:reached-end-quote"
+#define PARSER_BACKTICK_END "parser:reached-end-backtick"
+#define PARSER_TILDE_END "parser:reached-end-tilde"
+#define PARSER_TILDEAT_END "parser:reached-end-tildeat"
 
 extern char *lexer_result_syms[];
 

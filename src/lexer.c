@@ -75,6 +75,22 @@ LexerResult generate_tokens(StringView view, Tokens *tokens) {
       da_append(tokens, token);
     } break;
 
+    case '`': {
+      Token token = {.type = T_SYMBOL, .symbol = "`"};
+      da_append(tokens, token);
+    } break;
+
+    case '~': {
+      Token token;
+      if (sv_head(view) == '@') {
+        sv_pop_left(&view);
+        token = (Token){.type = T_SYMBOL, .symbol = "~@"};
+      } else {
+        token = (Token){.type = T_SYMBOL, .symbol = "~"};
+      }
+      da_append(tokens, token);
+    } break;
+
     case '0' ... '9': {
       int64_t number = c - '0';
 
@@ -206,7 +222,8 @@ LexerResult generate_tokens(StringView view, Tokens *tokens) {
     case '*' ... ',':
     case '.' ... '/':
     case ':':
-    case '<' ... '~': {
+    case '<' ... '_':
+    case 'a' ... '}': {
       StringBuilder sb;
       da_init(&sb);
       da_append(&sb, c);

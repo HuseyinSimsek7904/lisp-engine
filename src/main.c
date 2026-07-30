@@ -736,7 +736,7 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("debug:list-env", debug_list_env, true, false);
 
   // Builtin startup files.
-  char *startup[] = {"core/core.l"};
+  char *startup[] = {"core/core.l", "core/quote.l"};
 
   for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
     StringView buffer = read_file_sv(startup[i]);

@@ -59,6 +59,36 @@ LispValue parse_next_node(Token **tokens, size_t *token_count) {
       return lisp_make_list_2(lisp_make_sym("quote"), next_node);
     }
 
+    if (!strcmp(token.symbol, "`")) {
+      LispValue next_node = parse_next_node(tokens, token_count);
+
+      if (lisp_is_type(next_node, LISP_ERROR_T))
+        return lisp_make_error(
+            lisp_make_list_1(lisp_make_sym(PARSER_BACKTICK_END)));
+
+      return lisp_make_list_2(lisp_make_sym("quasi-quote"), next_node);
+    }
+
+    if (!strcmp(token.symbol, "~")) {
+      LispValue next_node = parse_next_node(tokens, token_count);
+
+      if (lisp_is_type(next_node, LISP_ERROR_T))
+        return lisp_make_error(
+            lisp_make_list_1(lisp_make_sym(PARSER_TILDE_END)));
+
+      return lisp_make_list_2(lisp_make_sym("unquote"), next_node);
+    }
+
+    if (!strcmp(token.symbol, "~@")) {
+      LispValue next_node = parse_next_node(tokens, token_count);
+
+      if (lisp_is_type(next_node, LISP_ERROR_T))
+        return lisp_make_error(
+            lisp_make_list_1(lisp_make_sym(PARSER_TILDEAT_END)));
+
+      return lisp_make_list_2(lisp_make_sym("unquote-expand"), next_node);
+    }
+
     return lisp_make_sym(token.symbol);
   }
 
