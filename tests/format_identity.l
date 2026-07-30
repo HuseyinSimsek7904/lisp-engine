@@ -4,9 +4,9 @@
 ;; (Assuming builtin and type names are not redefined)
 ;; Allows for testing whether the producer formatting is working or not.
 ;; lisp-obj x -> format "%l" -> str -> parse & eval -> lisp-obj x
-(setg id (fn (x) (eval (head (parse-lisp (format "%L" x))))))
+(set id (fn (x) (eval (head (parse-lisp (format "%L" x))))))
 
-(setg assert-id (fn (x) (assert-eq x (id x))))
+(set assert-id (fn (x) (assert-eq x (id x))))
 
 (assert-id nil)
 

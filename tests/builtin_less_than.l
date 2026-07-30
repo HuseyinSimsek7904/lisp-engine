@@ -25,9 +25,9 @@
            (error (list 'wrong-type-arg-to-builtin < "that" int64-t)))
 
 ;; Behavior tests.
-(setg check-less-than (fn (a b)
-                          (assert-eq (< a b) true)
-                          (assert-eq (< b a) false)))
+(set check-less-than (fn (a b)
+                         (assert-eq (< a b) true)
+                         (assert-eq (< b a) false)))
 
 (check-less-than -9223372036854775808 -9223372036854775807)
 (check-less-than -9223372036854775808 -2)
