@@ -28,7 +28,6 @@ LispValue lisp_builtin_less_than;
 LispValue lisp_builtin_read_file;
 LispValue lisp_builtin_parse_lisp;
 LispValue lisp_builtin_eval;
-LispValue lisp_builtin_unpack;
 LispValue lisp_builtin_head;
 LispValue lisp_builtin_tail;
 LispValue lisp_builtin_typeof;
@@ -373,25 +372,6 @@ DEFINE_BUILTIN(eval) {
   return evaluate_lisp_body(args, env, false);
 }
 
-DEFINE_BUILTIN(unpack) {
-  LispGen items_gen;
-  lisp_gen_init(&items_gen);
-
-  LispIter args_iter;
-  lisp_iter_init(&args_iter, args);
-
-  while (lisp_iter_has_next(&args_iter)) {
-    LispValue arg = lisp_iter_next(&args_iter);
-
-    if (!lisp_is_list(arg))
-      RETURN_INVALID_ARG(lisp_builtin_unpack, arg, lisp_make_type(LISP_LIST_T));
-
-    lisp_gen_extendr(&items_gen, arg);
-  }
-
-  return lisp_make_unpacked(lisp_gen_end(&items_gen));
-}
-
 DEFINE_BUILTIN(quote) {
   REQUIRES_EQ_ARGS(quote, 1);
 
@@ -694,7 +674,6 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("read-file", read_file, false, false);
   DEFINE_BUILTIN_FUNCTION("parse-lisp", parse_lisp, false, false);
   DEFINE_BUILTIN_FUNCTION("eval", eval, false, false);
-  DEFINE_BUILTIN_FUNCTION("unpack", unpack, false, false);
   DEFINE_BUILTIN_FUNCTION("head", head, false, false);
   DEFINE_BUILTIN_FUNCTION("tail", tail, false, false);
   DEFINE_BUILTIN_FUNCTION("typeof", typeof, false, false);

@@ -35,7 +35,6 @@ char *lisp_type_syms[] = {
     [LISP_INT64_T] = "int64-t",       [LISP_BOOL_T] = "bool-t",
     [LISP_SYMBOL_T] = "sym-t",        [LISP_BUILTIN_FUNC_T] = "builtin-t",
     [LISP_FUNC_T] = "fn-t",           [LISP_LIST_T] = "list-t",
-    [LISP_UNPACKED_T] = "unpacked-t",
 };
 
 char *lexer_result_syms[] = {
@@ -102,11 +101,6 @@ extern inline LispValue lisp_get_error_item(LispValue value) {
   assert(lisp_is_type(value, LISP_ERROR_T));
   return value->item;
 }
-extern inline LispValue lisp_get_unpacked_item(LispValue value) {
-  assert(lisp_is_type(value, LISP_UNPACKED_T));
-  assert(lisp_is_list(value->item));
-  return value->item;
-}
 extern inline _LispCons *lisp_get_cons(LispValue value) {
   assert(lisp_is_type(value, LISP_LIST_T));
   assert(value->cons);
@@ -163,14 +157,6 @@ extern inline LispValue lisp_make_cons(_LispCons *cons) {
 
   LispValue value = _lisp_init(LISP_LIST_T);
   value->cons = cons;
-  return value;
-}
-
-extern inline LispValue lisp_make_unpacked(LispValue item) {
-  assert(lisp_is_list(item));
-
-  LispValue value = _lisp_init(LISP_UNPACKED_T);
-  value->item = item;
   return value;
 }
 
@@ -304,9 +290,6 @@ bool lisp_is_ident(LispValue a, LispValue b) {
            lisp_is_ident(a_custom->args, b_custom->args) &&
            lisp_is_ident(a_custom->body, b_custom->body);
   }
-
-  case LISP_UNPACKED_T:
-    return lisp_is_ident(lisp_get_unpacked_item(a), lisp_get_unpacked_item(b));
 
   case LISP_TYPE_COUNT:
     lisp_fprintf(stderr, "reached unreachable\n");

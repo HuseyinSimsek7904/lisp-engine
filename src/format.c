@@ -191,19 +191,6 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
     break;
 
-  case LISP_UNPACKED_T:
-    // Producers: (unpack ITEM)
-
-    da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
-    if (formatting)
-      sb_append_static_str(builder, "unpack ");
-    else
-      sb_append_static_str(builder, "unpacked ");
-
-    lisp_value_format(builder, lisp_get_unpacked_item(value), formatting);
-    da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
-    break;
-
   case LISP_LIST_T:
     // Producers: (list [LIST_ITEMS...])
 

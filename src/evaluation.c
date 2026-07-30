@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
 
 #include "core.h"
 #include "debug.h"
@@ -23,14 +22,7 @@ LispValue generate_args(LispValue lisp, Environment *env, bool is_macro) {
   lisp_iter_next(&iter);
 
   while (lisp_iter_has_next(&iter)) {
-    LispValue arg = evaluate_lisp(lisp_iter_next(&iter), env);
-
-    if (lisp_is_type(arg, LISP_UNPACKED_T)) {
-      lisp_gen_extendr(&args_gen, lisp_get_unpacked_item(arg));
-
-    } else {
-      lisp_gen_appendr(&args_gen, arg);
-    }
+    lisp_gen_appendr(&args_gen, evaluate_lisp(lisp_iter_next(&iter), env));
   }
 
   return lisp_gen_end(&args_gen);
@@ -59,12 +51,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
       return ERROR1(UNDEF_SYMBOL_SYM, lisp);
     }
-
-    case LISP_UNPACKED_T:
-      // I do not think calling an unpacked type is possible by regular means,
-      // but just in case adding this fall through to list.
-
-      lisp = lisp_get_unpacked_item(lisp);
 
     case LISP_LIST_T: {
       if (debug_flags & DEBUG_PRINT_EVAL) {

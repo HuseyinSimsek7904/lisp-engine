@@ -72,9 +72,6 @@
 (assert-eq (format "%l" '(a b)) "(a b)")
 (assert-eq (format "%l" '(a (b c) d)) "(a (b c) d)")
 
-;; Testing unpacked formatting is not easy...
-;; (assert-eq (format "%l" (unpack (list 1 2 3))) "<unpacked (1 2 3)>")
-
 ;; Test printable string formatting.
 (assert-eq (format "%l" "hello") "\"hello\"")
 (assert-eq (format "%l" "\a\b\t\n\v\r\e\"\'") "\"\\a\\b\\t\\n\\v\\r\\e\\\"\\\'\"")

@@ -23,10 +23,6 @@ typedef enum {
   LISP_BUILTIN_FUNC_T,
   LISP_FUNC_T,
   LISP_LIST_T,
-
-  // NOTE: With the implementation of `quasi-quote`, this value type lost its
-  // use completely (probably). Perhaps could be removed.
-  LISP_UNPACKED_T,
   LISP_TYPE_COUNT,
 } LispType;
 
@@ -107,7 +103,6 @@ bool lisp_get_bool(LispValue value);
 _LispBuiltinFunction *lisp_get_builtin(LispValue value);
 _LispCustomFunction *lisp_get_custom(LispValue value);
 LispValue lisp_get_error_item(LispValue value);
-LispValue lisp_get_unpacked_item(LispValue value);
 
 LispValue _lisp_init(LispType type);
 
@@ -120,7 +115,6 @@ LispValue lisp_make_builtin(bool is_macro, bool tail_call,
 LispValue lisp_make_bool(bool boolean);
 LispValue lisp_make_error(LispValue item);
 LispValue lisp_make_cons(_LispCons *cons);
-LispValue lisp_make_unpacked(LispValue item);
 LispValue lisp_make_fn_or_macro(LispValue args, LispValue body, bool variadic,
                                 bool is_macro, Environment *env);
 LispValue lisp_make_type(LispType ref_type);
