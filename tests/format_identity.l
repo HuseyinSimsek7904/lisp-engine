@@ -3,8 +3,8 @@
 ;; This function should return its argument, hence the identity function.
 ;; (Assuming builtin and type names are not redefined)
 ;; Allows for testing whether the producer formatting is working or not.
-;; lisp-obj x -> format "%l" -> str -> parse, unpack, eval -> lisp-obj x
-(setg id (fn (x) (eval (unpack (parse-lisp (format "%L" x))))))
+;; lisp-obj x -> format "%l" -> str -> parse & eval -> lisp-obj x
+(setg id (fn (x) (eval (head (parse-lisp (format "%L" x))))))
 
 (setg assert-id (fn (x) (assert-eq x (id x))))
 
