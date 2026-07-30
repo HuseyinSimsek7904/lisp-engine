@@ -1,10 +1,6 @@
 (include "core/assert.l")
 
-;; `do` structure: (do BODY...)
-
-;; Wrong number of arguments.
-(assert-eq (do)
-           (error (list 'too-few-args-to-builtin do 0 1)))
+;; `do` structure: (do [BODY...])
 
 ;; If anything inside `BODY` returns error, it is returned immediately.
 (let ((test nil))

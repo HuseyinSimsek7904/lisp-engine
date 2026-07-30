@@ -274,7 +274,8 @@ DEFINE_BUILTIN(macro) {
 }
 
 DEFINE_BUILTIN(do) {
-  REQUIRES_MIN_ARGS(do, 1);
+  if (lisp_is_nil(args))
+    return LISP_NIL;
 
   return evaluate_lisp_body(args, env, true);
 }
