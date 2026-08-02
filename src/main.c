@@ -750,7 +750,7 @@ int main(int argc, char **argv) {
           lisp_printf("info: %s test passed\n", argv[i]);
       } else {
         lisp_fprintf(stderr, "fail: %s test failed\n", argv[i]);
-        lisp_fprintf(stderr, "%l\n", return_value);
+        lisp_fprintf(stderr, "~ %l\n", return_value);
         test_failed = true;
       }
     }

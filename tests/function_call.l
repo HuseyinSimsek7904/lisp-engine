@@ -18,11 +18,9 @@
 (set f2 (fn (y) (+ x y)))
 
 (assert-eq (f2 5)
-           (error (list 'wrong-type-arg-to-builtin +
-                        (error (list 'undefined-symbol 'x)) int64-t)))
+           (error `(wrong-type-arg-to-builtin ~+ ~(error '(undefined-symbol x)) ~int64-t)))
 (assert-eq (let ((x 10)) (f2 5))
-           (error (list 'wrong-type-arg-to-builtin +
-                        (error (list 'undefined-symbol 'x)) int64-t)))
+           (error `(wrong-type-arg-to-builtin ~+ ~(error '(undefined-symbol x)) ~int64-t)))
 
 ;; Try partial application.
 (set add-curry (fn (x) (fn (y) (+ x y))))

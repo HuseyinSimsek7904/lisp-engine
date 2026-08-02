@@ -4,22 +4,22 @@
 
 ;; Wrong number of arguments.
 (assert-eq (format)
-           (error (list 'too-few-args-to-builtin format 0 1)))
+           (error `(too-few-args-to-builtin ~format 0 1)))
 
 ;; Wrong type of argument.
 (assert-eq (format 1 nil)
-           (error (list 'wrong-type-arg-to-builtin format 1 str-t)))
+           (error `(wrong-type-arg-to-builtin ~format 1 ~str-t)))
 
 ;; Too few args to format.
-(assert-eq (format "abc %l def") (error (list 'too-few-args-to-format "abc %l def")))
-(assert-eq (format "abc %s def") (error (list 'too-few-args-to-format "abc %s def")))
-(assert-eq (format "abc %l def %l" 2) (error (list 'too-few-args-to-format "abc %l def %l")))
+(assert-eq (format "abc %l def") (error `(too-few-args-to-format "abc %l def")))
+(assert-eq (format "abc %s def") (error `(too-few-args-to-format "abc %s def")))
+(assert-eq (format "abc %l def %l" 2) (error `(too-few-args-to-format "abc %l def %l")))
 
 ;; Wrong type arg to format.
-(assert-eq (format "%s" 2) (error (list 'wrong-type-arg-to-format 2 str-t)))
+(assert-eq (format "%s" 2) (error `(wrong-type-arg-to-format 2 ~str-t)))
 
 ;; Invalid format string.
-(assert-eq (format "%d") (error (list 'invalid-format-string "%d")))
+(assert-eq (format "%d") (error `(invalid-format-string "%d")))
 
 ;; Functionality test.
 (assert-eq (format "hello, %s" "world") "hello, world")
@@ -63,10 +63,10 @@
 (assert-eq (format "%l" (fn (a b (rest r)) nil)) "<fn (a b (rest r))>")
 (assert-eq (format "%l" (fn (a b c (rest r)) nil)) "<fn (a b c (rest r))>")
 
-(assert-eq (format "%l" (list)) "<nil>")
-(assert-eq (format "%l" (list 1)) "(1)")
-(assert-eq (format "%l" (list 1 2)) "(1 2)")
-(assert-eq (format "%l" (list 1 2 3)) "(1 2 3)")
+(assert-eq (format "%l" '()) "<nil>")
+(assert-eq (format "%l" '(1)) "(1)")
+(assert-eq (format "%l" '(1 2)) "(1 2)")
+(assert-eq (format "%l" '(1 2 3)) "(1 2 3)")
 (assert-eq (format "%l" '()) "<nil>")
 (assert-eq (format "%l" '(a)) "(a)")
 (assert-eq (format "%l" '(a b)) "(a b)")

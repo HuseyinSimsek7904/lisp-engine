@@ -4,14 +4,14 @@
 
 ;; Wrong number of arguments.
 (assert-eq (=)
-           (error (list 'wrong-number-of-args-to-builtin = 0 2)))
+           (error `(wrong-number-of-args-to-builtin ~= 0 2)))
 (assert-eq (= 1 2 3)
-           (error (list 'wrong-number-of-args-to-builtin = 3 2)))
+           (error `(wrong-number-of-args-to-builtin ~= 3 2)))
 
 ;; Different type identity checks.
 (assert-eq (= nil 4) false)
 (assert-eq (= "hi" print) false)
-(assert-eq (= (list 1 2 3) 'abc) false)
+(assert-eq (= '(1 2 3) 'abc) false)
 
 ;; nil-t
 (assert-eq (= nil nil) true)
@@ -28,7 +28,7 @@
 (assert-eq (= (error "should be true") (error "should be true")) true)
 
 (assert-eq (= (error "should not be true") (error "wrong")) false)
-(assert-eq (= (error (quote (wrong))) (error (list (wrong)))) false)
+(assert-eq (= (error (quote (wrong))) (error '((wrong)))) false)
 
 ;; str-t
 (assert-eq (= "abc" "abc") true)
@@ -81,9 +81,9 @@
 
 ;; list-t
 (assert-eq (= nil nil) true)
-(assert-eq (= (list 1 2 3) (list 1 2 3)) true)
-(assert-eq (= (list 1 (list 2 3)) (list 1 (list 2 3))) true)
+(assert-eq (= '(1 2 3) '(1 2 3)) true)
+(assert-eq (= '(1 '(2 3)) '(1 '(2 3))) true)
 
 (assert-eq (= nil "a") false)
-(assert-eq (= (list 1 2 3) (list 1 2 4)) false)
-(assert-eq (= (list 1 (list 2 3)) (list 1 (list 2 4))) false)
+(assert-eq (= '(1 2 3) '(1 2 4)) false)
+(assert-eq (= '(1 '(2 3)) '(1 '(2 4))) false)

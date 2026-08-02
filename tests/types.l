@@ -54,5 +54,5 @@
 (assert-type nil? fn-t)
 
 ;; list-t
-(assert-type (list 1 2 3) list-t)
-(assert-type (tail (list 1 2 3)) list-t)
+(assert-type '(1 2 3) list-t)
+(assert-type (tail '(1 2 3)) list-t)

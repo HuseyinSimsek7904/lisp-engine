@@ -9,12 +9,12 @@
 
 ;; Wrong type of argument.
 (assert-eq (print 1 "print" "test")
-           (error (list 'wrong-type-arg-to-builtin print 1 str-t)))
+           (error `(wrong-type-arg-to-builtin ~print 1 ~str-t)))
 (assert-eq (print "print" 2 "test")
-           (error (list 'wrong-type-arg-to-builtin print 2 str-t)))
+           (error `(wrong-type-arg-to-builtin ~print 2 ~str-t)))
 (assert-eq (print "print" "test" 3)
-           (error (list 'wrong-type-arg-to-builtin print 3 str-t)))
+           (error `(wrong-type-arg-to-builtin ~print 3 ~str-t)))
 
 ;; Error as argument.
 (assert-eq (print (error "should not return"))
-           (error (list 'wrong-type-arg-to-builtin print (error "should not return") str-t)))
+           (error `(wrong-type-arg-to-builtin ~print ~(error "should not return") ~str-t)))
