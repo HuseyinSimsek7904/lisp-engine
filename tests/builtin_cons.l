@@ -21,7 +21,8 @@
            (error `(wrong-type-arg-to-builtin ~cons ~(error "should not return") ~list-t)))
 
 ;; Behavior tests.
-(assert-eq (cons () ()) '(()))
-(assert-eq (cons 123 ()) '(123))
-(assert-eq (cons "123" ()) '("123"))
+(assert-eq (cons empty empty) `(~empty))
+(assert-eq (cons nil empty) `(~nil))
+(assert-eq (cons 123 empty) '(123))
+(assert-eq (cons "123" empty) '("123"))
 (assert-eq (cons 1 '(2 3 4)) '(1 2 3 4))

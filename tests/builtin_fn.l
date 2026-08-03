@@ -37,8 +37,8 @@
                         "argument list must be in the form ([SYMBOL...] [(rest SYMBOL)])")))
 
 ;; Argument matching.
-(let ((func (fn () ())))
-  (assert-eq (func) ())
+(let ((func (fn () empty)))
+  (assert-eq (func) empty)
   (assert-eq (func 1)
              (error `(too-many-args ~func))))
 

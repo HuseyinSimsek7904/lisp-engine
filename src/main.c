@@ -83,7 +83,9 @@ DEFINE_BUILTIN(let) {
 
   Environment *new_env = env_make(env);
 
-  if (lisp_is_non_empty_list(ARG(0))) {
+  CHECK_ARG_TYPE(let, ARG(0), LISP_LIST_T);
+
+  if (!lisp_is_empty(ARG(0))) {
     LispIter defs_iter;
     lisp_iter_init(&defs_iter, ARG(0));
 
@@ -112,9 +114,7 @@ DEFINE_BUILTIN(let) {
 
       env_set_shallow(new_env, symbol, value);
     }
-
-  } else if (!lisp_is_nil(ARG(0)))
-    RETURN_INVALID_ARG(lisp_builtin_let, ARG(0), lisp_make_type(LISP_LIST_T));
+  }
 
   return evaluate_lisp_body(lisp_tail(args), new_env, false);
 }
@@ -146,10 +146,15 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
   bool variadic = false;
   LispValue arg_symbols;
 
-  if (lisp_is_nil(ARG(0))) {
-    arg_symbols = LISP_NIL;
+  if (!lisp_is_type(ARG(0), LISP_LIST_T))
+    return lisp_make_error(lisp_make_list_4(lisp_make_sym(WRONG_TYPE_ARG_SYM),
+                                            builtin, ARG(0),
+                                            lisp_make_type(LISP_LIST_T)));
 
-  } else if (lisp_is_non_empty_list(ARG(0))) {
+  if (lisp_is_empty(ARG(0))) {
+    arg_symbols = LISP_EMPTY;
+
+  } else {
     LispGen args_gen;
     lisp_gen_init(&args_gen);
 
@@ -173,7 +178,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
 
     arg = lisp_iter_next(&args_iter);
 
-    if (lisp_is_non_empty_list(arg)) {
+    if (lisp_is_type(arg, LISP_LIST_T)) {
       if (lisp_get_len(arg) != 2)
         return lisp_make_error(lisp_make_list_4(
             lisp_make_sym(WRONG_TYPE_ARG_SYM), builtin, ARG(0),
@@ -212,11 +217,7 @@ LispValue define_fn_or_macro(LispValue args, Environment *env,
               "SYMBOL)])")));
 
     arg_symbols = lisp_gen_end(&args_gen);
-
-  } else
-    return lisp_make_error(lisp_make_list_4(lisp_make_sym(WRONG_TYPE_ARG_SYM),
-                                            builtin, ARG(0),
-                                            lisp_make_type(LISP_LIST_T)));
+  }
 
   return lisp_make_fn_or_macro(arg_symbols, lisp_tail(args), variadic, is_macro,
                                env);
@@ -231,7 +232,7 @@ DEFINE_BUILTIN(macro) {
 }
 
 DEFINE_BUILTIN(do) {
-  if (lisp_is_nil(args))
+  if (lisp_is_empty(args))
     return LISP_NIL;
 
   return evaluate_lisp_body(args, env, true);
@@ -365,10 +366,10 @@ DEFINE_BUILTIN(head) {
   if (arg_count == 2) {
     CHECK_ARG_TYPE(head, ARG(1), LISP_INT64_T);
     n = lisp_get_int64(ARG(1));
-
-    if (lisp_get_len(ARG(0)) < n + 1)
-      RETURN_INVALID_ARG(lisp_builtin_head, ARG(0), ARG(1));
   }
+
+  if (lisp_get_len(ARG(0)) < n + 1)
+    RETURN_INVALID_ARG(lisp_builtin_head, ARG(0), lisp_make_int64(n));
 
   return lisp_head_n(ARG(0), n);
 }
@@ -385,10 +386,10 @@ DEFINE_BUILTIN(tail) {
   if (arg_count == 2) {
     CHECK_ARG_TYPE(tail, ARG(1), LISP_INT64_T);
     n = lisp_get_int64(ARG(1));
-
-    if (lisp_get_len(ARG(0)) < n + 1)
-      RETURN_INVALID_ARG(lisp_builtin_tail, ARG(0), ARG(1));
   }
+
+  if (lisp_get_len(ARG(0)) < n + 1)
+    RETURN_INVALID_ARG(lisp_builtin_tail, ARG(0), lisp_make_int64(n));
 
   return lisp_tail_n(ARG(0), n);
 }
@@ -479,8 +480,7 @@ DEFINE_BUILTIN(format) {
 DEFINE_BUILTIN(cons) {
   REQUIRES_EQ_ARGS(cons, 2);
 
-  if (!lisp_is_nil(ARG(1)))
-    CHECK_ARG_TYPE(cons, ARG(1), LISP_LIST_T);
+  CHECK_ARG_TYPE(cons, ARG(1), LISP_LIST_T);
 
   return lisp_cons(ARG(0), ARG(1));
 }
@@ -579,10 +579,6 @@ LispValue interactive_repl(Environment *env) {
   }
 }
 
-LispValue LISP_NIL;
-LispValue LISP_TRUE;
-LispValue LISP_FALSE;
-
 int main(int argc, char **argv) {
   bool interactive = true;
   bool test_mode = false;
@@ -619,13 +615,12 @@ int main(int argc, char **argv) {
   Environment *global_env = env_make(NULL);
 
   // Singletons.
-  LISP_NIL = lisp_make_singleton_nil();
-  LISP_TRUE = lisp_make_singleton_bool(true);
-  LISP_FALSE = lisp_make_singleton_bool(false);
+  lisp_init_singletons();
 
   env_set_shallow(global_env, "nil", LISP_NIL);
   env_set_shallow(global_env, "false", LISP_FALSE);
   env_set_shallow(global_env, "true", LISP_TRUE);
+  env_set_shallow(global_env, "empty", LISP_EMPTY);
 
   // Type representative singletons.
   DEFINE_TYPE_REP("nil-t", nil, LISP_NIL_T);
@@ -720,7 +715,7 @@ int main(int argc, char **argv) {
       // In test mode, every file must return nil.
       // If they do not, that means that the test failed.
 
-      if (lisp_is_nil(return_value)) {
+      if (lisp_is_ident(return_value, LISP_NIL)) {
         if (always_show_test_results)
           lisp_printf("info: %s test passed\n", argv[i]);
       } else {

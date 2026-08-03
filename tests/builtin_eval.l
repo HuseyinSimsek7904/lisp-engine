@@ -12,7 +12,7 @@
 
 (let ((test nil))
   (assert-eq (eval `(+ ~test 4) `(set test 1) 'okay)
-             (error `(wrong-type-arg-to-builtin ~+ () ~int64-t)))
+             (error `(wrong-type-arg-to-builtin ~+ ~nil ~int64-t)))
   (assert-eq test nil)
   (set test 2)
   (assert-eq (eval `(+ ~test 4) `(set test 3) ''okay) 'okay)
@@ -20,11 +20,11 @@
 
 ;; If anything inside `BODY` returns error, it is returned immediately.
 (assert-eq
- (eval '(print ())
+ (eval '(print nil)
        '(print "should not be printed"))
- (error `(wrong-type-arg-to-builtin ~print () ~str-t)))
+ (error `(wrong-type-arg-to-builtin ~print ~nil ~str-t)))
 
 (assert-eq
  (eval '(set test 5)
-       '(print ()))
- (error `(wrong-type-arg-to-builtin ~print () ~str-t)))
+       '(print nil))
+ (error `(wrong-type-arg-to-builtin ~print ~nil ~str-t)))

@@ -10,10 +10,7 @@
 (set nil?     (fn (x) (= x nil)))
 (set true?    (fn (x) (= x true)))
 (set false?   (fn (x) (= x false)))
-
-(set nil?     (fn (x) (= x nil)))
-(set true?    (fn (x) (= x true)))
-(set false?   (fn (x) (= x false)))
+(set empty?   (fn (x) (= x empty)))
 
 (set type?    (fn (x) (= (typeof x) type-t)))
 (set error?   (fn (x) (= (typeof x) error-t)))
@@ -25,36 +22,37 @@
 (set fn?      (fn (x) (= (typeof x) fn-t)))
 (set list?    (fn (x) (= (typeof x) list-t)))
 
-(set concat (fn (l1 l2) (if (nil? l1) l2
-                            (if (list? l1) (cons (head l1) (concat (tail l1) l2))
-                                (error 'l1-not-list)))))
+(set concat (fn (l1 l2)
+                (if (not (list? l1)) (error 'concat-l1-not-list))
+                (if (empty? l1) l2
+                    (cons (head l1) (concat (tail l1) l2)))))
 
 (set not (fn (c) (if c false true)))
-(set and (macro ((rest cs)) (if (nil? cs) true
+(set and (macro ((rest cs)) (if (empty? cs) true
                                 `(if ~(head cs)
                                      (and ~@(tail cs))
                                      false))))
-(set or (macro ((rest cs)) (if (nil? cs) false
+(set or (macro ((rest cs)) (if (empty? cs) false
                                `(if ~(head cs)
                                     true
                                     (or ~@(tail cs))))))
 
-(set cond (macro ((rest ps)) (if (nil? ps) nil
+(set cond (macro ((rest ps)) (if (empty? ps) nil
                                  `(if ~(head (head ps))
                                       ~(head (head ps) 1)
                                       (cond ~@(tail ps))))))
 
 ;; List utilities
-(set last (fn (l) (cond ((nil? l) (error 'list-empty))
-                        ((not (list? l)) (error 'not-a-list))
-                        ((nil? (tail l)) (head l))
+(set last (fn (l) (cond ((not (list? l)) (error 'not-a-list))
+                        ((empty? l) (error 'list-empty))
+                        ((empty? (tail l)) (head l))
                         (true (last (tail l))))))
 
-(set init (fn (l) (cond ((nil? l) (error 'list-empty))
-                        ((not (list? l)) (error 'not-a-list))
-                        ((nil? (tail l)) nil)
+(set init (fn (l) (cond ((not (list? l)) (error 'not-a-list))
+                        ((empty? l) (error 'list-empty))
+                        ((empty? (tail l)) empty)
                         (true (cons (head l) (init (tail l)))))))
 
-(set reverse (fn (l) (cond ((nil? l) nil)
-                           ((not (list? l)) (error 'not-a-list))
+(set reverse (fn (l) (cond ((not (list? l)) (error 'not-a-list))
+                           ((empty? l) empty)
                            (true (cons (last l) (reverse (init l)))))))

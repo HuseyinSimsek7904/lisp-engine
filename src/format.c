@@ -12,10 +12,11 @@
 
 void lisp_format_items(StringBuilder *builder, LispValue value,
                        FormattingType formatting) {
-  if (lisp_is_nil(value))
-    return;
 
-  assert(lisp_is_non_empty_list(value));
+  assert(lisp_is_type(value, LISP_LIST_T));
+
+  if (lisp_is_empty(value))
+    return;
 
   LispIter items_iter;
   lisp_iter_init(&items_iter, value);
@@ -155,7 +156,7 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
       sb_append_static_str(builder, "fn ");
 
     sb_append_static_str(builder, "(");
-    if (!lisp_is_nil(custom->args)) {
+    if (!lisp_is_empty(custom->args)) {
       LispIter args_iter;
       lisp_iter_init(&args_iter, custom->args);
 

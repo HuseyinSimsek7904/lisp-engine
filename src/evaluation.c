@@ -53,6 +53,13 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     }
 
     case LISP_LIST_T: {
+      if (lisp_is_empty(lisp))
+        return LISP_NIL;
+
+      if (debug_flags & DEBUG_PRINT_EVAL) {
+        lisp_fprintf(stderr, "eval: %l\n", lisp);
+      }
+
       LispValue callable = evaluate_lisp(lisp_head(lisp), env);
 
       switch (lisp_get_type(callable)) {
@@ -93,8 +100,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
         Environment *new_env = env_make(custom->env);
 
-        if (lisp_is_nil(custom->args)) {
-          if (!lisp_is_nil(args)) {
+        if (lisp_is_empty(custom->args)) {
+          if (!lisp_is_empty(args)) {
             return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
           }
 
@@ -167,7 +174,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 }
 
 LispValue evaluate_lisp_body(LispValue lisp, Environment *env, bool tail_call) {
-  if (lisp_is_nil(lisp))
+  if (lisp_is_empty(lisp))
     return LISP_NIL;
 
   LispIter iter;

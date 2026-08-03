@@ -1,5 +1,5 @@
 (set quasi-quote-items-fn (fn (exprs)
-                              (if (nil? exprs) nil
+                              (if (empty? exprs) 'empty
                                   (if (= 'unquote-expand (head (head exprs)))
                                       (list 'concat
                                             (head (head exprs) 1)
@@ -9,11 +9,11 @@
                                             (quasi-quote-items-fn (tail exprs)))))))
 
 (set quasi-quote-fn (fn (expr)
-                        (if (nil? expr) nil
-                            (if (list? expr)
+                        (if (list? expr)
+                            (if (empty? expr) 'empty
                                 (if (= 'unquote (head expr))
                                     (head expr 1)
-                                    (quasi-quote-items-fn expr))
-                                (list 'quote expr)))))
+                                    (quasi-quote-items-fn expr)))
+                            (list 'quote expr))))
 
 (set quasi-quote (macro (expr) (quasi-quote-fn expr)))

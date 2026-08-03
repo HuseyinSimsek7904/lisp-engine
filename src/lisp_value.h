@@ -86,13 +86,12 @@ typedef struct _LispCons _LispCons;
 extern LispValue LISP_NIL;
 extern LispValue LISP_TRUE;
 extern LispValue LISP_FALSE;
+extern LispValue LISP_EMPTY;
 
 LispType lisp_get_type(LispValue value);
 
 bool lisp_is_type(LispValue value, LispType type);
-bool lisp_is_nil(LispValue value);
-bool lisp_is_non_empty_list(LispValue value);
-bool lisp_is_list(LispValue value);
+bool lisp_is_empty(LispValue value);
 bool lisp_is_sym(LispValue value, const char *symbol);
 
 StringView lisp_get_str(LispValue value);
@@ -106,11 +105,10 @@ LispValue lisp_get_error_item(LispValue value);
 
 LispValue _lisp_init(LispType type);
 
-LispValue lisp_make_singleton_nil();
-LispValue lisp_make_singleton_bool(bool boolean);
 LispValue lisp_make_builtin(bool is_macro, bool tail_call,
                             LispValue (*callback)(LispValue, Environment *),
                             char *name);
+void lisp_init_singletons();
 
 LispValue lisp_make_bool(bool boolean);
 LispValue lisp_make_error(LispValue item);
@@ -137,7 +135,6 @@ struct _LispCons {
   _LispCons *tail;
 };
 
-_LispCons *lisp_cons_make(LispValue head, _LispCons *tail);
 LispValue lisp_cons(LispValue head, LispValue tail);
 LispValue lisp_consify_array(LispValue *array, size_t size);
 LispValue lisp_head(LispValue lisp);

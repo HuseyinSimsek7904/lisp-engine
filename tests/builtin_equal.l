@@ -15,6 +15,7 @@
 
 ;; nil-t
 (assert-eq (= nil nil) true)
+(assert-eq (= nil empty) false)
 
 ;; type-t
 (assert-eq (= int64-t int64-t) true)

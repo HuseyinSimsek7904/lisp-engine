@@ -2,8 +2,8 @@
 
 ;; `list` structure: (list [ITEM...])
 
-;; Empty list is `nil`.
-(assert-eq (list) nil)
+(assert-eq (list) empty)
+(assert-eq (list) '())
 
 ;; Check against `quote`.
 (assert-eq (list 1) '(1))
