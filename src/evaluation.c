@@ -53,10 +53,6 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     }
 
     case LISP_LIST_T: {
-      if (debug_flags & DEBUG_PRINT_EVAL) {
-        lisp_fprintf(stderr, "eval: %l\n", lisp);
-      }
-
       LispValue callable = evaluate_lisp(lisp_head(lisp), env);
 
       switch (lisp_get_type(callable)) {
@@ -64,11 +60,22 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         return callable;
 
       case LISP_BUILTIN_FUNC_T: {
+        if (debug_flags & DEBUG_PRINT_EVAL) {
+          lisp_fprintf(stderr, "eval: %l\n", lisp);
+        }
+
         _LispBuiltinFunction *builtin = lisp_get_builtin(callable);
 
         LispValue args = generate_args(lisp, env, builtin->is_macro);
 
-        lisp = builtin->callback(args, env);
+        LispValue return_value = builtin->callback(args, env);
+
+        if (debug_flags & DEBUG_PRINT_EVAL) {
+          lisp_fprintf(stderr, ": %l\n", lisp);
+          lisp_fprintf(stderr, ". return: %l\n", return_value);
+        }
+
+        lisp = return_value;
 
         if (!builtin->tail_call) {
           return lisp;
@@ -76,6 +83,10 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
       } break;
 
       case LISP_FUNC_T: {
+        if (debug_flags & DEBUG_PRINT_EVAL) {
+          lisp_fprintf(stderr, "eval: %l\n", lisp);
+        }
+
         _LispCustomFunction *custom = lisp_get_custom(callable);
 
         LispValue args = generate_args(lisp, env, custom->is_macro);
@@ -127,7 +138,15 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
         }
 
         if (custom->is_macro) {
-          lisp = evaluate_lisp_body(custom->body, new_env, false);
+          LispValue expand = evaluate_lisp_body(custom->body, new_env, false);
+
+          if (debug_flags & DEBUG_PRINT_EVAL) {
+            lisp_fprintf(stderr, ": %l\n", lisp);
+            lisp_fprintf(stderr, ". expand: %l\n", expand);
+          }
+
+          lisp = expand;
+
         } else {
           lisp = evaluate_lisp_body(custom->body, new_env, true);
           env = new_env;
