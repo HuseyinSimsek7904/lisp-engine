@@ -191,18 +191,47 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
     break;
 
-  case LISP_LIST_T:
+  case LISP_LIST_T: {
     // Producers: (list [LIST_ITEMS...])
+
+    if (lisp_get_len(value) == 2) {
+      LispValue form = lisp_head(value);
+      LispValue arg = lisp_head_n(value, 1);
+
+      if (lisp_is_sym(form, "quote")) {
+        sb_append_cstr(builder, "'");
+        lisp_value_format(builder, arg, formatting);
+        break;
+      }
+
+      if (lisp_is_sym(form, "quasi-quote")) {
+        sb_append_cstr(builder, "`");
+        lisp_value_format(builder, arg, formatting);
+        break;
+      }
+
+      if (lisp_is_sym(form, "unquote")) {
+        sb_append_cstr(builder, "~");
+        lisp_value_format(builder, arg, formatting);
+        break;
+      }
+
+      if (lisp_is_sym(form, "unquote-expand")) {
+        sb_append_cstr(builder, "~@");
+        lisp_value_format(builder, arg, formatting);
+        break;
+      }
+    }
 
     sb_append_static_str(builder, "(");
 
-    if (formatting)
+    if (formatting == FORMAT_PRODUCER)
       sb_append_static_str(builder, "list ");
 
     lisp_format_items(builder, value, formatting);
 
     sb_append_static_str(builder, ")");
-    break;
+  } break;
 
   case LISP_TYPE_COUNT:
     lisp_fprintf(stderr, "reached unreachable\n");
