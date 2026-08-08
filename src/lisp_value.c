@@ -8,7 +8,7 @@
 
 #include "core.h"
 #include "format.h"
-#include "lexer.h"
+#include "parser.h"
 #include "lisp_value.h"
 
 struct _LispValue {

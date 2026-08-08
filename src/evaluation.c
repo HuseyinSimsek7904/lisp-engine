@@ -6,7 +6,6 @@
 #include "debug.h"
 #include "evaluation.h"
 #include "format.h"
-#include "lexer.h"
 #include "lisp_value.h"
 #include "parser.h"
 
