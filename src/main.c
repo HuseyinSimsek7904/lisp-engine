@@ -497,6 +497,43 @@ DEFINE_BUILTIN(read_line) {
   return lisp_make_str(view);
 }
 
+LispValue apply_quasi_quote(LispValue value, Environment *env) {
+  if (!lisp_is_type(value, LISP_LIST_T))
+    return value;
+
+  if (lisp_get_len(value) == 2 && lisp_is_sym(lisp_head(value), "unquote"))
+    return evaluate_lisp(lisp_head_n(value, 1), env);
+
+  LispIter iter;
+  lisp_iter_init(&iter, value);
+
+  LispGen gen;
+  lisp_gen_init(&gen);
+
+  while (lisp_iter_has_next(&iter)) {
+    LispValue item = lisp_iter_next(&iter);
+
+    if (lisp_is_type(item, LISP_LIST_T) && lisp_get_len(item) == 2 &&
+        lisp_is_sym(lisp_head(item), "unquote-expand")) {
+      LispValue result = evaluate_lisp(lisp_head_n(item, 1), env);
+
+      if (!lisp_is_type(result, LISP_LIST_T))
+        return ERROR1("result-not-list", lisp_head_n(item, 1));
+
+      lisp_gen_extendr(&gen, result);
+    } else
+      lisp_gen_appendr(&gen, apply_quasi_quote(item, env));
+  }
+
+  return lisp_gen_end(&gen);
+}
+
+DEFINE_BUILTIN(quasi_quote) {
+  REQUIRES_EQ_ARGS(quasi_quote, 1);
+
+  return apply_quasi_quote(ARG(0), env);
+}
+
 // TODO: This should expect a list of symbols, where each symbol is a flag.
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
@@ -655,6 +692,7 @@ int main(int argc, char **argv) {
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
   DEFINE_BUILTIN_FUNCTION("quote", quote, true, false);
+  DEFINE_BUILTIN_FUNCTION("quasi-quote", quasi_quote, true, false);
   DEFINE_BUILTIN_FUNCTION("fn", fn, true, false);
   DEFINE_BUILTIN_FUNCTION("macro", macro, true, false);
 
@@ -668,7 +706,9 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("debug:list-env", debug_list_env, true, false);
 
   // Builtin startup files.
-  char *startup[] = {"core/core.l", "core/quote.l"};
+  char *startup[] = {
+      "core/core.l",
+  };
 
   for (size_t i = 0; i < sizeof(startup) / sizeof(startup[0]); i++) {
     StringView buffer = read_file_sv(startup[i]);
