@@ -142,6 +142,7 @@ LispValue lisp_tail(LispValue lisp);
 LispValue lisp_head_n(LispValue lisp, size_t n);
 LispValue lisp_tail_n(LispValue lisp, size_t n);
 size_t lisp_get_len(LispValue lisp);
+LispValue lisp_reverse(LispValue lisp);
 
 // Lisp Generators are used for generating lists without directly accessing list
 // cons values. They can append items at the right end of the lists.
@@ -152,7 +153,9 @@ typedef struct {
 
 void lisp_gen_init(LispGen *generator);
 void _lisp_gen_move(LispGen *generator);
+void lisp_gen_appendl(LispGen *generator, LispValue item);
 void lisp_gen_appendr(LispGen *generator, LispValue item);
+void lisp_gen_extendl(LispGen *generator, LispValue list);
 void lisp_gen_extendr(LispGen *generator, LispValue list);
 LispValue lisp_gen_end(LispGen *generator);
 

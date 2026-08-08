@@ -366,6 +366,20 @@ size_t lisp_get_len(LispValue lisp) {
   return count;
 }
 
+LispValue lisp_reverse(LispValue lisp) {
+  LispIter iter;
+  lisp_iter_init(&iter, lisp);
+
+  LispGen gen;
+  lisp_gen_init(&gen);
+
+  while (lisp_iter_has_next(&iter)) {
+    lisp_gen_appendl(&gen, lisp_iter_next(&iter));
+  }
+
+  return lisp_gen_end(&gen);
+}
+
 // Lisp Cons
 extern inline _LispCons *lisp_cons_make(LispValue head, _LispCons *tail) {
   _LispCons *cons = malloc(sizeof(_LispCons));
@@ -382,18 +396,27 @@ extern inline void lisp_gen_init(LispGen *generator) {
   generator->last = &(generator->list);
 }
 
-extern inline void _lisp_gen_move(LispGen *generator) {
-  generator->last = &((*generator->last)->tail);
+extern inline void lisp_gen_appendl(LispGen *generator, LispValue item) {
+  generator->list = lisp_cons_make(item, generator->list);
 }
 
 extern inline void lisp_gen_appendr(LispGen *generator, LispValue item) {
   *generator->last = lisp_cons_make(item, NULL);
-  _lisp_gen_move(generator);
+  generator->last = &((*generator->last)->tail);
+}
+
+extern inline void lisp_gen_extendl(LispGen *generator, LispValue list) {
+  _LispCons *old_cons = generator->list;
+  _LispCons **old_last = generator->last;
+
+  lisp_gen_init(generator);
+  lisp_gen_extendr(generator, list);
+
+  *generator->last = old_cons;
+  generator->last = old_last;
 }
 
 extern inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
-  assert(lisp_is_type(list, LISP_LIST_T));
-
   LispIter iter;
   lisp_iter_init(&iter, list);
 
@@ -403,7 +426,9 @@ extern inline void lisp_gen_extendr(LispGen *generator, LispValue list) {
 }
 
 extern inline LispValue lisp_gen_end(LispGen *generator) {
-  return lisp_make_cons(generator->list);
+  LispValue cons = lisp_make_cons(generator->list);
+  lisp_gen_init(generator);
+  return cons;
 }
 
 // Lisp Iterators
