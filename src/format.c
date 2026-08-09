@@ -93,6 +93,15 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
 
     break;
 
+  case LISP_ATOM_T: {
+    // Producers: (atom ITEM)
+
+    da_append(builder, formatting == FORMAT_PRODUCER ? '(' : '<');
+    sb_append_static_str(builder, "atom ");
+    lisp_value_format(builder, lisp_get_atom(value), formatting);
+    da_append(builder, formatting == FORMAT_PRODUCER ? ')' : '>');
+  } break;
+
   case LISP_STRING_T:
     // Producers: "STRING"
 

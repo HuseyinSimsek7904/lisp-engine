@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "core.h"
 #include "format.h"
-#include "parser.h"
 #include "lisp_value.h"
+#include "parser.h"
 
 struct _LispValue {
   LispType type;
@@ -34,6 +35,7 @@ char *lisp_type_syms[] = {
     [LISP_INT64_T] = "int64-t", [LISP_BOOL_T] = "bool-t",
     [LISP_SYMBOL_T] = "sym-t",  [LISP_BUILTIN_FUNC_T] = "builtin-t",
     [LISP_FUNC_T] = "fn-t",     [LISP_LIST_T] = "list-t",
+    [LISP_ATOM_T] = "atom-t",
 };
 
 char *lexer_result_syms[] = {
@@ -98,6 +100,14 @@ extern inline LispValue lisp_get_error_item(LispValue value) {
 extern inline _LispCons *lisp_get_cons(LispValue value) {
   assert(lisp_is_type(value, LISP_LIST_T));
   return value->cons;
+}
+extern inline void lisp_set_atom(LispValue value, LispValue item) {
+  assert(lisp_is_type(value, LISP_ATOM_T));
+  value->item = item;
+}
+extern inline LispValue lisp_get_atom(LispValue value) {
+  assert(lisp_is_type(value, LISP_ATOM_T));
+  return value->item;
 }
 
 LispValue _lisp_init(LispType type) {
@@ -212,6 +222,12 @@ extern inline LispValue lisp_make_sym(const char *symbol) {
   return value;
 }
 
+extern inline LispValue lisp_make_atom(LispValue item) {
+  LispValue value = _lisp_init(LISP_ATOM_T);
+  value->item = item;
+  return value;
+}
+
 extern inline LispValue lisp_make_list_1(LispValue item0) {
   _LispCons *cons = lisp_cons_make(item0, NULL);
   return lisp_make_cons(cons);
@@ -291,6 +307,11 @@ bool lisp_is_ident(LispValue a, LispValue b) {
            lisp_is_ident(a_custom->args, b_custom->args) &&
            lisp_is_ident(a_custom->body, b_custom->body);
   }
+
+  case LISP_ATOM_T:
+    // If two atoms are the same, their references must also be the same.
+    // We already performed the reference identity check.
+    return false;
 
   case LISP_TYPE_COUNT:
     lisp_fprintf(stderr, "reached unreachable\n");

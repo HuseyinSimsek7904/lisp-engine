@@ -58,3 +58,8 @@
 (assert-type '() list-t)
 (assert-type '(1 2 3) list-t)
 (assert-type (tail '(1 2 3)) list-t)
+
+;; atom-t
+(assert-type (atom nil) atom-t)
+(assert-type (atom '()) atom-t)
+(assert-type (atom '(1 2 3)) atom-t)

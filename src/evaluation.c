@@ -38,6 +38,7 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
     case LISP_BUILTIN_FUNC_T:
     case LISP_FUNC_T:
     case LISP_ERROR_T:
+    case LISP_ATOM_T:
       return lisp;
 
     case LISP_SYMBOL_T: {

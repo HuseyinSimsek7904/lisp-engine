@@ -23,6 +23,7 @@ typedef enum {
   LISP_BUILTIN_FUNC_T,
   LISP_FUNC_T,
   LISP_LIST_T,
+  LISP_ATOM_T,
   LISP_TYPE_COUNT,
 } LispType;
 
@@ -102,6 +103,8 @@ bool lisp_get_bool(LispValue value);
 _LispBuiltinFunction *lisp_get_builtin(LispValue value);
 _LispCustomFunction *lisp_get_custom(LispValue value);
 LispValue lisp_get_error_item(LispValue value);
+void lisp_set_atom(LispValue value, LispValue item);
+LispValue lisp_get_atom(LispValue value);
 
 LispValue _lisp_init(LispType type);
 
@@ -120,6 +123,7 @@ LispValue lisp_make_int64(int64_t integer);
 LispValue lisp_make_str(StringView string);
 LispValue lisp_make_cstr(const char *string);
 LispValue lisp_make_sym(const char *symbol);
+LispValue lisp_make_atom(LispValue item);
 
 LispValue lisp_make_list_1(LispValue item0);
 LispValue lisp_make_list_2(LispValue item0, LispValue item1);

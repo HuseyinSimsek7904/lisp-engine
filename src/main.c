@@ -23,9 +23,9 @@
   LispValue builtin_##n(LispValue args, Environment *env)
 
 #define RETURN_WRONG_NUMBER_ARGS(m, n, g, c)                                   \
-  return ERROR3(m, lisp_builtin_##n, lisp_make_int64(argc), lisp_make_int64(c));
+  return ERROR3(m, lisp_builtin_##n, lisp_make_int64(argc), lisp_make_int64(c))
 
-#define RETURN_INVALID_ARG(n, v, m) return ERROR3(WRONG_TYPE_ARG_SYM, n, v, m);
+#define RETURN_INVALID_ARG(n, v, m) return ERROR3(WRONG_TYPE_ARG_SYM, n, v, m)
 
 #define REQUIRES_EQ_ARGS(n, c)                                                 \
   do {                                                                         \
@@ -59,9 +59,9 @@
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   lisp_builtin_##c = lisp_make_builtin(m, t, builtin_##c, n);                  \
-  env_set_shallow(global_env, n, lisp_builtin_##c);
+  env_set_shallow(global_env, n, lisp_builtin_##c)
 
-#define DEFINE_TYPE_REP(n, c, r) env_set(global_env, n, lisp_make_type(r));
+#define DEFINE_TYPE_REP(n, c, r) env_set_shallow(global_env, n, lisp_make_type(r))
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
@@ -533,6 +533,28 @@ DEFINE_BUILTIN(quasi_quote) {
   return apply_quasi_quote(ARG(0), env);
 }
 
+DEFINE_BUILTIN(atom) {
+  REQUIRES_EQ_ARGS(atom, 1);
+
+  return lisp_make_atom(ARG(0));
+}
+
+DEFINE_BUILTIN(reset) {
+  REQUIRES_EQ_ARGS(reset, 2);
+
+  CHECK_ARG_TYPE(reset, ARG(0), LISP_ATOM_T);
+  lisp_set_atom(ARG(0), ARG(1));
+
+  return ARG(0);
+}
+
+DEFINE_BUILTIN(deref) {
+  REQUIRES_EQ_ARGS(deref, 1);
+
+  CHECK_ARG_TYPE(reset, ARG(0), LISP_ATOM_T);
+  return lisp_get_atom(ARG(0));
+}
+
 // TODO: This should expect a list of symbols, where each symbol is a flag.
 // For now, this is satisfactory.
 DEFINE_BUILTIN(debug_set_flags) {
@@ -669,6 +691,7 @@ int main(int argc, char **argv) {
   DEFINE_TYPE_REP("builtin-t", builtin_func, LISP_BUILTIN_FUNC_T);
   DEFINE_TYPE_REP("fn-t", func, LISP_FUNC_T);
   DEFINE_TYPE_REP("list-t", list, LISP_LIST_T);
+  DEFINE_TYPE_REP("atom-t", atom, LISP_ATOM_T);
 
   // Builtin functions.
   DEFINE_BUILTIN_FUNCTION("print", print, false, false);
@@ -687,6 +710,9 @@ int main(int argc, char **argv) {
   DEFINE_BUILTIN_FUNCTION("format", format, false, false);
   DEFINE_BUILTIN_FUNCTION("cons", cons, false, false);
   DEFINE_BUILTIN_FUNCTION("read-line", read_line, false, false);
+  DEFINE_BUILTIN_FUNCTION("atom", atom, false, false);
+  DEFINE_BUILTIN_FUNCTION("deref", deref, false, false);
+  DEFINE_BUILTIN_FUNCTION("reset", reset, false, false);
 
   // Builtin macros.
   DEFINE_BUILTIN_FUNCTION("set", set, true, false);
