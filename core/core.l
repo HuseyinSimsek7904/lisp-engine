@@ -1,5 +1,12 @@
+;; TODO: This must use absolute paths.
+(set included (atom '("core/core.l")))
 (set include (macro (file-name)
-                    `(do ~@(parse-lisp (read-file file-name)))))
+                    (if (contains? file-name (deref included)) nil
+                        (reset included (cons file-name (deref included)))
+                        `(do ~@(parse-lisp (read-file file-name))))))
+
+(set eval-file (macro (file-name)
+                      `(do ~@(parse-lisp (read-file file-name)))))
 
 (set >  (fn (a b) (< b a)))
 (set <= (fn (a b) (not (< b a))))
@@ -43,6 +50,12 @@
                                       (cond ~@(tail ps))))))
 
 ;; List utilities
+(set contains? (fn (x l)
+                   (if (not (list? l)) (error `(not-a-list contains? ~l)))
+                   (and (not (empty? l))
+                        (or (= x (head l))
+                            (contains? x (tail l))))))
+
 (set last (fn (l) (cond ((not (list? l)) (error 'not-a-list))
                         ((empty? l) (error 'list-empty))
                         ((empty? (tail l)) (head l))
