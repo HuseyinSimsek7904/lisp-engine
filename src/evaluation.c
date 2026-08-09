@@ -121,15 +121,15 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
 
             assert(lisp_is_type(arg, LISP_SYMBOL_T));
 
-            env_set_shallow(new_env, lisp_get_sym(arg), param);
+            env_set(new_env, lisp_get_sym(arg), param);
           }
 
           LispValue last_func_arg = lisp_iter_next(&args_iter);
           assert(lisp_is_type(last_func_arg, LISP_SYMBOL_T));
 
           if (custom->variadic) {
-            env_set_shallow(new_env, lisp_get_sym(last_func_arg),
-                            lisp_iter_remaining(&params_iter));
+            env_set(new_env, lisp_get_sym(last_func_arg),
+                    lisp_iter_remaining(&params_iter));
           } else {
             if (!lisp_iter_has_next(&params_iter)) {
               return ERROR1(TOO_FEW_ARGS_CUSTOM_SYM, callable);
@@ -139,8 +139,8 @@ LispValue evaluate_lisp(LispValue lisp, Environment *env) {
               return ERROR1(TOO_MANY_ARGS_CUSTOM_SYM, callable);
             }
 
-            env_set_shallow(new_env, lisp_get_sym(last_func_arg),
-                            lisp_iter_next(&params_iter));
+            env_set(new_env, lisp_get_sym(last_func_arg),
+                    lisp_iter_next(&params_iter));
           }
         }
 

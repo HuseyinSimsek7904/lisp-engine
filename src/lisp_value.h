@@ -190,8 +190,6 @@ Environment *env_make(Environment *other);
 void env_free(Environment *env);
 EnvironmentEntry *env_find_shallow(Environment *env, const char *symbol);
 EnvironmentEntry *env_find(Environment *env, const char *symbol);
-EnvironmentEntry *env_set_shallow(Environment *env, const char *symbol,
-                                  LispValue value);
 EnvironmentEntry *env_set(Environment *env, const char *symbol,
                           LispValue value);
 

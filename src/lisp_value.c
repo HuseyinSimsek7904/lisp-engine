@@ -514,32 +514,13 @@ EnvironmentEntry *env_find(Environment *env, const char *symbol) {
   return env_find(env->other, symbol);
 }
 
-EnvironmentEntry *env_set_shallow(Environment *env, const char *symbol,
-                                  LispValue value) {
-  EnvironmentEntry *entry = env_find_shallow(env, symbol);
-
-  if (!entry) {
-    EnvironmentEntry entry =
-        (EnvironmentEntry){.symbol = strdup(symbol), .value = value};
-    da_append(env, entry);
-    return &env->array[env->size - 1];
-  }
-
-  entry->value = value;
-  return entry;
-}
-
 EnvironmentEntry *env_set(Environment *env, const char *symbol,
                           LispValue value) {
-  EnvironmentEntry *entry = env_find(env, symbol);
+  if (env_find_shallow(env, symbol))
+    return NULL;
 
-  if (!entry) {
-    EnvironmentEntry entry =
-        (EnvironmentEntry){.symbol = strdup(symbol), .value = value};
-    da_append(env, entry);
-    return &env->array[env->size - 1];
-  }
-
-  entry->value = value;
-  return entry;
+  EnvironmentEntry entry =
+      (EnvironmentEntry){.symbol = strdup(symbol), .value = value};
+  da_append(env, entry);
+  return &env->array[env->size - 1];
 }

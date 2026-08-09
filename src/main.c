@@ -59,9 +59,9 @@
 
 #define DEFINE_BUILTIN_FUNCTION(n, c, m, t)                                    \
   lisp_builtin_##c = lisp_make_builtin(m, t, builtin_##c, n);                  \
-  env_set_shallow(global_env, n, lisp_builtin_##c)
+  env_set(global_env, n, lisp_builtin_##c)
 
-#define DEFINE_TYPE_REP(n, c, r) env_set_shallow(global_env, n, lisp_make_type(r))
+#define DEFINE_TYPE_REP(n, c, r) env_set(global_env, n, lisp_make_type(r))
 
 DEFINE_BUILTIN(set) {
   REQUIRES_EQ_ARGS(set, 2);
@@ -70,7 +70,9 @@ DEFINE_BUILTIN(set) {
   const char *symbol = lisp_get_sym(ARG(0));
   LispValue value = evaluate_lisp(ARG(1), env);
 
-  env_set(env, symbol, value);
+  if (!env_set(env, symbol, value)) {
+    return ERROR1("redefinition", ARG(0));
+  }
 
   return value;
 }
@@ -111,7 +113,7 @@ DEFINE_BUILTIN(let) {
       // That way one variable defined can be used in the other one.
       LispValue value = evaluate_lisp(lisp_head_n(def_node, 1), env);
 
-      env_set_shallow(new_env, symbol, value);
+      env_set(new_env, symbol, value);
     }
   }
 
@@ -675,10 +677,10 @@ int main(int argc, char **argv) {
   // Singletons.
   lisp_init_singletons();
 
-  env_set_shallow(global_env, "nil", LISP_NIL);
-  env_set_shallow(global_env, "false", LISP_FALSE);
-  env_set_shallow(global_env, "true", LISP_TRUE);
-  env_set_shallow(global_env, "empty", LISP_EMPTY);
+  env_set(global_env, "nil", LISP_NIL);
+  env_set(global_env, "false", LISP_FALSE);
+  env_set(global_env, "true", LISP_TRUE);
+  env_set(global_env, "empty", LISP_EMPTY);
 
   // Type representative singletons.
   DEFINE_TYPE_REP("nil-t", nil, LISP_NIL_T);
