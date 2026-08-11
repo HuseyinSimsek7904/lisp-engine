@@ -576,10 +576,15 @@ DEFINE_BUILTIN(debug_list_env) {
   return LISP_NIL;
 }
 
-const char *history_path = "./.history";
+const char *HISTORY_PATH = "./.history";
+
+const char *PROMPT_INPUT_START = "> ";
+const char *PROMPT_INPUT_CONT = ". ";
+const char *RETURN_SUCCESS = "\e[96m~ %l\e[0m\n";
+const char *RETURN_ERROR = "\e[91m~ %l\e[0m\n";
 
 LispValue interactive_repl(Environment *env) {
-  char *full_lisp = readline("> ");
+  char *full_lisp = readline(PROMPT_INPUT_START);
 
   if (!full_lisp) {
     return NULL;
@@ -598,7 +603,7 @@ LispValue interactive_repl(Environment *env) {
 
       if (lexer_result != LEXER_UNTERMINATED_STRING) {
         add_history(full_lisp);
-        write_history(history_path);
+        write_history(HISTORY_PATH);
         free(full_lisp);
         RETURN_COULD_NOT_GEN_TOKENS(lexer_result);
       }
@@ -609,7 +614,7 @@ LispValue interactive_repl(Environment *env) {
 
       if (!lisp_is_type(parser_result, LISP_ERROR_T)) {
         add_history(full_lisp);
-        write_history(history_path);
+        write_history(HISTORY_PATH);
         free(full_lisp);
 
         return evaluate_lisp_body(parser_result, env, false);
@@ -618,14 +623,14 @@ LispValue interactive_repl(Environment *env) {
       if (!lisp_is_sym(lisp_head(lisp_get_error_item(parser_result)),
                        PARSER_TOO_FEW_R_PAREN)) {
         add_history(full_lisp);
-        write_history(history_path);
+        write_history(HISTORY_PATH);
         free(full_lisp);
 
         return parser_result;
       }
     }
 
-    char *new_line = readline(". ");
+    char *new_line = readline(PROMPT_INPUT_CONT);
 
     if (!new_line) {
       free(full_lisp);
@@ -800,7 +805,7 @@ int main(int argc, char **argv) {
 
   // Interactive mode.
   if (interactive)
-    read_history(history_path);
+    read_history(HISTORY_PATH);
 
   while (interactive) {
     LispValue result = interactive_repl(global_env);
@@ -809,6 +814,10 @@ int main(int argc, char **argv) {
       break;
     }
 
-    lisp_printf("~ %l\n", result);
+    if (lisp_is_type(result, LISP_ERROR_T))
+      lisp_printf(RETURN_ERROR, result);
+    else {
+      lisp_printf(RETURN_SUCCESS, result);
+    }
   }
 }
