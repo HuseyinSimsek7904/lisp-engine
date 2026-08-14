@@ -112,15 +112,12 @@ void lisp_value_format(StringBuilder *builder, LispValue value,
     break;
 
   case LISP_SYMBOL_T:
-    // Producers: (quote SYMBOL)
+    // Producers: 'SYMBOL, (quote SYMBOL)
 
     if (formatting == FORMAT_PRODUCER)
-      sb_append_static_str(builder, "(quote ");
+      sb_append_static_str(builder, "'");
 
     sb_append_cstr(builder, lisp_get_sym(value));
-
-    if (formatting == FORMAT_PRODUCER)
-      sb_append_static_str(builder, ")");
 
     break;
 
